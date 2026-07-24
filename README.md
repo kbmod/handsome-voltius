@@ -1,23 +1,45 @@
 <div align="center">
   <img src="src-tauri/icons/128x128.png" alt="Voltius Logo" width="96" />
   <br/>
-  <h1>Voltius</h1>
+  <h1>Handsome Voltius</h1>
   
-  <p>📢 <strong>Latest Update:</strong> <a href="https://github.com/orgs/VoltiusApp/discussions/7">Huge thanks for the 200+ stars in 24h!</a></p>
-  <p><strong>A local-first SSH/SFTP/Serial client with E2EE sync, plugins, and no account required — a modern alternative to Termius.</strong></p>
+  <p><strong>A Linux-focused UI fork of <a href="https://github.com/VoltiusApp/voltius">Voltius</a>.</strong></p>
+  <p>Local-first SSH, SFTP, serial terminals, and encrypted Gist sync with a denser desktop interface tuned for Linux.</p>
   
   <p>
     <img src="https://img.shields.io/badge/status-beta-f59e0b" alt="Beta" />
     <img src="https://img.shields.io/badge/built_with-Rust-dea584?logo=rust" alt="Rust" />
     <img src="https://img.shields.io/badge/UI-Tauri-24c8db?logo=tauri" alt="Tauri" />
     <img src="https://img.shields.io/badge/Security-E2EE-green" alt="E2EE" />
-    <img src="https://img.shields.io/github/license/VoltiusApp/voltius" alt="License" />
+    <img src="https://img.shields.io/github/license/kbmod/handsome-voltius" alt="License" />
   </p>
-
-  <img width="800" height="450" alt="demo" src="https://github.com/user-attachments/assets/dbb5092c-4536-4112-b481-745bbbba80e8" />
 </div>
 
 ---
+
+## About this fork
+
+Handsome Voltius is a personal, Linux-first fork of the open-source
+[Voltius](https://github.com/VoltiusApp/voltius) project. It retains the Voltius
+Rust/Tauri backend, SSH and SFTP functionality, encrypted vaults, plugins, and
+free end-to-end encrypted GitHub Gist sync while refining the desktop experience
+for daily use on Linux.
+
+The fork currently focuses on:
+
+- A compact, Termius-inspired workspace with denser tabs, split panes, search,
+  connection states, and a vertical vault navigation list.
+- Correct `xterm-256color` terminal capability, bundled Linux-friendly fonts,
+  sharper terminal rendering, and a focused block cursor.
+- Independent application and terminal themes, allowing a dark-blue desktop
+  shell with a Gruvbox Dark terminal palette.
+- A flush two-pane SFTP workspace and native non-blocking error notifications.
+- Linux/WebKitGTK behavior, including reliable terminal sizing and deliberate
+  shell exits that do not trigger an unwanted reconnect.
+
+This project is not affiliated with Termius. Termius is used only as a visual
+and workflow reference. Upstream Voltius remains available from the
+[official repository](https://github.com/VoltiusApp/voltius).
 
 ## ✨ Features
 
@@ -37,6 +59,11 @@ No account required. Everything below is free, forever.
 > Full feature list at [docs.voltius.app](https://docs.voltius.app) *(coming soon)* · **Pro · Teams · Business** — see [voltius.app/#pricing](https://voltius.app/#pricing) for paid plans.
 
 ## 📦 Install
+
+> The package repositories and download links below install official upstream
+> Voltius and do **not** currently include this fork's UI changes. To run
+> Handsome Voltius, build this repository from source using the Development &
+> Build section below.
 
 ### Linux — apt & dnf/yum
 
@@ -269,11 +296,14 @@ flowchart TD
 
 ## 🛠️ Development & Build
 
-Early beta — PRs and issues are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+This fork is primarily developed and tested on Debian-family Linux systems with
+Tauri's WebKitGTK runtime. Other platforms may continue to work through the
+upstream codebase, but they are not the focus of the UI changes.
 
-For dev, you simply need to run:
+After installing the prerequisites:
+
 ```bash
-pnpm i
+pnpm install
 pnpm tauri dev
 ```
 
