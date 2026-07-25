@@ -28,11 +28,14 @@ export default function MobileSessionView({ session, active }: { session: Termin
         session={session}
         active={active}
         compact
-        onClosed={() =>
-          handleSessionClosed(session.type, session.id, {
+        onClosed={(close) =>
+          handleSessionClosed(session.type, session.id, close, {
             status: (id) => useSessionStore.getState().sessions.find((s) => s.id === id)?.status,
             markDisconnected,
             reconnectWithBackoff,
+            sessionEnded: (id) => {
+              void import("@/services/crossDeviceSessions").then((service) => service.sessionEnded(id));
+            },
           })
         }
       />

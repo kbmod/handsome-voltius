@@ -1,10 +1,18 @@
+> [!WARNING]
+> **Work in progress.** Handsome Voltius is a personal-use project and is not
+> currently a finished or supported release. It is a fork of
+> [Voltius](https://github.com/VoltiusApp/voltius) focused on a cleaner,
+> better-integrated Linux desktop UI—specifically for Debian and WebKitGTK.
+> Gruvbox Dark is the only bundled theme; additional terminal themes can be
+> [created in the app](#terminal-themes-in-this-fork).
+
 <div align="center">
   <img src="src-tauri/icons/128x128.png" alt="Voltius Logo" width="96" />
   <br/>
   <h1>Handsome Voltius</h1>
   
-  <p><strong>A Linux-focused UI fork of <a href="https://github.com/VoltiusApp/voltius">Voltius</a>.</strong></p>
-  <p>Local-first SSH, SFTP, serial terminals, and encrypted Gist sync with a denser desktop interface tuned for Linux.</p>
+  <p><strong>A personal Debian-focused UI fork of <a href="https://github.com/VoltiusApp/voltius">Voltius</a>.</strong></p>
+  <p>Voltius's SSH, SFTP, vault, and encrypted Gist-sync engine with a more polished Linux desktop and terminal workspace.</p>
   
   <p>
     <img src="https://img.shields.io/badge/status-beta-f59e0b" alt="Beta" />
@@ -19,11 +27,13 @@
 
 ## About this fork
 
-Handsome Voltius is a personal, Linux-first fork of the open-source
-[Voltius](https://github.com/VoltiusApp/voltius) project. It retains the Voltius
+Handsome Voltius is a personal-use fork of the open-source
+[Voltius](https://github.com/VoltiusApp/voltius) project. It keeps Voltius's
 Rust/Tauri backend, SSH and SFTP functionality, encrypted vaults, plugins, and
-free end-to-end encrypted GitHub Gist sync while refining the desktop experience
-for daily use on Linux.
+free end-to-end encrypted GitHub Gist sync while replacing rough desktop
+surfaces with a denser, more coherent interface for daily use on Debian Linux.
+It may work on other operating systems, but Debian/WebKitGTK is the target used
+for development and verification.
 
 The fork currently focuses on:
 
@@ -31,8 +41,8 @@ The fork currently focuses on:
   connection states, and a vertical vault navigation list.
 - Correct `xterm-256color` terminal capability, bundled Linux-friendly fonts,
   sharper terminal rendering, and a focused block cursor.
-- Independent application and terminal themes, allowing a dark-blue desktop
-  shell with a Gruvbox Dark terminal palette.
+- A fixed Gruvbox Dark desktop shell and terminal-only custom color schemes,
+  preventing terminal palettes from leaking into workspace chrome.
 - A flush two-pane SFTP workspace and native non-blocking error notifications.
 - Linux/WebKitGTK behavior, including reliable terminal sizing and deliberate
   shell exits that do not trigger an unwanted reconnect.
@@ -40,6 +50,35 @@ The fork currently focuses on:
 This project is not affiliated with Termius. Termius is used only as a visual
 and workflow reference. Upstream Voltius remains available from the
 [official repository](https://github.com/VoltiusApp/voltius).
+
+## Terminal themes in this fork
+
+Handsome Voltius deliberately ships with one built-in theme: **Gruvbox Dark**.
+The desktop interface is fixed to that palette. Selecting, importing, editing,
+or creating another theme changes only xterm terminal colors and terminal font
+settings; it does not recolor tabs, active-pane borders, unread-output dots,
+settings, or other application chrome. Changes hot-apply to terminals that are
+already open.
+
+The simplest way to create a compatible theme is **Settings → Appearance → New
+Custom Theme**. Start from Gruvbox Dark, set a unique name, then edit the
+terminal font and colors. The theme editor exposes every field this build uses:
+
+- `background`, `foreground`, `cursor`, and `selectionBackground`
+- the eight normal ANSI colors: `black`, `red`, `green`, `yellow`, `blue`,
+  `magenta`, `cyan`, and `white`
+- the eight bright ANSI colors: `brightBlack`, `brightRed`, `brightGreen`,
+  `brightYellow`, `brightBlue`, `brightMagenta`, `brightCyan`, and
+  `brightWhite`
+- `terminalFontFamily` and `terminalFontSize`
+
+Use six-digit hexadecimal colors such as `#282828`. Font families may include
+fallbacks, for example `"'Source Code Pro', monospace"`; the named font must be
+installed or bundled for identical rendering. Exported `.voltius-theme.json`
+files retain the upstream `AppTheme` UI fields for file, plugin, and encrypted
+Gist-sync compatibility, but this fork intentionally ignores those UI values.
+Custom terminal themes and their font/rendering settings remain part of the
+encrypted theme sync payload.
 
 ## ✨ Features
 

@@ -36,12 +36,11 @@ export default function NavBar() {
   };
 
   return (
-    <div
-      className="flex items-center shrink-0 px-2.5 border-b gap-0.5"
+    <aside
+      className="flex flex-col shrink-0 w-48 p-2 gap-1 border-r"
       style={{
-        height: "2.75rem",
-        background: "transparent",
-        borderColor: "color-mix(in srgb, #ffffff 5%, transparent)",
+        background: "var(--t-bg-chrome)",
+        borderColor: "var(--t-border)",
       }}
     >
       {NAV_ITEMS.map((item) => {
@@ -55,7 +54,7 @@ export default function NavBar() {
           />
         );
       })}
-    </div>
+    </aside>
   );
 }
 
@@ -73,29 +72,28 @@ function NavTabButton({
     <button
       onClick={onClick}
       onMouseDown={createRipple}
-      className="relative flex items-center gap-2 px-3.5 h-full text-sm font-medium shrink-0 transition-colors overflow-hidden"
+      className="relative flex items-center gap-2.5 px-3 h-9 rounded-md text-sm font-medium shrink-0 transition-colors overflow-hidden"
       style={{
         color: isActive ? "var(--t-text-primary)" : "var(--t-text-dim)",
-        background: "transparent",
+        background: isActive ? "var(--t-bg-elevated)" : "transparent",
       }}
       onMouseEnter={(e) => {
-        if (!isActive)
+        if (!isActive) {
           (e.currentTarget as HTMLButtonElement).style.color = "var(--t-text-primary)";
+          (e.currentTarget as HTMLButtonElement).style.background = "var(--t-bg-card)";
+        }
       }}
       onMouseLeave={(e) => {
-        if (!isActive)
+        if (!isActive) {
           (e.currentTarget as HTMLButtonElement).style.color = "var(--t-text-dim)";
+          (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+        }
       }}
     >
       {rippleEls}
       <Icon icon={item.icon} width={15} className="shrink-0" />
       <span>{item.label}</span>
-      {isActive && (
-        <span
-          className="absolute bottom-0 left-0 right-0 rounded-t-full"
-          style={{ height: 2, background: "var(--t-accent)" }}
-        />
-      )}
+      {isActive && <span className="absolute left-0 inset-y-2 w-0.5 rounded-r-full bg-(--t-accent)" />}
     </button>
   );
 }

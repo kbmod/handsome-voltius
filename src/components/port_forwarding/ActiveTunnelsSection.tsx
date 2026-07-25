@@ -124,7 +124,8 @@ export function ActiveTunnelsSection() {
   function setBusyKey(key: string, on: boolean) {
     setBusy((prev) => {
       const s = new Set(prev);
-      on ? s.add(key) : s.delete(key);
+      if (on) s.add(key);
+      else s.delete(key);
       return s;
     });
   }

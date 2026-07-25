@@ -17,10 +17,11 @@ type Group = { id: string; ids: string[] };
 type TranslateFn = (key: string, opts?: Record<string, unknown>) => string;
 
 const GROUPS: Group[] = [
-  { id: "global",     ids: ["omni", "shortcuts", "themes"] },
-  { id: "tabs",       ids: ["new-tab", "close-tab", "next-tab", "prev-tab"] },
-  { id: "navigation", ids: ["sidebar", "filter"] },
+  { id: "global",     ids: ["omni", "jump-to", "shortcuts", "themes"] },
+  { id: "tabs",       ids: ["new-tab", "close-tab", "next-tab", "prev-tab", "local-terminal", "serial"] },
+  { id: "navigation", ids: ["port-forwarding", "sidebar", "filter"] },
   { id: "editing",    ids: ["delete", "undo", "redo"] },
+  { id: "workspace",  ids: ["panel-themes", "broadcast", "workspace-view", "terminal-search", "snippets"] },
 ];
 
 function displayLabel(sc: Shortcut, t: TranslateFn): string {

@@ -19,6 +19,8 @@ export function waitForConnectedSessionIds(
   return new Promise<string[]>((resolve) => {
     const pending = new Set(sessionIds);
     const connected: string[] = [];
+    // Must remain uninitialized while subscribe(check) may invoke check synchronously.
+    // eslint-disable-next-line prefer-const
     let unsubscribe: (() => void) | undefined;
 
     const check = () => {

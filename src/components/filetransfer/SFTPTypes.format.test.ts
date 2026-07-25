@@ -19,8 +19,9 @@ function assertEqual(actual: unknown, expected: unknown, msg: string) {
   assertEqual(formatSize(2048), "2.0 KB", "size KB");
 }
 {
-  // 14 days after epoch — stays "Jan 15 1970" in any realistic TZ offset
-  assertEqual(formatDate(1209600), "Jan 15 1970", "date past-year branch");
+  // Local noon on Jan 15 keeps the expected local date in every timezone.
+  const localJan15Noon = new Date(1970, 0, 15, 12, 0, 0).getTime() / 1000;
+  assertEqual(formatDate(localJan15Noon), "Jan 15 1970", "date past-year branch");
 
   // current-year branch → "Mon DD HH:MM" shape (TZ/clock independent on shape)
   const nowTs = Math.floor(Date.now() / 1000);

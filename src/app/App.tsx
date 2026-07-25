@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import DesktopShell from "@/components/layout/DesktopShell";
 import MobileShell from "@/components/mobile/MobileShell";
 import { usePlatform } from "@/utils/platform";
@@ -10,7 +10,6 @@ import { useKeyboard } from "@/hooks/useKeyboard";
 import { useInputUndo } from "@/hooks/useInputUndo";
 import { useSessionExpiration } from "@/hooks/useSessionExpiration";
 import { useApplyTheme } from "@/hooks/useApplyTheme";
-import { useThemeAutomation } from "@/hooks/useThemeAutomation";
 import { useApplyUiScale } from "@/hooks/useApplyUiScale";
 import { useCoreOmniCommands } from "@/hooks/useCoreOmniCommands";
 import { useImportExportContributions } from "@/hooks/useImportExportContributions";
@@ -32,15 +31,18 @@ import { TrialExpiredModal } from "@/components/shared/TrialExpiredModal";
 import CloudAuthModal from "@/components/layout/CloudAuthModal";
 import WhatsNewModal from "@/components/changelog/WhatsNewModal";
 import { EmailVerificationRequiredModal } from "@/components/notifications/EmailVerificationRequiredModal";
-import { GlobalTransferQueue } from "@/components/filetransfer/GlobalTransferQueue";
+import { shouldShowVisualReview } from "@/dev/visualFixtures";
 
-function App() {
+const VisualReviewPage = import.meta.env.DEV
+  ? lazy(() => import("@/dev/VisualReviewPage"))
+  : null;
+
+function ProductionApp() {
   const [ready, setReady] = useState(false);
   useKeyboard();
   useInputUndo();
   useSessionExpiration();
   useApplyTheme();
-  useThemeAutomation();
   useApplyUiScale();
   useCoreOmniCommands();
   useImportExportContributions();
@@ -80,8 +82,6 @@ function App() {
       <CloudAuthModal />
       <WhatsNewModal />
       <EmailVerificationRequiredModal />
-      <GlobalTransferQueue />
-
       {/* Global snippet variable modal — triggered from OmniSearch */}
       {globalPendingInject && (
         <SnippetVariableModal
@@ -122,6 +122,18 @@ function App() {
       )}
     </div>
   );
+}
+
+function App() {
+  if (VisualReviewPage && shouldShowVisualReview(window.location.search, true)) {
+    return (
+      <Suspense fallback={null}>
+        <VisualReviewPage />
+      </Suspense>
+    );
+  }
+
+  return <ProductionApp />;
 }
 
 export default App;

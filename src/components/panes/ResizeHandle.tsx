@@ -47,11 +47,11 @@ export function ResizeHandle({
       aria-orientation={direction === "h" ? "vertical" : "horizontal"}
       tabIndex={0}
       className={direction === "h"
-        ? "group w-2 -mx-0.5 cursor-col-resize flex items-center justify-center focus:outline-hidden"
-        : "group h-2 -my-0.5 cursor-row-resize flex items-center justify-center focus:outline-hidden"}
+        ? "group w-2 cursor-col-resize flex items-center justify-center focus:outline-hidden shrink-0"
+        : "group h-2 cursor-row-resize flex items-center justify-center focus:outline-hidden shrink-0"}
     >
       <div
-        className={`${direction === "h" ? "w-0.5 h-8" : "h-0.5 w-8"} rounded-full opacity-0 transition-[opacity,background-color] duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 ${isDragging ? "opacity-100" : ""}`}
+        className={`${direction === "h" ? "w-px h-full" : "h-px w-full"} opacity-35 transition-[opacity,background-color] duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 ${isDragging ? "opacity-100" : ""}`}
         style={{ background: isDragging ? "var(--t-accent)" : "color-mix(in srgb, var(--t-text-dim) 45%, transparent)" }}
       />
     </div>

@@ -6,7 +6,7 @@ import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon, type ISearchOptions } from "@xterm/addon-search";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { sshSendInput, sshResize, onSshOutput, onSshClosed, onSshCwd } from "@/services/ssh";
+import { sshSendInput, sshResize, onSshOutput, onSshClosed, onSshCwd, type SshClosedEvent } from "@/services/ssh";
 import { localSendInput, localResize, onLocalOutput, onLocalClosed } from "@/services/local";
 import { serialWrite, onSerialOutput, onSerialClosed } from "@/services/serial";
 import { useThemeStore } from "@/stores/themeStore";
@@ -16,11 +16,13 @@ import { getToggle, useToggleSettingsStore } from "@/stores/toggleSettingsStore"
 import { matchShortcut } from "@/stores/shortcutStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useTerminalCwdStore } from "@/stores/terminalCwdStore";
-import { findLeaf, getPaneSessionIds, useLayoutStore } from "@/stores/layoutStore";
+import { noteTerminalOutput } from "@/stores/terminalActivityStore";
+import { findLeaf, findLeafBySession, getPaneSessionIds, useLayoutStore } from "@/stores/layoutStore";
 import { useTeamSessionStore } from "@/stores/teamSessionStore";
 import { useCommandHistoryStore } from "@/stores/commandHistoryStore";
 import { consumeLatchForChar } from "@/stores/modifierLatchStore";
 import { sampleLineDensities, scrollDeltaForRatio, type TerminalMinimapCell, type TerminalMinimapSample } from "@/components/terminal/minimapMath";
+import { TERMINAL_RENDERING_DEFAULTS, waitForTerminalFont } from "@/components/terminal/terminalRendering";
 import type { TerminalTheme } from "@/themes/types";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { withFlagEmojiFallback } from "@/utils/emojiFont";
@@ -29,7 +31,7 @@ import { getPlatform } from "@/utils/platform";
 interface UseTerminalOptions {
   sessionId: string;
   sessionType: "ssh" | "local" | "serial";
-  onClosed?: () => void;
+  onClosed?: (event?: SshClosedEvent) => void;
   /** If provided, input is only sent to the process when this returns true. */
   inputGate?: React.RefObject<() => boolean>;
   encoding?: string;
@@ -38,11 +40,34 @@ interface UseTerminalOptions {
 
 function sendSessionInput(sessionId: string, sessionType: "ssh" | "local" | "serial", data: Uint8Array) {
   if (sessionType === "local") {
-    localSendInput(sessionId, data);
+    localSendInput(sessionId, data).catch(() => {});
   } else if (sessionType === "serial") {
     serialWrite(sessionId, data).catch(() => {});
   } else {
     sshSendInput(sessionId, data);
+  }
+}
+
+function noteTerminalActivity(sessionId: string): void {
+  const ui = useUIStore.getState();
+  if (ui.newTabOpen || ui.sftpPanelOpen || ui.activeNav !== "terminal") {
+    noteTerminalOutput(sessionId);
+    return;
+  }
+
+  const layout = useLayoutStore.getState();
+  if (!layout.splitTabActive) {
+    if (useSessionStore.getState().activeSessionId !== sessionId) noteTerminalOutput(sessionId);
+    return;
+  }
+
+  const leaf = findLeafBySession(layout.root, sessionId);
+  if (!leaf) {
+    noteTerminalOutput(sessionId);
+    return;
+  }
+  if (layout.maximizedPaneId && layout.maximizedPaneId !== leaf.id) {
+    noteTerminalOutput(sessionId);
   }
 }
 
@@ -143,12 +168,83 @@ type CacheEntry = {
   /** Mirror of the useTerminal `inputGate` so module-level senders (writeToSession)
    *  honor the same multiplayer control-holder gate as the onData handler. */
   inputGateRef: { current: (() => boolean) | undefined };
-  onClosedRef: { current: (() => void) | undefined };
+  onClosedRef: { current: ((event?: SshClosedEvent) => void) | undefined };
   onResizeRef: { current: ((cols: number, rows: number) => void) | undefined };
+  /** Resolves only after every Tauri output/close listener for this terminal is
+   * registered. Workspace restore awaits this before spawning processes so an
+   * eager shell prompt cannot be emitted into the gap between mount and listen. */
+  listenersReady: Promise<void>;
+  /** Monotonic count of native output events received by this terminal. Restore
+   * uses this to distinguish a spawned PTY from a shell that actually reached
+   * an interactive prompt. */
+  outputVersion: number;
   dispose: () => void; // full teardown, called only when the session is deleted
 };
 
 const terminalCache = new Map<string, CacheEntry>();
+
+if (import.meta.env.DEV) {
+  (window as typeof window & {
+    __voltiusTerminalBuffers?: () => Record<string, string>;
+  }).__voltiusTerminalBuffers = () =>
+    Object.fromEntries(
+      [...terminalCache].map(([id, entry]) => {
+        const buffer = entry.terminal.buffer.active;
+        const lines: string[] = [];
+        for (let row = 0; row < buffer.length; row += 1) {
+          lines.push(buffer.getLine(row)?.translateToString(true) ?? "");
+        }
+        return [id, lines.join("\n")];
+      }),
+    );
+}
+
+/** Wait until every requested terminal exists and has registered its native
+ * output/close listeners. This replaces restore's timing-based mount delay,
+ * which was unreliable when several split panes mounted together. */
+export async function waitForTerminalListeners(
+  sessionIds: string[],
+  timeoutMs = 5_000,
+): Promise<void> {
+  const pendingIds = [...new Set(sessionIds)];
+  const deadline = Date.now() + timeoutMs;
+  while (true) {
+    const entries = pendingIds.map((id) => terminalCache.get(id));
+    if (entries.every((entry): entry is CacheEntry => entry !== undefined)) {
+      await Promise.all(entries.map((entry) => entry.listenersReady));
+      return;
+    }
+    if (Date.now() >= deadline) {
+      const missing = pendingIds.filter((id) => !terminalCache.has(id));
+      throw new Error(`Terminal listeners did not mount: ${missing.join(", ")}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 16));
+  }
+}
+
+/** Wait for native output newer than `afterVersion`. An invoke resolving only
+ * proves that the PTY was spawned; it does not prove the interactive shell
+ * produced a prompt. */
+export async function waitForTerminalOutput(
+  sessionId: string,
+  afterVersion: number,
+  timeoutMs = 10_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (true) {
+    const entry = terminalCache.get(sessionId);
+    if (!entry) throw new Error(`Terminal was removed before it produced output: ${sessionId}`);
+    if (entry.outputVersion > afterVersion) return;
+    if (Date.now() >= deadline) {
+      throw new Error("Local shell started but did not produce an interactive prompt");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 16));
+  }
+}
+
+export function getTerminalOutputVersion(sessionId: string): number {
+  return terminalCache.get(sessionId)?.outputVersion ?? 0;
+}
 
 // ─── Search controller (module-level, callable from anywhere) ────────────────
 
@@ -273,7 +369,7 @@ function sampleMinimap(entry: CacheEntry, height: number): TerminalMinimapSample
   const maxSamples = Math.max(1, Math.floor(height));
   const length = Math.max(1, buffer.length);
   const cols = Math.max(1, entry.terminal.cols);
-  const theme = useThemeStore.getState().getActiveTheme().terminal;
+  const theme = useThemeStore.getState().getTerminalTheme().terminal;
   const lines: string[] = [];
   const cellRows: TerminalMinimapCell[][] = [];
   const nullCell = buffer.getNullCell();
@@ -612,7 +708,15 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
 
   const attach = useCallback(
     (container: HTMLDivElement | null) => {
-      if (!container || mountCleanupRef.current) return;
+      // React calls callback refs with null before a keyed pane is removed or
+      // reused elsewhere in a rearranged split tree. Tear down the
+      // container-specific observers/listeners at that point so the cached
+      // xterm can attach to its new container during the same reconciliation.
+      if (!container) {
+        mountCleanupRef.current?.();
+        return;
+      }
+      if (mountCleanupRef.current) return;
 
       const existing = terminalCache.get(sessionId);
 
@@ -653,12 +757,11 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
       }
 
       // ── Create new terminal ───────────────────────────────────────────────
-      const activeTheme = useThemeStore.getState().getActiveTheme();
+      const activeTheme = useThemeStore.getState().getTerminalTheme();
       const scrollback = useTerminalSettingsStore.getState().scrollbackLines;
       const term = new Terminal({
         altClickMovesCursor: false,
-        cursorBlink: true,
-        cursorStyle: "bar",
+        ...TERMINAL_RENDERING_DEFAULTS,
         fontSize: activeTheme.terminalFontSize,
         fontFamily: withFlagEmojiFallback(activeTheme.terminalFontFamily),
         scrollback,
@@ -728,6 +831,12 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
 
       const encoder = new TextEncoder();
       const decoder = encoding ? new TextDecoder(encoding) : null;
+      let resolveListenersReady!: () => void;
+      let rejectListenersReady!: (reason?: unknown) => void;
+      const listenersReady = new Promise<void>((resolve, reject) => {
+        resolveListenersReady = resolve;
+        rejectListenersReady = reject;
+      });
 
       // Build the cache entry first so closures below can reference it
       const entry: CacheEntry = {
@@ -745,6 +854,8 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
         inputGateRef: { current: inputGate?.current },
         onClosedRef: { current: onClosed },
         onResizeRef: { current: onResize },
+        listenersReady,
+        outputVersion: 0,
         dispose: () => {}, // filled in below
       };
       terminalCache.set(sessionId, entry);
@@ -822,6 +933,13 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
       });
 
       term.open(container);
+
+      void waitForTerminalFont(activeTheme.terminalFontFamily, activeTheme.terminalFontSize).then(() => {
+        if (terminalCache.get(sessionId)?.terminal !== term) return;
+        term.options.fontFamily = withFlagEmojiFallback(activeTheme.terminalFontFamily);
+        fitAddon.fit();
+        term.refresh(0, Math.max(0, term.rows - 1));
+      });
 
       // Android: stop xterm's hidden textarea from summoning the WebView's own (broken) IME —
       // a native overlay owns the soft keyboard instead (see services/androidKeyboard.ts, #34).
@@ -915,7 +1033,11 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
 
       if (sessionType === "local") {
         unlistenPromises.push(
-          onLocalOutput(sessionId, (data) => { term.write(decoder ? decoder.decode(data) : data, () => scheduleMinimapNotify(entry)); }),
+          onLocalOutput(sessionId, (data) => {
+            entry.outputVersion += 1;
+            noteTerminalActivity(sessionId);
+            term.write(decoder ? decoder.decode(data) : data, () => scheduleMinimapNotify(entry));
+          }),
         );
         unlistenPromises.push(
           onLocalClosed(sessionId, () => {
@@ -925,7 +1047,11 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
         );
       } else if (sessionType === "serial") {
         unlistenPromises.push(
-          onSerialOutput(sessionId, (data) => { term.write(decoder ? decoder.decode(data) : data, () => scheduleMinimapNotify(entry)); }),
+          onSerialOutput(sessionId, (data) => {
+            entry.outputVersion += 1;
+            noteTerminalActivity(sessionId);
+            term.write(decoder ? decoder.decode(data) : data, () => scheduleMinimapNotify(entry));
+          }),
         );
         unlistenPromises.push(
           onSerialClosed(sessionId, () => {
@@ -936,13 +1062,15 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
       } else {
         unlistenPromises.push(
           onSshOutput(sessionId, (data) => {
+            entry.outputVersion += 1;
+            noteTerminalActivity(sessionId);
             term.write(decoder ? decoder.decode(data) : data, () => scheduleMinimapNotify(entry));
             noteRestoreOutput(sessionId);
           }),
         );
         unlistenPromises.push(
-          onSshClosed(sessionId, () => {
-            entry.onClosedRef.current?.();
+          onSshClosed(sessionId, (event) => {
+            entry.onClosedRef.current?.(event);
           }),
         );
         // Persistent sessions (tmux/screen) hide the shell's OSC 7 from the
@@ -953,13 +1081,20 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
           }),
         );
       }
+      void Promise.all(unlistenPromises).then(
+        () => resolveListenersReady(),
+        (error) => rejectListenersReady(error),
+      );
 
       const onResizeDispose = term.onResize(({ cols, rows }) => {
         entry.onResizeRef.current?.(cols, rows);
         scheduleMinimapNotify(entry);
         if (!entry.connectedRef.current) return;
         if (sessionType === "local") {
-          localResize(sessionId, cols, rows);
+          // The xterm view mounts before local_connect inserts its PTY into the
+          // native session map. An eager fit during that short window is
+          // expected and should not become an unhandled "Session not found".
+          localResize(sessionId, cols, rows).catch(() => {});
         } else if (sessionType === "ssh") {
           sshResize(sessionId, cols, rows);
         }
@@ -1025,7 +1160,7 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
       const entry = terminalCache.get(sessionId);
       if (!entry) return;
       const { terminal: term, fitAddon } = entry;
-      const theme = state.getActiveTheme();
+      const theme = state.getTerminalTheme();
       term.options.theme = theme.terminal;
       term.options.fontFamily = withFlagEmojiFallback(theme.terminalFontFamily);
       if (term.options.fontSize !== theme.terminalFontSize) {
@@ -1074,7 +1209,7 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
     // the session becomes active after connecting.
     if (!entry.connectedRef.current) return;
     if (sessionType === "local") {
-      localResize(sessionId, term.cols, term.rows);
+      localResize(sessionId, term.cols, term.rows).catch(() => {});
     } else if (sessionType === "ssh") {
       sshResize(sessionId, term.cols, term.rows);
     }

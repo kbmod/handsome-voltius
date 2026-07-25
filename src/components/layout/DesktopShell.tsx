@@ -13,9 +13,10 @@ export default function DesktopShell() {
   const setOmniOpen = useUIStore((s) => s.setOmniOpen);
   const homeView = useUIStore((s) => s.homeView);
   const activeNav = useUIStore((s) => s.activeNav);
+  const newTabOpen = useUIStore((s) => s.newTabOpen);
   const sftpPanelOpen = useUIStore((s) => s.sftpPanelOpen);
   const inVault = !homeView;
-  const inTerminal = activeNav === "terminal";
+  const inTerminal = activeNav === "terminal" || newTabOpen;
   const showVaultChrome = inVault && !inTerminal && !sftpPanelOpen;
   // Sidebar visible ⇒ content floats as a raised slab on the recessed frame.
   const showFrame = !inTerminal && !sftpPanelOpen;
@@ -25,19 +26,23 @@ export default function DesktopShell() {
       <TitleBar />
       <EmailVerificationBanner />
       <div className="flex flex-1 overflow-hidden">
-        {showFrame && <VaultSidebar />}
+        {showFrame && !showVaultChrome && <VaultSidebar />}
         <div
           className={`flex flex-col flex-1 overflow-hidden bg-(--t-bg-terminal) relative z-10 ${showFrame ? "chrome-slab" : ""}`}
         >
-          {showVaultChrome && (
-            <div className="shrink-0 relative z-10" style={{ background: "var(--t-bg-chrome)" }}>
-              <VaultHeader />
-              <NavBar />
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+            {showVaultChrome && <NavBar />}
+            <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+              {showVaultChrome && (
+                <div className="shrink-0 relative z-10" style={{ background: "var(--t-bg-chrome)" }}>
+                  <VaultHeader />
+                </div>
+              )}
+              <div className="flex flex-1 min-h-0 overflow-hidden">
+                <MainPanel />
+                <RightPanel />
+              </div>
             </div>
-          )}
-          <div className="flex flex-1 overflow-hidden">
-            <MainPanel />
-            <RightPanel />
           </div>
         </div>
       </div>

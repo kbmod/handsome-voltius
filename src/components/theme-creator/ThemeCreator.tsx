@@ -6,8 +6,8 @@ import { useUIStore } from "@/stores/uiStore";
 import { useThemeStore } from "@/stores/themeStore";
 import { BUILT_IN_THEMES } from "@/themes/presets";
 import { applyThemeToDom } from "@/hooks/useApplyTheme";
-import type { AppTheme, UITheme, TerminalTheme } from "@/themes/types";
-import { getUiGroups, getTerminalGroups, getFieldLabels } from "./colorGroups";
+import type { AppTheme, TerminalTheme } from "@/themes/types";
+import { getTerminalGroups, getFieldLabels } from "./colorGroups";
 import { ColorPicker } from "./ColorPicker";
 
 // ── CSS variable inspector ────────────────────────────────────────────────────
@@ -48,11 +48,6 @@ function varToField(v: string): string {
     .replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
 }
 
-function fieldToVar(field: string): string {
-  // "bgInput" → "--t-bg-input"
-  return "--t-" + field.replace(/([A-Z])/g, (_, c: string) => "-" + c.toLowerCase());
-}
-
 function findElementsUsingVar(varName: string): Element[] {
   const selectors: string[] = [];
   for (const sheet of document.styleSheets) {
@@ -86,12 +81,6 @@ function findFields(el: Element): string[] {
 }
 
 // ── Font picker ───────────────────────────────────────────────────────────────
-
-const UI_FONT_OPTIONS = [
-  { label: "Inter Variable", value: "'Inter Variable', system-ui, sans-serif" },
-  { label: "System UI", value: "system-ui, sans-serif" },
-  { label: "Georgia", value: "Georgia, serif" },
-];
 
 const TERMINAL_FONT_OPTIONS = [
   { label: "JetBrains Mono", value: "'JetBrains Mono', monospace" },
@@ -253,18 +242,14 @@ function ColorEditor({
   pickedFields: Set<string>;
 }) {
   const { t } = useTranslation();
-  const uiGroups = getUiGroups(t);
   const terminalGroups = getTerminalGroups(t);
   const fieldLabels = getFieldLabels(t);
 
-  const setUiColor = (field: keyof UITheme, value: string) =>
-    setDraft((d) => ({ ...d, ui: { ...d.ui, [field]: value } }));
   const setTermColor = (field: keyof TerminalTheme, value: string) =>
     setDraft((d) => ({ ...d, terminal: { ...d.terminal, [field]: value } }));
 
   const [searchVar, setSearchVar] = useState<string | null>(null);
 
-  const ui = draft.ui as unknown as Record<string, string>;
   const term = draft.terminal as unknown as Record<string, string>;
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -302,65 +287,6 @@ function ColorEditor({
           />
         </label>
       </div>
-
-      {/* App Font */}
-      <div className="space-y-2">
-        <p className="text-xs font-bold uppercase tracking-widest text-(--t-text-dim)">{t("themeCreator.editor.appFont")}</p>
-        <div>
-          <span className="text-xs text-(--t-text-muted)">{t("themeCreator.editor.family")}</span>
-          <FontPicker
-            value={draft.uiFontFamily}
-            onChange={(v) => setDraft((d) => ({ ...d, uiFontFamily: v }))}
-            options={UI_FONT_OPTIONS}
-          />
-        </div>
-        <label className="block">
-          <span className="text-xs text-(--t-text-muted)">{t("themeCreator.editor.sizePx")}</span>
-          <input
-            type="number" min={10} max={20} value={draft.uiFontSize}
-            onChange={(e) => setDraft((d) => ({ ...d, uiFontSize: Number(e.target.value) }))}
-            className="form-input w-full mt-1 px-2.5 py-1.5 rounded-md text-sm outline-hidden bg-(--t-bg-input) border border-(--t-border) text-(--t-text-primary)"
-          />
-        </label>
-      </div>
-
-      {uiGroups.map((group) => (
-        <div key={group.label} className="space-y-1.5">
-          <p className="text-xs font-bold uppercase tracking-widest text-(--t-text-dim)">{group.label}</p>
-          {group.fields.map((field) => (
-            <div
-              key={field}
-              data-field={field}
-              data-picked={pickedFields.has(field as string) ? "true" : undefined}
-              className="flex items-center gap-2 transition-all duration-300"
-              style={rowStyle(field as string)}
-            >
-              <ColorPicker
-                value={ui[field as string]}
-                onChange={(hex) => setUiColor(field, hex)}
-              />
-              <span className="text-xs flex-1 text-(--t-text-secondary)">{fieldLabels[field] ?? field}</span>
-              <code className="text-xs font-mono text-(--t-text-muted)">{ui[field as string]}</code>
-              <button
-                onClick={() => setSearchVar(searchVar === fieldToVar(field as string) ? null : fieldToVar(field as string))}
-                title={t("themeCreator.editor.highlightUsing", { varName: fieldToVar(field as string) })}
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  width: 18, height: 18, borderRadius: 4, border: "1px solid",
-                  cursor: "pointer", flexShrink: 0,
-                  borderColor: searchVar === fieldToVar(field as string) ? "var(--t-accent)" : "transparent",
-                  background: searchVar === fieldToVar(field as string) ? "color-mix(in srgb, var(--t-accent) 18%, transparent)" : "transparent",
-                  color: searchVar === fieldToVar(field as string) ? "var(--t-accent)" : "var(--t-text-dim)",
-                }}
-                onMouseEnter={(e) => { if (searchVar !== fieldToVar(field as string)) (e.currentTarget as HTMLButtonElement).style.color = "var(--t-text-muted)"; }}
-                onMouseLeave={(e) => { if (searchVar !== fieldToVar(field as string)) (e.currentTarget as HTMLButtonElement).style.color = "var(--t-text-dim)"; }}
-              >
-                <Icon icon="lucide:search" width={10} />
-              </button>
-            </div>
-          ))}
-        </div>
-      ))}
 
       {/* Terminal Font */}
       <div className="space-y-2">
@@ -456,12 +382,12 @@ function PickOverlay({ rect }: { rect: DOMRect | null }) {
 export default function ThemeCreator() {
   const { t } = useTranslation();
   const { themeCreatorOpen, themeCreatorEditId, closeThemeCreator } = useUIStore();
-  const { getActiveTheme, saveCustomTheme, setTheme, customThemes } = useThemeStore();
+  const { getTerminalTheme, saveCustomTheme, setTerminalTheme, customThemes } = useThemeStore();
 
   const panelRef = useRef<HTMLDivElement>(null);
   const [restoreThemeId, setRestoreThemeId] = useState<string | null>(null);
   const [draft, setDraftRaw] = useState<AppTheme>(() => ({
-    ...JSON.parse(JSON.stringify(getActiveTheme())),
+    ...JSON.parse(JSON.stringify(getTerminalTheme())),
     id: `custom-${Date.now()}`,
     name: "My Theme",
     builtIn: false,
@@ -518,7 +444,7 @@ export default function ThemeCreator() {
 
   useEffect(() => {
     if (!themeCreatorOpen) return;
-    const active = getActiveTheme();
+    const active = getTerminalTheme();
     setRestoreThemeId(active.id);
 
     if (themeCreatorEditId) {
@@ -538,7 +464,7 @@ export default function ThemeCreator() {
     };
     setDraftRaw(d);
     initHistory(d);
-  }, [themeCreatorOpen, themeCreatorEditId, getActiveTheme, customThemes, initHistory]);
+  }, [themeCreatorOpen, themeCreatorEditId, getTerminalTheme, customThemes, initHistory]);
 
   useEffect(() => {
     if (themeCreatorOpen) applyThemeToDom(draft);
@@ -589,9 +515,9 @@ export default function ThemeCreator() {
   const handleSave = useCallback(() => {
     const themed = draft.name.trim() ? draft : { ...draft, name: "My Theme" };
     saveCustomTheme(themed);
-    setTheme(themed.id);
+    setTerminalTheme(themed.id);
     closeThemeCreator();
-  }, [draft, saveCustomTheme, setTheme, closeThemeCreator]);
+  }, [draft, saveCustomTheme, setTerminalTheme, closeThemeCreator]);
 
   const handleCancel = useCallback(() => {
     if (restoreThemeId) {

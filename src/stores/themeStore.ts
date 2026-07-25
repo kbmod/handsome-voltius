@@ -9,6 +9,7 @@ import type { ThemeMode, GeoLocation, AutomationConfig, ThemePhase } from "@/ser
 interface ThemeDiskState {
   updatedAt: string;
   activeThemeId: string;
+  terminalThemeId?: string | null;
   customThemes: AppTheme[];
   mode?: ThemeMode;
   lightThemeId?: string;
@@ -29,6 +30,7 @@ async function saveToDisk(state: ThemeDiskState): Promise<void> {
 
 interface ThemeStore {
   activeThemeId: string;
+  terminalThemeId: string | null;
   customThemes: AppTheme[];
   updatedAt: string;
   mode: ThemeMode;
@@ -40,6 +42,7 @@ interface ThemeStore {
   resolvedPhase: ThemePhase;
   persist: () => void;
   setTheme: (id: string) => void;
+  setTerminalTheme: (id: string | null) => void;
   saveCustomTheme: (theme: AppTheme) => void;
   deleteCustomTheme: (id: string) => void;
   setMode: (mode: ThemeMode) => void;
@@ -52,6 +55,7 @@ interface ThemeStore {
   getAutomationConfig: () => AutomationConfig;
   getEffectiveThemeId: () => string;
   getActiveTheme: () => AppTheme;
+  getTerminalTheme: () => AppTheme;
   loadFromDisk: () => Promise<void>;
 }
 
@@ -59,6 +63,7 @@ export const useThemeStore = create<ThemeStore>()(
   persist(
     (set, get) => ({
       activeThemeId: DEFAULT_THEME_ID,
+      terminalThemeId: DEFAULT_THEME_ID,
       customThemes: [],
       updatedAt: new Date(0).toISOString(),
       mode: "manual",
@@ -75,6 +80,7 @@ export const useThemeStore = create<ThemeStore>()(
         saveToDisk({
           updatedAt: now,
           activeThemeId: s.activeThemeId,
+          terminalThemeId: s.terminalThemeId,
           customThemes: s.customThemes,
           mode: s.mode,
           lightThemeId: s.lightThemeId,
@@ -84,8 +90,14 @@ export const useThemeStore = create<ThemeStore>()(
           location: s.location,
         });
       },
-      setTheme: (id) => {
-        set({ activeThemeId: id });
+      setTheme: (_id) => {
+        // The desktop shell is fixed in this fork. Retain this method for
+        // backward-compatible sync payloads and callers, but never recolor it.
+        set({ activeThemeId: DEFAULT_THEME_ID });
+        get().persist();
+      },
+      setTerminalTheme: (id) => {
+        set({ terminalThemeId: id });
         get().persist();
       },
       saveCustomTheme: (theme) => {
@@ -97,7 +109,10 @@ export const useThemeStore = create<ThemeStore>()(
         get().persist();
       },
       deleteCustomTheme: (id) => {
-        set((s) => ({ customThemes: s.customThemes.filter((t) => t.id !== id) }));
+        set((s) => ({
+          customThemes: s.customThemes.filter((t) => t.id !== id),
+          terminalThemeId: s.terminalThemeId === id ? DEFAULT_THEME_ID : s.terminalThemeId,
+        }));
         get().persist();
       },
       setMode: (mode) => {
@@ -138,13 +153,14 @@ export const useThemeStore = create<ThemeStore>()(
         };
       },
       getEffectiveThemeId: () => {
-        const { mode, activeThemeId, lightThemeId, darkThemeId, resolvedPhase } = get();
-        if (mode === "manual") return activeThemeId;
-        return resolvedPhase === "dark" ? darkThemeId : lightThemeId;
+        return DEFAULT_THEME_ID;
       },
       getActiveTheme: () => {
-        const id = get().getEffectiveThemeId();
-        const { customThemes } = get();
+        return BUILT_IN_THEMES[0];
+      },
+      getTerminalTheme: () => {
+        const { terminalThemeId, customThemes } = get();
+        const id = terminalThemeId ?? DEFAULT_THEME_ID;
         const pluginThemes = usePluginStore.getState().pluginThemes;
         return (
           BUILT_IN_THEMES.find((t) => t.id === id) ??
@@ -160,12 +176,19 @@ export const useThemeStore = create<ThemeStore>()(
           const disk: ThemeDiskState = JSON.parse(raw);
           if (disk.activeThemeId && Array.isArray(disk.customThemes))
             set({
-              activeThemeId: disk.activeThemeId,
-              customThemes: disk.customThemes,
+              activeThemeId: DEFAULT_THEME_ID,
+              terminalThemeId: disk.terminalThemeId ?? (
+                disk.customThemes.some((theme) => theme.id === disk.activeThemeId)
+                  ? disk.activeThemeId
+                  : DEFAULT_THEME_ID
+              ),
+              customThemes: disk.customThemes.filter(
+                (theme) => !BUILT_IN_THEMES.some((builtIn) => builtIn.id === theme.id),
+              ),
               updatedAt: disk.updatedAt ?? new Date(0).toISOString(),
-              mode: disk.mode ?? "manual",
-              lightThemeId: disk.lightThemeId ?? DEFAULT_LIGHT_THEME_ID,
-              darkThemeId: disk.darkThemeId ?? DEFAULT_THEME_ID,
+              mode: "manual",
+              lightThemeId: DEFAULT_LIGHT_THEME_ID,
+              darkThemeId: DEFAULT_THEME_ID,
               scheduleLightStart: disk.scheduleLightStart ?? "07:00",
               scheduleDarkStart: disk.scheduleDarkStart ?? "19:00",
               location: disk.location ?? null,

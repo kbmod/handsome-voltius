@@ -31,13 +31,6 @@ function statusColor(status: TerminalSession["status"]): string {
   return "var(--t-text-muted)";
 }
 
-function sessionBadge(session: TerminalSession, t: TFunction): string {
-  if (session.type === "ssh") return t("panes.badge.ssh");
-  if (session.type === "serial") return t("panes.badge.serial");
-  if (session.type === "multiplayer") return t("panes.badge.multiplayer");
-  return t("panes.badge.local");
-}
-
 interface ConnectedSystemInfo {
   os_name: string;
   os_version: string;
@@ -323,13 +316,13 @@ export function PaneHeader({ paneId, session, active }: { paneId: string; sessio
   return (
     <div
       onContextMenu={open}
-      className="h-7 shrink-0 flex items-stretch gap-2 px-2 text-xs border-b"
+      className="group h-8 shrink-0 flex items-stretch gap-2 px-2 text-xs border-b"
       style={{
         background: broadcastActive
-          ? "color-mix(in srgb, var(--t-accent) 12%, var(--t-bg-card))"
+          ? "color-mix(in srgb, var(--t-accent) 10%, var(--t-bg-terminal))"
           : active
-            ? "var(--t-bg-card)"
-            : "color-mix(in srgb, var(--t-bg-card) 70%, var(--t-bg-terminal))",
+            ? "color-mix(in srgb, var(--t-tab-active-bg) 55%, var(--t-bg-terminal))"
+            : "var(--t-bg-terminal)",
         borderColor: "var(--t-border)",
         color: active ? "var(--t-text-primary)" : "var(--t-text-secondary)",
       }}
@@ -337,19 +330,19 @@ export function PaneHeader({ paneId, session, active }: { paneId: string; sessio
       <div onMouseDown={beginDrag} className="min-w-0 flex-1 flex items-center gap-2 cursor-grab active:cursor-grabbing self-stretch">
         <span
           ref={distroTriggerRef}
-          className={`size-5 rounded-md flex items-center justify-center shrink-0 transition-opacity${showDistroPopover ? " hover:opacity-75 cursor-pointer" : ""}`}
+          className={`size-4 flex items-center justify-center shrink-0 transition-opacity${showDistroPopover ? " hover:opacity-75 cursor-pointer" : ""}`}
           style={{
-            background: iconBg ?? "var(--t-bg-elevated)",
-            color: iconBg ? "#fff" : "var(--t-text-secondary)",
+            color: iconBg ?? "var(--t-text-secondary)",
           }}
           onMouseEnter={showDistroPopover ? handleDistroMouseEnter : undefined}
           onMouseLeave={showDistroPopover ? () => setShowDistroInfo(false) : undefined}
           onMouseDown={showDistroPopover ? (e) => e.stopPropagation() : undefined}
           onClick={showDistroPopover ? handleDistroClick : undefined}
         >
-          <Icon icon={icon} width={13} />
+          <Icon icon={icon} width={12} />
         </span>
         <span className="truncate font-semibold">{session.connectionName}</span>
+        <span className="size-1.5 rounded-full shrink-0" style={{ background: statusColor(session.status) }} />
         {subtitle && (
           <span
             className="hidden md:flex items-center truncate max-w-44 text-(--t-text-dim) px-1 -mx-1 hover:bg-(--t-bg-card-hover) transition-colors cursor-pointer self-stretch"
@@ -363,10 +356,6 @@ export function PaneHeader({ paneId, session, active }: { paneId: string; sessio
       </div>
 
       <div className="hidden sm:flex items-center gap-1.5 shrink-0 self-stretch">
-        <span className="px-1.5 py-0.5 rounded-sm border border-(--t-border) bg-(--t-bg-elevated) text-[10px] font-semibold">
-          {sessionBadge(session, t)}
-        </span>
-        <span className="size-1.5 rounded-full" style={{ background: statusColor(session.status) }} />
         {session.type === "ssh" && pingStatus === "up" && latencyMs !== undefined && (
           <div
             ref={latencyTriggerRef}
@@ -382,7 +371,7 @@ export function PaneHeader({ paneId, session, active }: { paneId: string; sessio
         {excludedFromBroadcast && <span title={t("panes.header.excludedFromBroadcast")}><Icon icon="lucide:lock" width={13} /></span>}
       </div>
 
-      <div className="flex items-stretch shrink-0">
+      <div className="flex items-stretch shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
         <button
           className="h-full px-1.5 flex items-center justify-center hover:bg-(--t-bg-card-hover) transition-colors"
           title={broadcastActive ? t("panes.header.disableBroadcast") : t("panes.header.broadcastInput")}

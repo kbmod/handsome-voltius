@@ -43,21 +43,27 @@ export function getDefaultShortcut(id: string): Omit<Shortcut, "key"> | undefine
 
 const DEFAULTS: Omit<Shortcut, "key">[] = [
   { id: "omni",            labelKey: "settings.shortcuts.items.omni.label",            descriptionKey: "settings.shortcuts.items.omni.desc",            defaultKey: "k",      ctrl: true,  shift: false, alt: false },
+  { id: "jump-to",         labelKey: "settings.shortcuts.items.jumpTo.label",          descriptionKey: "settings.shortcuts.items.jumpTo.desc",          defaultKey: "j",      ctrl: true,  shift: false, alt: false },
   { id: "shortcuts",       labelKey: "settings.shortcuts.items.shortcuts.label",       descriptionKey: "settings.shortcuts.items.shortcuts.desc",       defaultKey: " ",      ctrl: true,  shift: false, alt: false },
   { id: "themes",          labelKey: "settings.shortcuts.items.themes.label",          descriptionKey: "settings.shortcuts.items.themes.desc",          defaultKey: ",",      ctrl: true,  shift: false, alt: false },
-  { id: "new-tab",         labelKey: "settings.shortcuts.items.newTab.label",          descriptionKey: "settings.shortcuts.items.newTab.desc",          defaultKey: "t",      ctrl: true,  shift: false, alt: false },
-  { id: "close-tab",       labelKey: "settings.shortcuts.items.closeTab.label",        descriptionKey: "settings.shortcuts.items.closeTab.desc",        defaultKey: "w",      ctrl: true,  shift: false, alt: false },
-  { id: "next-tab",        labelKey: "settings.shortcuts.items.nextTab.label",         descriptionKey: "settings.shortcuts.items.nextTab.desc",         defaultKey: "Tab",    ctrl: true,  shift: false, alt: false },
-  { id: "prev-tab",        labelKey: "settings.shortcuts.items.prevTab.label",         descriptionKey: "settings.shortcuts.items.prevTab.desc",         defaultKey: "Tab",    ctrl: true,  shift: true,  alt: false },
+  { id: "new-tab",         labelKey: "settings.shortcuts.items.newTab.label",          descriptionKey: "settings.shortcuts.items.newTab.desc",          defaultKey: "t",          ctrl: true,  shift: true,  alt: false },
+  { id: "close-tab",       labelKey: "settings.shortcuts.items.closeTab.label",        descriptionKey: "settings.shortcuts.items.closeTab.desc",        defaultKey: "w",          ctrl: true,  shift: true,  alt: false },
+  { id: "next-tab",        labelKey: "settings.shortcuts.items.nextTab.label",         descriptionKey: "settings.shortcuts.items.nextTab.desc",         defaultKey: "ArrowRight", ctrl: false, shift: false, alt: true },
+  { id: "prev-tab",        labelKey: "settings.shortcuts.items.prevTab.label",         descriptionKey: "settings.shortcuts.items.prevTab.desc",         defaultKey: "ArrowLeft",  ctrl: false, shift: false, alt: true },
   { id: "sidebar",         labelKey: "settings.shortcuts.items.sidebar.label",         descriptionKey: "settings.shortcuts.items.sidebar.desc",         defaultKey: "b",      ctrl: true,  shift: false, alt: false },
   { id: "delete",          labelKey: "settings.shortcuts.items.delete.label",          descriptionKey: "settings.shortcuts.items.delete.desc",          defaultKey: "Delete", ctrl: false, shift: false, alt: false },
   { id: "undo",            labelKey: "settings.shortcuts.items.undo.label",            descriptionKey: "settings.shortcuts.items.undo.desc",            defaultKey: "z",      ctrl: true,  shift: false, alt: false },
   { id: "redo",            labelKey: "settings.shortcuts.items.redo.label",            descriptionKey: "settings.shortcuts.items.redo.desc",            defaultKey: "z",      ctrl: true,  shift: true,  alt: false },
   { id: "filter",          labelKey: "settings.shortcuts.items.filter.label",          descriptionKey: "settings.shortcuts.items.filter.desc",          defaultKey: "f",      ctrl: true,  shift: false, alt: false },
-  { id: "terminal-search", labelKey: "settings.shortcuts.items.terminalSearch.label",  descriptionKey: "settings.shortcuts.items.terminalSearch.desc",  defaultKey: "f",      ctrl: true,  shift: false, alt: false },
+  { id: "terminal-search", labelKey: "settings.shortcuts.items.terminalSearch.label",  descriptionKey: "settings.shortcuts.items.terminalSearch.desc",  defaultKey: "f",      ctrl: true,  shift: true,  alt: false },
   { id: "history",         labelKey: "settings.shortcuts.items.history.label",         descriptionKey: "settings.shortcuts.items.history.desc",         defaultKey: "h",      ctrl: true,  shift: true,  alt: false },
   { id: "snippets",        labelKey: "settings.shortcuts.items.snippets.label",        descriptionKey: "settings.shortcuts.items.snippets.desc",        defaultKey: "s",      ctrl: true,  shift: true,  alt: false },
-  { id: "panel-themes",    labelKey: "settings.shortcuts.items.panelThemes.label",     descriptionKey: "settings.shortcuts.items.panelThemes.desc",     defaultKey: "t",      ctrl: true,  shift: true,  alt: false },
+  { id: "panel-themes",    labelKey: "settings.shortcuts.items.panelThemes.label",     descriptionKey: "settings.shortcuts.items.panelThemes.desc",     defaultKey: ".",      ctrl: true,  shift: false, alt: false },
+  { id: "local-terminal",  labelKey: "settings.shortcuts.items.localTerminal.label",   descriptionKey: "settings.shortcuts.items.localTerminal.desc",   defaultKey: "l",      ctrl: true,  shift: true,  alt: false },
+  { id: "serial",          labelKey: "settings.shortcuts.items.serial.label",          descriptionKey: "settings.shortcuts.items.serial.desc",          defaultKey: "s",      ctrl: true,  shift: false, alt: true },
+  { id: "port-forwarding", labelKey: "settings.shortcuts.items.portForwarding.label",  descriptionKey: "settings.shortcuts.items.portForwarding.desc",  defaultKey: "p",      ctrl: true,  shift: false, alt: false },
+  { id: "broadcast",       labelKey: "settings.shortcuts.items.broadcast.label",       descriptionKey: "settings.shortcuts.items.broadcast.desc",       defaultKey: "b",      ctrl: true,  shift: false, alt: true },
+  { id: "workspace-view",  labelKey: "settings.shortcuts.items.workspaceView.label",   descriptionKey: "settings.shortcuts.items.workspaceView.desc",   defaultKey: "m",      ctrl: true,  shift: false, alt: true },
 ];
 
 function toShortcut(s: Omit<Shortcut, "key">): Shortcut {
@@ -102,7 +108,7 @@ export const useShortcutStore = create<ShortcutStore>()(
     }),
     {
       name: "voltius-shortcuts",
-      version: 5,
+      version: 6,
       // v5: label/description (literal English strings) → labelKey/descriptionKey
       // (i18n keys resolved at render time). Re-derive keys from `id`; drop the
       // stale literal fields so old English text can't linger in persisted state.
@@ -114,6 +120,13 @@ export const useShortcutStore = create<ShortcutStore>()(
             const def = DEFAULTS.find((d) => d.id === sc.id);
             return { ...rest, labelKey: def?.labelKey ?? "", descriptionKey: def?.descriptionKey ?? "" };
           });
+        }
+        // v6 adopts the Termius-compatible desktop bindings. Earlier builds
+        // shipped non-functional tab bindings which xterm frequently consumed,
+        // so retaining those persisted defaults would keep the bug after update.
+        if (version < 6) {
+          if (!state) return { shortcuts: DEFAULTS.map(toShortcut) } as unknown as ShortcutStore;
+          state.shortcuts = DEFAULTS.map(toShortcut) as unknown as Array<Record<string, unknown>>;
         }
         return state as unknown as ShortcutStore;
       },

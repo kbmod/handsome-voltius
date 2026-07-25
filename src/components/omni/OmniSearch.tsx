@@ -41,15 +41,13 @@ import {
   type ShellOption,
 } from "@/components/layout/newSessionItems";
 import { useLocalShells } from "@/hooks/useLocalShells";
-import { useThemeStore } from "@/stores/themeStore";
 import OmniThemeSwitch from "@/components/omni/OmniThemeSwitch";
-import OmniThemeAutomation from "@/components/omni/OmniThemeAutomation";
 
 interface OmniSearchProps {
   onClose: () => void;
 }
 
-type OmniView = "root" | "theme-switch" | "theme-automation";
+type OmniView = "root" | "theme-switch";
 
 type OmniItem =
   | { kind: "host"; connection: Connection }
@@ -327,9 +325,7 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
     );
 
     const themeActions: OmniItem[] = [
-      { kind: "action", id: "theme:toggle", label: t("omni.theme.toggle"), icon: "lucide:sun-moon", description: t("omni.theme.toggleDesc") },
       { kind: "action", id: "theme:switch", label: t("omni.theme.switch"), icon: "lucide:palette", description: t("omni.theme.switchDesc") },
-      { kind: "action", id: "theme:automation", label: t("omni.theme.automation"), icon: "lucide:clock", description: t("omni.theme.automationDesc") },
     ];
     const filteredThemeActions = themeActions.filter(
       (a) => a.kind === "action" && (!q || a.label.toLowerCase().includes(q) || a.description?.toLowerCase().includes(q)),
@@ -392,9 +388,7 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
         setActiveNav("keychain");
         onClose();
       } else if (item.kind === "action") {
-        if (item.id === "theme:toggle") { useThemeStore.getState().toggleLightDark(); onClose(); return; }
         if (item.id === "theme:switch") { setOmniView("theme-switch"); setQuery(""); return; }
-        if (item.id === "theme:automation") { setOmniView("theme-automation"); setQuery(""); return; }
         if (item.id.startsWith("plugin:")) {
           const cmdId = item.id.slice("plugin:".length);
           pluginCommands.find((c) => c.id === cmdId)?.execute();
@@ -1082,8 +1076,6 @@ export default function OmniSearch({ onClose }: OmniSearchProps) {
         {/* Results */}
         {omniView === "theme-switch" ? (
           <OmniThemeSwitch query={q} onBack={() => { setOmniView("root"); setQuery(""); }} onClose={onClose} />
-        ) : omniView === "theme-automation" ? (
-          <OmniThemeAutomation onBack={() => { setOmniView("root"); setQuery(""); }} onClose={onClose} />
         ) : (
         <div ref={listRef} className="overflow-y-auto py-2" style={{ maxHeight: "420px" }}>
           {category === "all" && sectionBoundaries ? (

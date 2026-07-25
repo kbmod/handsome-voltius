@@ -9,14 +9,14 @@ export function TransferQueue({ transfers, onClear, onCancel, onCancelAll, colla
   onClear: () => void;
   onCancel: (id: string) => void;
   onCancelAll: () => void;
-  /** When true the list collapses to a compact header and expands on hover. */
+  /** When true the list collapses to a compact header with an explicit toggle. */
   collapsible?: boolean;
 }) {
   const { t } = useTranslation();
-  const [hovered, setHovered] = useState(false);
+  const [open, setOpen] = useState(false);
   if (transfers.length === 0) return null;
 
-  const expanded = !collapsible || hovered;
+  const expanded = !collapsible || open;
 
   // ── Aggregates for the compact header ──────────────────────────────────────
   const active = transfers.filter((tr) => tr.status === "running");
@@ -42,14 +42,16 @@ export function TransferQueue({ transfers, onClear, onCancel, onCancelAll, colla
   }
 
   return (
-    <div
-      className="shrink-0 border-t border-t-(--t-border) bg-(--t-bg-elevated)"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
+    <div className="shrink-0 border-t border-t-(--t-border) bg-(--t-bg-elevated)">
       {/* Compact header — always visible */}
       <div className="relative flex items-center justify-between gap-2 px-3.5 py-2 select-none">
-        <div className="flex items-center gap-2 min-w-0">
+        <button
+          type="button"
+          disabled={!collapsible}
+          aria-expanded={collapsible ? expanded : undefined}
+          onClick={() => setOpen((value) => !value)}
+          className="flex items-center gap-2 min-w-0 text-left disabled:cursor-default"
+        >
           <Icon
             icon={hasActive ? "lucide:loader-circle" : "lucide:arrow-down-up"}
             width={12}
@@ -67,21 +69,21 @@ export function TransferQueue({ transfers, onClear, onCancel, onCancelAll, colla
           >
             {badgeCount}
           </span>
-        </div>
+          {collapsible && (
+            <Icon
+              icon="lucide:chevron-up"
+              width={13}
+              className="shrink-0 transition-transform duration-200 text-(--t-text-dim)"
+              style={{ transform: expanded ? "rotate(0deg)" : "rotate(180deg)" }}
+            />
+          )}
+        </button>
 
         <div className="flex items-center gap-2 shrink-0">
           {hasActive && totalSpeed > 0 && (
             <span className="text-xs font-mono tabular-nums text-(--t-text-dim)" title={t("fileTransfer.queue.combinedThroughput")}>
               {formatSize(Math.round(totalSpeed))}/s
             </span>
-          )}
-          {collapsible && (
-            <Icon
-              icon="lucide:chevron-up"
-              width={13}
-              className="shrink-0 transition-transform duration-300 text-(--t-text-dim)"
-              style={{ transform: expanded ? "rotate(0deg)" : "rotate(180deg)" }}
-            />
           )}
           {hasActive && (
             <button
@@ -115,7 +117,7 @@ export function TransferQueue({ transfers, onClear, onCancel, onCancelAll, colla
 
       {/* Expandable list — animates open/closed via grid-rows trick */}
       <div
-        className="grid transition-[grid-template-rows] duration-300 ease-out"
+        className="grid transition-[grid-template-rows] duration-200 ease-out"
         style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden min-h-0">

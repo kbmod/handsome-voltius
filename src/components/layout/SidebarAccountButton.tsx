@@ -3,7 +3,6 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useUIStore } from "@/stores/uiStore";
-import { useThemeStore } from "@/stores/themeStore";
 import { useRipple } from "@/hooks/useRipple";
 import { getAccountMode, lockVaultSession, logout } from "@/services/account";
 import { getSavedAccounts, saveCurrentAccount, switchToAccount, removeSavedAccount, type SavedAccount } from "@/services/savedAccounts";
@@ -92,8 +91,8 @@ export function SidebarAccountButton() {
         title={t("layout.sidebarAccount.accountTitle")}
         className="flex items-center justify-center relative overflow-hidden transition-all shrink-0"
         style={{
-          width: 44,
-          height: 44,
+          width: 40,
+          height: 40,
           borderRadius: open ? "0.75rem" : "1.375rem",
           background: open ? "var(--t-bg-elevated)" : "transparent",
           color: open ? "var(--t-text-bright)" : "var(--t-text-dim)",
@@ -160,12 +159,6 @@ export function SidebarAccountButton() {
             label={t("layout.sidebarAccount.appearance")}
             onClick={() => { setOpen(false); useUIStore.getState().openSettings("appearance"); }}
           />
-          <DropdownMenuItem
-            icon="lucide:sun-moon"
-            label={t("layout.sidebarAccount.toggleTheme")}
-            onClick={() => { setOpen(false); useThemeStore.getState().toggleLightDark(); }}
-          />
-
           {accountMode !== "server" && (
             <DropdownMenuItem
               icon="lucide:log-in"

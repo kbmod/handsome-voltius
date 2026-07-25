@@ -144,7 +144,12 @@ export function PortsPanel() {
   }, [activeSessionId, isSshSession]);
 
   function setBusyKey(key: string, on: boolean) {
-    setBusy((prev) => { const s = new Set(prev); on ? s.add(key) : s.delete(key); return s; });
+    setBusy((prev) => {
+      const s = new Set(prev);
+      if (on) s.add(key);
+      else s.delete(key);
+      return s;
+    });
   }
 
   // ── Rule actions ──────────────────────────────────────────────────────────

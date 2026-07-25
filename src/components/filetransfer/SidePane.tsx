@@ -36,7 +36,7 @@ function sparklinePoints(values: number[], width: number, height: number): strin
 
 export function SidePane({
   host, phase, refreshTick,
-  onPick, onNavigate, onSelect, onRefresh, onChangeHost, side, onDropFiles,
+  onPick, onNavigate, onSelect, onRefresh, onRetry, onChangeHost, side, onDropFiles,
   onTransferToTarget, canTransferToTarget, onOpenInTerminal,
   selected = [], onUpload, onDownloadFiles, onMoveWithin, onPaste,
 }: {
@@ -47,6 +47,7 @@ export function SidePane({
   onNavigate: (p: string) => void;
   onSelect: (files: FileEntry[]) => void;
   onRefresh: () => void;
+  onRetry: () => void;
   onChangeHost: () => void;
   side: "left" | "right";
   onDropFiles: (files: FileEntry[], fromSide: "left" | "right" | "panel", targetFolder?: string) => void;
@@ -144,15 +145,20 @@ export function SidePane({
   const [histState, setHistState] = useState({ canBack: false, canForward: false });
   const homeCwdRef = useRef<string>("");
 
-  // Reset history when a new connection becomes "connected"
+  // Reset history after a new connection becomes connected. This must happen
+  // in an effect: setting React state during render can leave a pane with stale
+  // controls or trigger an extra render loop.
   const prevPhaseTagRef = useRef<string>("");
-  if (phase.tag === "connected" && prevPhaseTagRef.current !== "connected") {
-    historyRef.current = [phase.cwd];
-    histIdxRef.current = 0;
-    homeCwdRef.current = phase.cwd;
-    setHistState({ canBack: false, canForward: false });
-  }
-  prevPhaseTagRef.current = phase.tag;
+  const connectedCwd = phase.tag === "connected" ? phase.cwd : null;
+  useEffect(() => {
+    if (phase.tag === "connected" && connectedCwd !== null && prevPhaseTagRef.current !== "connected") {
+      historyRef.current = [connectedCwd];
+      histIdxRef.current = 0;
+      homeCwdRef.current = connectedCwd;
+      setHistState({ canBack: false, canForward: false });
+    }
+    prevPhaseTagRef.current = phase.tag;
+  }, [connectedCwd, phase.tag]);
 
   const navigate = useCallback((p: string) => {
     const hist = historyRef.current;
@@ -229,8 +235,6 @@ export function SidePane({
 
         {phase.tag === "connected" && (
           <div className="ml-auto flex items-center gap-1">
-            <NavBtn icon="lucide:arrow-left"  title={t("fileTransfer.side.back")}    disabled={!histState.canBack}    onClick={goBack} />
-            <NavBtn icon="lucide:arrow-right" title={t("fileTransfer.side.forward")} disabled={!histState.canForward} onClick={goForward} />
             <FilterInput value={filterQuery} onChange={setFilterQuery} placeholder={t("fileTransfer.side.filterPlaceholder")} width={128} shortcutId="filter" />
             {onUpload && (
               <NavBtn icon="lucide:upload" title={t("fileTransfer.side.uploadHere")} disabled={false} onClick={onUpload} />
@@ -302,14 +306,20 @@ export function SidePane({
           <div className="flex flex-col items-center justify-center h-full gap-3 px-6 text-center">
             <Icon icon="lucide:wifi-off" width={24} className="text-(--t-status-error)" />
             <p className="text-sm text-(--t-status-error)">{phase.message}</p>
-            <button
-              onClick={onChangeHost}
-              className="text-xs px-3 py-1.5 rounded-lg transition-colors bg-(--t-bg-elevated) text-(--t-text-secondary) border border-(--t-border)"
-              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--t-bg-card-hover)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "var(--t-bg-elevated)")}
-            >
-              {t("fileTransfer.side.tryAgain")}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onRetry}
+                className="text-xs px-3 py-1.5 rounded-lg transition-colors bg-(--t-bg-elevated) text-(--t-text-primary) border border-(--t-border-hover)"
+              >
+                {t("fileTransfer.side.tryAgain")}
+              </button>
+              <button
+                onClick={onChangeHost}
+                className="text-xs px-3 py-1.5 rounded-lg transition-colors text-(--t-text-secondary) border border-(--t-border)"
+              >
+                {t("fileTransfer.side.chooseHost")}
+              </button>
+            </div>
           </div>
         )}
 

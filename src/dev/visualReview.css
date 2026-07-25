@@ -1,0 +1,4 @@
+/* The global production stylesheet explicitly excludes src/dev from its scan.
+   Generate the harness utilities in this dev-only lazy chunk instead. */
+@import "tailwindcss" source(none);
+@source "./VisualReviewPage.tsx";

@@ -143,7 +143,7 @@ export function useDockerList(session: TerminalSession | undefined, opts: { poll
               sess.id === newSessionId ? { ...sess, status: "connected" as const } : sess,
             ),
           }));
-        } catch (e) {
+        } catch {
           useSessionStore.setState((s) => ({
             sessions: s.sessions.map((sess) =>
               sess.id === newSessionId ? { ...sess, status: "error" as const } : sess,

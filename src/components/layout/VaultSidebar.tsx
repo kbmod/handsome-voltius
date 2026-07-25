@@ -75,8 +75,8 @@ export default function VaultSidebar() {
 
   return (
     <aside
-      className="flex flex-col shrink-0 items-center gap-2.5 overflow-hidden bg-transparent"
-      style={{ width: "4.75rem" }}
+      className="flex flex-col shrink-0 items-center gap-2 overflow-hidden bg-transparent"
+      style={{ width: "4rem" }}
     >
       {/* App icon */}
       <AppIconButton isActive={homeView} onClick={() => setHomeView(true)} />
@@ -85,7 +85,7 @@ export default function VaultSidebar() {
 
       <div
         data-testid="vault-sidebar-scroll-area"
-        className="flex flex-col items-center gap-2.5 min-h-0 overflow-y-auto overflow-x-hidden w-full scrollbar-none"
+        className="flex flex-col items-center gap-2 min-h-0 overflow-y-auto overflow-x-hidden w-full scrollbar-none"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {/* Local vault buttons */}
@@ -218,8 +218,8 @@ function PendingInviteButton({ invite, onClick }: { invite: MyPendingInvitation;
         title={t("layout.vaultSidebar.vaultInviteTitle", { name: invite.team_name })}
         className="flex items-center justify-center text-base font-bold relative overflow-hidden transition-all"
         style={{
-          width: 44,
-          height: 44,
+          width: 40,
+          height: 40,
           background: hovered ? "rgba(245,158,11,0.2)" : "var(--t-bg-elevated)",
           color: "var(--t-text-dim)",
           borderRadius: hovered ? "0.75rem" : "1.375rem",
@@ -422,7 +422,7 @@ function ActivePip({ active }: { active: boolean }) {
       className="absolute left-0 rounded-r-full"
       style={{
         width: 4,
-        height: active ? 40 : 20,
+        height: active ? 32 : 16,
         background: "var(--t-text-primary)",
         transition: "height 150ms ease",
       }}
@@ -450,7 +450,7 @@ function AppIconButton({ isActive, onClick }: { isActive: boolean; onClick: () =
         style={{ background: "none", border: "none", padding: 0 }}
       >
         {rippleEls}
-        <LogoBadge size={11} active={isActive} borderRadius={borderRadius} />
+        <LogoBadge size={10} active={isActive} borderRadius={borderRadius} />
       </button>
     </div>
   );
@@ -482,8 +482,8 @@ function VaultButton({
         title={label}
         className="flex items-center justify-center text-base font-bold relative overflow-hidden transition-all"
         style={{
-          width: 44,
-          height: 44,
+          width: 40,
+          height: 40,
           background: isActive
             ? "linear-gradient(145deg, color-mix(in srgb, var(--t-accent) 80%, #ffffff 20%) 0%, var(--t-accent) 60%, color-mix(in srgb, var(--t-accent) 85%, #000000 15%) 100%)"
             : "var(--t-bg-elevated)",
@@ -548,8 +548,8 @@ function WhatsNewButton({ onClick }: { onClick: () => void }) {
       title={title}
       className="flex items-center justify-center mb-3 relative overflow-hidden transition-all shrink-0"
       style={{
-        width: 44,
-        height: 44,
+        width: 40,
+        height: 40,
         borderRadius: "1.375rem",
         background: "transparent",
         color: "var(--t-text-dim)",
@@ -567,7 +567,7 @@ function WhatsNewButton({ onClick }: { onClick: () => void }) {
       }}
     >
       {rippleEls}
-      <Icon icon={icon} width={20} className={iconClass} style={iconStyle} />
+      <Icon icon={icon} width={18} className={iconClass} style={iconStyle} />
       {ready && (
         <span
           className="absolute rounded-full"
@@ -588,8 +588,8 @@ function SettingsButton({ onClick }: { onClick: () => void }) {
       title={t("layout.vaultSidebar.settings")}
       className="flex items-center justify-center mb-3 relative overflow-hidden transition-all shrink-0"
       style={{
-        width: 44,
-        height: 44,
+        width: 40,
+        height: 40,
         borderRadius: "1.375rem",
         background: "transparent",
         color: "var(--t-text-dim)",
@@ -607,7 +607,7 @@ function SettingsButton({ onClick }: { onClick: () => void }) {
       }}
     >
       {rippleEls}
-      <Icon icon="lucide:settings" width={20} />
+      <Icon icon="lucide:settings" width={18} />
     </button>
   );
 }
@@ -622,8 +622,8 @@ function AddVaultButton({ onClick }: { onClick: () => void }) {
       title={t("layout.vaultSidebar.addVault")}
       className="flex items-center justify-center relative overflow-hidden transition-all shrink-0"
       style={{
-        width: 44,
-        height: 44,
+        width: 40,
+        height: 40,
         borderRadius: "1.375rem",
         border: "2px dashed var(--t-border)",
         background: "transparent",
@@ -642,7 +642,7 @@ function AddVaultButton({ onClick }: { onClick: () => void }) {
       }}
     >
       {rippleEls}
-      <Icon icon="lucide:plus" width={20} />
+      <Icon icon="lucide:plus" width={18} />
     </button>
   );
 }

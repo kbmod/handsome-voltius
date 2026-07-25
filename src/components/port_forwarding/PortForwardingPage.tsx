@@ -493,7 +493,7 @@ export function PortForwardingPage() {
         >
           <ActiveTunnelsSection />
 
-          <div ref={itemAreaRef} data-drag-surface="true" className="space-y-6 mt-4">
+          <div ref={itemAreaRef} data-drag-surface="true" className="min-h-full space-y-6 mt-4">
 
             {/* ── Folder breadcrumb ── */}
             {folderPath.length > 0 && (
@@ -598,7 +598,12 @@ export function PortForwardingPage() {
 
             {/* ── Rules section ── */}
             {filtered.length === 0 && visibleFolders.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-3 text-(--t-text-dim)">
+              <div className="flex min-h-[calc(100vh-15rem)] flex-col items-center justify-center gap-3 text-center text-(--t-text-dim)">
+                {!q && !activeFolderId && (
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-(--t-border) bg-(--t-bg-toolbar)">
+                    <Icon icon="lucide:waypoints" width={20} />
+                  </div>
+                )}
                 <span className="text-sm">
                   {q ? t("portForwarding.page.noRulesMatchSearch") : activeFolderId ? t("portForwarding.page.folderEmpty") : t("portForwarding.page.noRulesYet")}
                 </span>

@@ -141,7 +141,7 @@ export default function KnownHostsPage() {
           ref={itemAreaRef}
           className={`p-5 ${
             layoutMode === "grid"
-              ? "grid gap-4"
+              ? "grid gap-2.5"
               : "flex flex-col gap-2"
           }`}
           style={layoutMode === "grid" ? { gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" } : undefined}

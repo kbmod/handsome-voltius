@@ -40,6 +40,9 @@ jobs:
 
       - run: pnpm install
 
+      - name: Frontend lint
+        run: pnpm lint
+
       # Build the frontend first so `dist/` exists for the Tauri build script.
       - run: pnpm build
 

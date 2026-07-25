@@ -10,7 +10,12 @@ import { useSessionStore } from "./sessionStore";
 import { useLayoutStore, getPaneSessionIds, type SplitTab } from "./layoutStore";
 import { useUIStore } from "./uiStore";
 import { localConnect } from "@/services/local";
-import { setRestoreScrollOffset } from "@/hooks/useTerminal";
+import {
+  getTerminalOutputVersion,
+  setRestoreScrollOffset,
+  waitForTerminalListeners,
+  waitForTerminalOutput,
+} from "@/hooks/useTerminal";
 import type { SerialConnectParams, TerminalSession } from "@/types";
 import type { SnapshotSession } from "./workspaceSnapshotCore";
 
@@ -28,15 +33,6 @@ function toTerminalSession(s: SnapshotSession): TerminalSession {
     localShell: s.localShell,
     serialConfig: s.serialConfig as SerialConnectParams | undefined,
   };
-}
-
-/** Two animation frames + a grace delay: lets React mount the (invisible)
- * terminal views and their async tauri `listen()` output subscriptions
- * register before reconnect output — including history replay — flows. */
-function waitForTerminalMount(): Promise<void> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 150)));
-  });
 }
 
 let ran = false;
@@ -86,45 +82,55 @@ export async function restoreWorkspaceOnLaunch(): Promise<void> {
   useUIStore.getState().setActiveNav("terminal");
   useUIStore.getState().setSidebarOpen(false);
 
-  // 2. Wait for terminals to mount, then track state changes from here on.
-  await waitForTerminalMount();
+  // 2. Wait for every split/non-split terminal's native output and close
+  // listeners. Spawning on an arbitrary animation-frame delay loses the first
+  // prompt on slower multi-pane mounts and leaves an apparently dead shell.
+  await waitForTerminalListeners(snapshot.sessions.map((session) => session.id));
   startWorkspaceSnapshotSync();
 
-  // 3. Reconnect everything in parallel. Persistent SSH re-attaches its tmux
-  // (same session id → same key) and replays history (restore flag). Vault
-  // unlock happens lazily inside credential resolution; failures land in the
-  // existing per-session error overlay (retry affordances included).
+  // 3. Reconnect in snapshot order. Starting several interactive shells at
+  // once can race expensive profile initialization and used to leave one pane
+  // marked connected without a prompt. Vault unlock also stays single-flight.
   const { reconnect, markConnected, markError } = useSessionStore.getState();
   for (const s of snapshot.sessions) {
     if (s.scrollLinesFromBottom) setRestoreScrollOffset(s.id, s.scrollLinesFromBottom);
   }
 
-  // Cross-device: a cached remote tombstone means the session's multiplexer
-  // was killed — drop it instead of restoring a dead tab. (Attach-only
-  // reconnects also catch this server-side; the tombstone just saves a probe.)
-  const cds = useCrossDeviceSessionsStore.getState();
-  const { closedIds } = resolveRemoteSessions({
-    manifests: Object.values(cds.manifests),
-    myDeviceId: localStorage.getItem("voltius.device_id") ?? "",
-    myTombstones: cds.tombstones,
-    myOpenSessionIds: snapshot.sessions.map((s) => s.id),
-  });
+  // Cross-device tombstones only govern persistent SSH sessions advertised by
+  // that feature. They must never prune ordinary workspace tabs, especially
+  // while cross-device sessions are disabled.
+  let closedIds: string[] = [];
+  if (getToggle("cross-device-sessions")) {
+    const cds = useCrossDeviceSessionsStore.getState();
+    const advertisedIds = snapshot.sessions
+      .filter((session) => session.type === "ssh" && session.persist)
+      .map((session) => session.id);
+    closedIds = resolveRemoteSessions({
+      manifests: Object.values(cds.manifests),
+      myDeviceId: localStorage.getItem("voltius.device_id") ?? "",
+      myTombstones: cds.tombstones,
+      myOpenSessionIds: advertisedIds,
+    }).closedIds;
+  }
   const closed = new Set(closedIds);
   for (const id of closedIds) useSessionStore.getState().removeSession(id);
 
-  await Promise.allSettled(
-    snapshot.sessions.map(async (s) => {
-      if (closed.has(s.id)) return; // killed on another device
-      if (s.type === "ssh" || s.type === "serial") {
-        await reconnect(s.id, { restore: s.persist });
-      } else {
-        try {
-          await localConnect(s.id, 80, 24, s.localShell, s.cwd, getToggle("shell-integration"));
-          markConnected(s.id);
-        } catch (err) {
-          markError(s.id, err instanceof Error ? err.message : String(err));
-        }
+  for (const s of snapshot.sessions) {
+    if (closed.has(s.id)) continue; // killed on another device
+    if (s.type === "ssh" || s.type === "serial") {
+      // Launch restore is allowed to recreate a missing persistent tmux/screen
+      // session. Attach-only is reserved for joining a session advertised by
+      // another device and for reconnecting a previously live channel.
+      await reconnect(s.id, { restore: s.persist, attachOnly: false });
+    } else {
+      try {
+        const outputVersion = getTerminalOutputVersion(s.id);
+        await localConnect(s.id, 80, 24, s.localShell, s.cwd, getToggle("shell-integration"));
+        await waitForTerminalOutput(s.id, outputVersion);
+        markConnected(s.id);
+      } catch (err) {
+        markError(s.id, err instanceof Error ? err.message : String(err));
       }
-    }),
-  );
+    }
+  }
 }

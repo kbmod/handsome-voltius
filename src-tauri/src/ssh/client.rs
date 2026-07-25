@@ -41,6 +41,14 @@ pub struct SshStepEvent {
     pub detail: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SshClosedEvent {
+    /// Present when the remote shell/process ended normally (for example after
+    /// the user typed `exit`). A transport loss has no exit status.
+    exit_status: Option<u32>,
+}
+
 // Optional context for interactive conflict resolution (absent in non-interactive/exec use).
 struct ConflictContext {
     app: AppHandle,
@@ -951,6 +959,7 @@ pub async fn connect(
     }
 
     tokio::spawn(async move {
+        let mut exit_status: Option<u32> = None;
         loop {
             tokio::select! {
                 _ = shutdown_rx.recv() => break,
@@ -970,8 +979,15 @@ pub async fn connect(
                         Some(ChannelMsg::Data { data }) | Some(ChannelMsg::ExtendedData { data, .. }) => {
                             let _ = app.emit(&event_name, data.as_ref());
                         }
-                        Some(ChannelMsg::Eof) | Some(ChannelMsg::Close) | None => {
-                            let _ = app.emit(&close_event, ());
+                        Some(ChannelMsg::ExitStatus { exit_status: status }) => {
+                            exit_status = Some(status);
+                        }
+                        // EOF can precede the exit-status message. Wait for the
+                        // channel close so a deliberate shell exit is not
+                        // mistaken for a dropped connection.
+                        Some(ChannelMsg::Eof) => {}
+                        Some(ChannelMsg::Close) | None => {
+                            let _ = app.emit(&close_event, SshClosedEvent { exit_status });
                             break;
                         }
                         _ => {}

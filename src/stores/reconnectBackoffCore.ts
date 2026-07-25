@@ -10,6 +10,12 @@ export function backoffDelays(): number[] {
 
 export type SessionStatus = "connected" | "connecting" | "disconnected" | "error" | undefined;
 
+export interface SessionClose {
+  /** An SSH exit status means the remote shell/process deliberately ended.
+   * Transport loss and legacy close events have no status. */
+  exitStatus?: number | null;
+}
+
 export interface BackoffStore {
   status(sessionId: string): SessionStatus;
   exists(sessionId: string): boolean;
@@ -86,20 +92,35 @@ export async function runBackoff(sessionId: string, store: BackoffStore): Promis
  * so the steady overlay never flickers and no second loop spawns. The loop owns
  * the 'reconnecting' (connecting) state, so we don't set it here.
  *
- * local: just mark disconnected (no reconnect). */
+ * local: the child process ended, so close the tab immediately. A dead local
+ * PTY cannot be reconnected and leaving a disconnected tab behind makes
+ * `exit` behave differently from an SSH shell. */
 export function handleSessionClosed(
   sessionType: string,
   sessionId: string,
+  close: SessionClose | undefined,
   deps: {
     status: (id: string) => SessionStatus;
     markDisconnected: (id: string) => void;
     reconnectWithBackoff: (id: string) => void;
+    sessionEnded: (id: string) => void;
   },
 ): void {
+  if (sessionType === "local") {
+    deps.sessionEnded(sessionId);
+    return;
+  }
   if (sessionType !== "ssh" && sessionType !== "serial") {
     deps.markDisconnected(sessionId);
     return;
   }
+  // Intentional disconnects performed by reconnect() can still deliver a
+  // process exit status. While connecting/reconnecting, that stale close must
+  // not delete the tab that the new attempt is establishing.
   if (deps.status(sessionId) !== "connected") return;
+  if (sessionType === "ssh" && typeof close?.exitStatus === "number") {
+    deps.sessionEnded(sessionId);
+    return;
+  }
   deps.reconnectWithBackoff(sessionId);
 }

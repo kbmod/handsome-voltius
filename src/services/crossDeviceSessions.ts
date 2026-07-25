@@ -58,9 +58,14 @@ export async function joinRemoteSession(j: RemoteSession): Promise<void> {
 /** The host says this session no longer exists (attach probe failed): drop the
  * tab and tombstone it so other devices' tabs and cards die too. */
 export function sessionEnded(sessionId: string): void {
+  const session = useSessionStore.getState().sessions.find((candidate) => candidate.id === sessionId);
   useSessionStore.getState().removeSession(sessionId);
-  useCrossDeviceSessionsStore.getState().markClosed(sessionId);
-  publishLiveSessionsNow();
+  // Only persistent SSH sessions are advertised across devices. Local shells,
+  // serial sessions, and ordinary SSH tabs should simply disappear locally.
+  if (session?.type === "ssh" && session.persist) {
+    useCrossDeviceSessionsStore.getState().markClosed(sessionId);
+    publishLiveSessionsNow();
+  }
 }
 
 /** Tear down tabs whose session another device confirmed killed. The killer

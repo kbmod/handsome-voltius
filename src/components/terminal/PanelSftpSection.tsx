@@ -24,6 +24,7 @@ import { hitTestDropTarget, setExternalDragHover, clearExternalDragHover } from 
 import { useFileClipboardStore, type FileEndpoint } from "@/stores/fileClipboardStore";
 import { buildPasteDeps, executePaste } from "@/components/filetransfer/pasteService";
 import type { FileEntry, VisibleCols } from "@/components/filetransfer/SFTPTypes";
+import { showSftpError } from "@/components/filetransfer/sftpNotifications";
 
 const PANEL_VISIBLE_COLS: VisibleCols = { size: false, modified: false, permissions: false };
 
@@ -192,7 +193,7 @@ export default function PanelSftpSection() {
       rename: (from, to) => isLocal ? fsRename(from, to) : sftpRename(sftpId!, from, to),
       setPending,
       onRefresh: () => setRefreshTick((n) => n + 1),
-      onError: (m) => alert(m),
+      onError: showSftpError,
     });
   }, [panelState, setPending]);
 

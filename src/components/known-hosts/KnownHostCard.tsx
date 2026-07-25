@@ -61,7 +61,7 @@ export function KnownHostCard({
       isSelected={isSelected}
       isFocused={isFocused}
       isList={isList}
-      glass={!isList}
+      className={isList ? "" : "gap-3 py-2 rounded-xl"}
       onClick={onSelect}
       contextMenuItems={contextMenuItems}
       bulkContextMenuItems={bulkContextMenuItems}

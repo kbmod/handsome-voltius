@@ -1,11 +1,5 @@
-/* Inter Variable — served from /public/fonts with format('woff2') for WebKitGTK compatibility */
-@import '@fontsource/source-code-pro/400.css' layer(base);
-@import '@fontsource/source-code-pro/500.css' layer(base);
-@import '@fontsource/source-code-pro/600.css' layer(base);
-@import '@fontsource/jetbrains-mono/400.css' layer(base);
-@import '@fontsource/jetbrains-mono/500.css' layer(base);
-
 @import 'tailwindcss';
+@source not "../dev";
 
 @theme {
   --color-surface-0: #0a0a0f;

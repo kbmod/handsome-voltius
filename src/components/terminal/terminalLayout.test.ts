@@ -8,7 +8,7 @@ function equal<T>(actual: T, expected: T) {
 
 function run() {
   equal(terminalViewportClass(false), "h-full w-full");
-  equal(terminalViewportClass(true), "h-full w-full pr-28 terminal-minimap-enabled");
+  equal(terminalViewportClass(true), "h-full w-full terminal-minimap-enabled");
 }
 
 run();

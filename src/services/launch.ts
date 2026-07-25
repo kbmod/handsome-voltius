@@ -4,6 +4,7 @@ import { buildQuickConnectConnection, type QuickConnectIntent } from "@/services
 
 function goToTerminal(): void {
   const ui = useUIStore.getState();
+  ui.closeNewTab();
   ui.setSidebarOpen(false);
   ui.setSftpPanelOpen(false);
   ui.setActiveNav("terminal");

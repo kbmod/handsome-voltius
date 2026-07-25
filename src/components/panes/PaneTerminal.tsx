@@ -131,11 +131,14 @@ export function PaneTerminal({ session, active }: { session: TerminalSession; ac
           inputGate={inputGateRef}
           encoding={session.encoding}
           onResize={(cols, rows) => setDimensions({ cols, rows })}
-          onClosed={() =>
-            handleSessionClosed(session.type, session.id, {
+          onClosed={(close) =>
+            handleSessionClosed(session.type, session.id, close, {
               status: (id) => useSessionStore.getState().sessions.find((s) => s.id === id)?.status,
               markDisconnected,
               reconnectWithBackoff,
+              sessionEnded: (id) => {
+                void import("@/services/crossDeviceSessions").then((service) => service.sessionEnded(id));
+              },
             })
           }
         />

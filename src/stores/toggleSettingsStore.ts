@@ -29,7 +29,7 @@ export const TOGGLE_DEFS = {
     icon: "lucide:panel-right",
     descriptionKey: "settings.toggleDefs.category.appearance",
     keywords: ["minimap", "scrollbar", "terminal", "map"],
-    default: true,
+    default: false,
   },
   "select-to-copy": {
     labelKey: "settings.toggleDefs.selectToCopy.label",

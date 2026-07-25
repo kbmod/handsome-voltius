@@ -22,13 +22,13 @@ export function PaneView({ node }: { node: PaneNode }) {
     const firstVisible = !maximizedPaneId || containsPane(node.first, maximizedPaneId);
     const secondVisible = !maximizedPaneId || containsPane(node.second, maximizedPaneId);
     return (
-      <div ref={containerRef} className={`flex flex-1 min-h-0 min-w-0 gap-1.5 ${node.direction === "h" ? "flex-row" : "flex-col"}`}>
+      <div ref={containerRef} className={`flex flex-1 min-h-0 min-w-0 ${node.direction === "h" ? "flex-row" : "flex-col"}`}>
         <div className={`flex min-h-0 min-w-0 ${firstVisible ? "" : "hidden"}`} style={{ flex: maximizedPaneId ? "1 1 0" : `${node.ratio} 1 0` }}>
-          <PaneView node={node.first} />
+          <PaneView key={node.first.id} node={node.first} />
         </div>
         {!maximizedPaneId && <ResizeHandle splitNodeId={node.id} direction={node.direction} containerRef={containerRef} />}
         <div className={`flex min-h-0 min-w-0 ${secondVisible ? "" : "hidden"}`} style={{ flex: maximizedPaneId ? "1 1 0" : `${1 - node.ratio} 1 0` }}>
-          <PaneView node={node.second} />
+          <PaneView key={node.second.id} node={node.second} />
         </div>
       </div>
     );
@@ -46,10 +46,10 @@ export function PaneView({ node }: { node: PaneNode }) {
       className={`relative flex flex-col flex-1 min-h-0 min-w-0 rounded-lg overflow-hidden bg-(--t-bg-terminal) transition-opacity duration-150 ${hiddenByMaximize ? "hidden" : ""} ${isBeingDragged ? "opacity-40" : ""}`}
       style={{
         border: active
-          ? "1px solid var(--t-accent)"
+          ? "1px solid var(--t-terminal-active-border)"
           : broadcastActive
-            ? "2px dotted var(--t-accent)"
-            : "1px solid color-mix(in srgb, var(--t-accent) 25%, transparent)",
+            ? "1px dashed var(--t-terminal-active-border)"
+            : "1px solid var(--t-border)",
       }}
       onMouseDown={() => {
         setActivePane(node.id);

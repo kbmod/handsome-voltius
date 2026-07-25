@@ -9,7 +9,7 @@ import { PortsPanel } from "@/components/terminal/PortsPanel";
 import { HistoryPanel } from "@/components/terminal/HistoryPanel";
 import PanelSftpSection from "@/components/terminal/PanelSftpSection";
 import { useThemeStore } from "@/stores/themeStore";
-import { BUILT_IN_THEMES } from "@/themes/presets";
+import { BUILT_IN_THEMES, DEFAULT_THEME_ID } from "@/themes/presets";
 import type { AppTheme } from "@/themes/types";
 import { useCurrentSessionTunnelCount } from "@/hooks/useCurrentSessionTunnelCount";
 
@@ -56,9 +56,20 @@ function ThemePreview({ theme }: { theme: AppTheme }) {
 
 function ThemesSection() {
   const { t } = useTranslation();
-  const { activeThemeId, customThemes, setTheme, deleteCustomTheme, getActiveTheme } = useThemeStore();
+  const {
+    terminalThemeId,
+    customThemes,
+    setTerminalTheme,
+    deleteCustomTheme,
+    getTerminalTheme,
+  } = useThemeStore();
   const openThemeCreator = useUIStore((s) => s.openThemeCreator);
-  const allThemes = [...BUILT_IN_THEMES, ...customThemes];
+  const allThemes = [
+    ...BUILT_IN_THEMES,
+    ...customThemes.filter((theme) => !BUILT_IN_THEMES.some((builtIn) => builtIn.id === theme.id)),
+  ];
+  const activeTerminalTheme = getTerminalTheme();
+  const selectedId = terminalThemeId ?? DEFAULT_THEME_ID;
 
   return (
     <div className="flex flex-col h-full">
@@ -73,7 +84,7 @@ function ThemesSection() {
           <div>
             <p className="text-sm font-medium text-(--t-text-primary)">{t("terminal.rightPanel.font")}</p>
             <p className="text-xs text-(--t-text-muted)">
-              {getActiveTheme().terminalFontFamily.split(",")[0].replace(/'/g, "")} · {getActiveTheme().terminalFontSize}px
+              {activeTerminalTheme.terminalFontFamily.split(",")[0].replace(/'/g, "")} · {activeTerminalTheme.terminalFontSize}px
             </p>
           </div>
         </div>
@@ -86,11 +97,11 @@ function ThemesSection() {
 
       <div className="flex-1 overflow-y-auto">
         {allThemes.map((theme) => {
-          const isActive = theme.id === activeThemeId;
+          const isActive = theme.id === selectedId;
           return (
             <div
               key={theme.id}
-              onClick={() => setTheme(theme.id)}
+              onClick={() => setTerminalTheme(theme.id)}
               className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors border-b border-b-(--t-border)"
               style={{ background: isActive ? "var(--t-bg-elevated)" : "transparent" }}
               onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "var(--t-bg-card)"; }}
@@ -99,11 +110,11 @@ function ThemesSection() {
               <div className="relative">
                 <ThemePreview theme={theme} />
                 {isActive && (
-                  <div style={{ position: "absolute", inset: 0, borderRadius: 6, border: `2px solid ${theme.ui.tabActiveText}`, pointerEvents: "none" }} />
+                  <div style={{ position: "absolute", inset: 0, borderRadius: 6, border: "2px solid var(--t-terminal-active-border)", pointerEvents: "none" }} />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: isActive ? theme.ui.tabActiveText : "var(--t-text-primary)" }}>
+                <p className="text-sm font-medium truncate" style={{ color: isActive ? "var(--t-terminal-active-text)" : "var(--t-text-primary)" }}>
                   {theme.name}
                 </p>
                 <p className="text-xs mt-0.5 text-(--t-text-muted)">
@@ -123,7 +134,7 @@ function ThemesSection() {
                       <Icon icon="lucide:pencil" width={12} />
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); deleteCustomTheme(theme.id); if (activeThemeId === theme.id) setTheme("abyss"); }}
+                      onClick={(e) => { e.stopPropagation(); deleteCustomTheme(theme.id); }}
                       className="p-1.5 rounded-sm transition-colors text-(--t-text-muted)"
                       onMouseEnter={(e) => (e.currentTarget.style.color = "var(--t-status-error)")}
                       onMouseLeave={(e) => (e.currentTarget.style.color = "var(--t-text-muted)")}

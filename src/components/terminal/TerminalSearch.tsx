@@ -107,12 +107,12 @@ export function TerminalSearch({ sessionId }: { sessionId: string }) {
 
   return (
     <div
-      className="absolute top-2 right-2 z-30 flex items-center gap-1 rounded-lg animate-fadeIn"
+      className="absolute top-2 right-2 z-30 flex items-center gap-0.5 rounded-md border border-(--t-border) animate-fadeIn"
       style={{
         background: "var(--t-bg-modal)",
-        padding: "5px 6px",
-        width: "min(420px, calc(100% - 16px))",
-        boxShadow: "var(--t-ring), var(--t-elev-2)",
+        padding: "3px 4px",
+        width: "min(360px, calc(100% - 16px))",
+        boxShadow: "var(--t-elev-1)",
       }}
       onClick={(e) => e.stopPropagation()}
     >
@@ -132,7 +132,7 @@ export function TerminalSearch({ sessionId }: { sessionId: string }) {
           spellCheck={false}
           autoComplete="off"
           placeholder={t("terminal.search.placeholder")}
-          className="w-full bg-transparent text-sm outline-hidden px-1 py-1 text-(--t-text-primary) placeholder-(--t-text-muted)"
+          className="w-full bg-transparent text-xs outline-hidden px-1 py-1 text-(--t-text-primary) placeholder-(--t-text-muted)"
           style={{
             boxShadow: showError ? "inset 2px 0 0 var(--t-status-error, #ef4444)" : undefined,
           }}
@@ -205,8 +205,8 @@ function ToggleChip({
       onMouseDown={(e) => e.preventDefault()}
       className="rounded-sm transition-colors flex items-center justify-center select-none"
       style={{
-        width: "22px",
-        height: "22px",
+        width: "20px",
+        height: "20px",
         background: active ? "var(--t-accent)" : "transparent",
         color: active ? "var(--t-bg-terminal)" : "var(--t-text-dim)",
         border: active ? "1px solid var(--t-accent)" : "1px solid transparent",
@@ -247,8 +247,8 @@ function IconButton({
       disabled={disabled}
       className="rounded-sm transition-colors flex items-center justify-center"
       style={{
-        width: "22px",
-        height: "22px",
+        width: "20px",
+        height: "20px",
         background: "transparent",
         color: "var(--t-text-dim)",
         opacity: disabled ? 0.4 : 1,

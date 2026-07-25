@@ -151,26 +151,43 @@ globalThis.setTimeout = realSetTimeout;
     status: () => status,
     markDisconnected: () => calls.push("disconnect"),
     reconnectWithBackoff: () => calls.push("backoff"),
+    sessionEnded: () => calls.push("ended"),
   });
 
   calls.length = 0;
-  handleSessionClosed("ssh", "s1", deps("connected"));
+  handleSessionClosed("ssh", "s1", undefined, deps("connected"));
   assertEqual(calls, ["backoff"], "ssh close on a connected session starts reconnect");
 
   calls.length = 0;
-  handleSessionClosed("serial", "s1", deps("connected"));
+  handleSessionClosed("ssh", "s1", { exitStatus: null }, deps("connected"));
+  assertEqual(calls, ["backoff"], "ssh transport close without an exit status starts reconnect");
+
+  calls.length = 0;
+  handleSessionClosed("serial", "s1", undefined, deps("connected"));
   assertEqual(calls, ["backoff"], "serial close on a connected session starts reconnect");
 
   calls.length = 0;
-  handleSessionClosed("ssh", "s1", deps("disconnected"));
+  handleSessionClosed("ssh", "s1", undefined, deps("disconnected"));
   assertEqual(calls, [], "close while already reconnecting is ignored (no second loop)");
 
   calls.length = 0;
-  handleSessionClosed("ssh", "s1", deps("connecting"));
+  handleSessionClosed("ssh", "s1", undefined, deps("connecting"));
   assertEqual(calls, [], "close mid-connect is ignored");
 
   calls.length = 0;
-  handleSessionClosed("local", "s1", deps("connected"));
-  assertEqual(calls, ["disconnect"], "local close marks disconnected without reconnecting");
+  handleSessionClosed("ssh", "s1", { exitStatus: 0 }, deps("connecting"));
+  assertEqual(calls, [], "stale process exit mid-connect cannot delete the replacement session");
+
+  calls.length = 0;
+  handleSessionClosed("local", "s1", undefined, deps("connected"));
+  assertEqual(calls, ["ended"], "local shell exit closes its tab without reconnecting");
+
+  calls.length = 0;
+  handleSessionClosed("ssh", "s1", { exitStatus: 0 }, deps("connected"));
+  assertEqual(calls, ["ended"], "clean ssh exit ends the session instead of reconnecting");
+
+  calls.length = 0;
+  handleSessionClosed("ssh", "s1", { exitStatus: 7 }, deps("connected"));
+  assertEqual(calls, ["ended"], "non-zero ssh exit still ends the deliberate shell session");
 })();
 });

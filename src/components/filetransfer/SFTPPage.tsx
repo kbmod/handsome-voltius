@@ -40,6 +40,8 @@ import { EditorTabStrip } from "./editor/EditorTabStrip";
 import { EditorTab } from "./editor/EditorTab";
 import { DiffTab } from "./editor/DiffTab";
 import { EditorDropOverlay } from "./editor/EditorDropOverlay";
+import { showSftpError } from "./sftpNotifications";
+import { TransferQueue } from "./TransferQueue";
 
 export default function SFTPPage() {
   const { t } = useTranslation();
@@ -50,6 +52,10 @@ export default function SFTPPage() {
   const pending = useTransferQueueStore((s) => s.pending);
   const setPending = useTransferQueueStore((s) => s.setPending);
   const resolvePending = useTransferQueueStore((s) => s.resolvePending);
+  const transfers = useTransferQueueStore((s) => s.transfers);
+  const clearCompleted = useTransferQueueStore((s) => s.clearCompleted);
+  const cancelTransfer = useTransferQueueStore((s) => s.cancelTransfer);
+  const cancelAll = useTransferQueueStore((s) => s.cancelAll);
 
   const [leftHost, setLeftHost] = useState<HostChoice | null>(null);
   const [leftPhase, setLeftPhase] = useState<SidePhase>({ tag: "picking" });
@@ -118,24 +124,6 @@ export default function SFTPPage() {
     }
     setPhase({ tag: "picking" });
   }, []);
-
-  // ── Auto-reconnect on error ────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (leftPhase.tag === "error" && leftPhase.host) {
-      const host = leftPhase.host;
-      const t = setTimeout(() => connectSide(host, setLeftPhase), 1500);
-      return () => clearTimeout(t);
-    }
-  }, [leftPhase, connectSide]);
-
-  useEffect(() => {
-    if (rightPhase.tag === "error" && rightPhase.host) {
-      const host = rightPhase.host;
-      const t = setTimeout(() => connectSide(host, setRightPhase), 1500);
-      return () => clearTimeout(t);
-    }
-  }, [rightPhase, connectSide]);
 
   // ── Detect remote connection loss via Rust sftp-closed event ──────────────
 
@@ -311,7 +299,7 @@ export default function SFTPPage() {
       rename: (from, to) => isLocal ? fsRename(from, to) : sftpRename(sftpId!, from, to),
       setPending,
       onRefresh: side === "left" ? () => setLeftRefresh((n) => n + 1) : () => setRightRefresh((n) => n + 1),
-      onError: (m) => alert(m),
+      onError: showSftpError,
     });
   }, [leftPhase, rightPhase, leftHost, rightHost, setPending]);
 
@@ -474,14 +462,17 @@ export default function SFTPPage() {
         ))}
         <EditorDropOverlay />
       </div>
-      <div className={`flex flex-1 min-h-0 gap-3 p-3${activeTab !== null ? " hidden" : ""}`}>
-        <div className="flex-1 min-w-0 rounded-xl overflow-hidden border border-(--t-border)">
+      <div className={`flex flex-1 min-h-0 bg-(--t-bg-card)${activeTab !== null ? " hidden" : ""}`}>
+        <div className="flex-1 min-w-0 overflow-hidden">
           <SidePane
             host={leftHost} phase={leftPhase} refreshTick={leftRefresh}
             onPick={(h) => { setLeftHost(h); connectSide(h, setLeftPhase); }}
             onNavigate={(p) => setLeftPhase((prev) => prev.tag === "connected" ? { ...prev, cwd: p, selected: [] } : prev)}
             onSelect={(files) => setLeftPhase((prev) => prev.tag === "connected" ? { ...prev, selected: files } : prev)}
             onRefresh={() => setLeftRefresh((n) => n + 1)}
+            onRetry={() => {
+              if (leftHost) void connectSide(leftHost, setLeftPhase);
+            }}
             onChangeHost={() => { disconnectSide(setLeftPhase, leftPhase); setLeftHost(null); }}
             side="left"
             onDropFiles={(files, fromSide, targetFolder) => { if (fromSide !== "panel") void triggerTransfer(files, fromSide, targetFolder); }}
@@ -496,21 +487,24 @@ export default function SFTPPage() {
           />
         </div>
 
-        <div className="flex flex-col items-center justify-center shrink-0 w-10">
-          <div className="flex flex-col gap-1.5 p-1.5 rounded-xl border border-(--t-border) bg-(--t-bg-elevated)">
+        <div className="flex flex-col items-center justify-center shrink-0 w-9 border-x border-(--t-border) bg-(--t-bg-base)">
+          <div className="flex flex-col gap-1.5">
             <TransferBtn icon="lucide:arrow-right" title={transferLRTitle} disabled={!canTransferLR} onClick={() => transfer("LR")} />
             <TransferBtn icon="lucide:arrow-left"  title={transferRLTitle} disabled={!canTransferRL} onClick={() => transfer("RL")} />
             <TransferBtn icon="lucide:diff"        title={canCompare ? t("fileTransfer.page.compareTitle", { leftName: leftSingleFile!.name, rightName: rightSingleFile!.name }) : t("fileTransfer.page.compareHint")} disabled={!canCompare} onClick={handleCompare} />
           </div>
         </div>
 
-        <div className="flex-1 min-w-0 rounded-xl overflow-hidden border border-(--t-border)">
+        <div className="flex-1 min-w-0 overflow-hidden">
           <SidePane
             host={rightHost} phase={rightPhase} refreshTick={rightRefresh}
             onPick={(h) => { setRightHost(h); connectSide(h, setRightPhase); }}
             onNavigate={(p) => setRightPhase((prev) => prev.tag === "connected" ? { ...prev, cwd: p, selected: [] } : prev)}
             onSelect={(files) => setRightPhase((prev) => prev.tag === "connected" ? { ...prev, selected: files } : prev)}
             onRefresh={() => setRightRefresh((n) => n + 1)}
+            onRetry={() => {
+              if (rightHost) void connectSide(rightHost, setRightPhase);
+            }}
             onChangeHost={() => { disconnectSide(setRightPhase, rightPhase); setRightHost(null); }}
             side="right"
             onDropFiles={(files, fromSide, targetFolder) => { if (fromSide !== "panel") void triggerTransfer(files, fromSide, targetFolder); }}
@@ -525,6 +519,16 @@ export default function SFTPPage() {
           />
         </div>
       </div>
+
+      {transfers.length > 0 && (
+        <TransferQueue
+          transfers={transfers}
+          onClear={clearCompleted}
+          onCancel={cancelTransfer}
+          onCancelAll={cancelAll}
+          collapsible
+        />
+      )}
 
       {pending && (
         <ConflictDialog
@@ -547,16 +551,13 @@ function TransferBtn({ icon, title, disabled, onClick }: { icon: string; title: 
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className="flex items-center justify-center w-6 h-6 rounded-md transition-all"
+      className="flex items-center justify-center w-6 h-6 rounded-sm border transition-colors enabled:hover:bg-(--t-bg-card-hover) disabled:cursor-not-allowed"
       style={{
-        background: disabled ? "transparent" : "var(--t-bg-elevated)",
-        border: `1px solid ${disabled ? "var(--t-border)" : "var(--t-border-hover)"}`,
+        background: disabled ? "transparent" : "var(--t-bg-card)",
+        borderColor: disabled ? "var(--t-border)" : "var(--t-border-hover)",
         color: disabled ? "var(--t-text-dim)" : "var(--t-accent)",
-        cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.4 : 1,
       }}
-      onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = "var(--t-bg-card-hover)"; }}
-      onMouseLeave={(e) => { if (!disabled) e.currentTarget.style.background = "var(--t-bg-elevated)"; }}
     >
       <Icon icon={icon} width={12} />
     </button>

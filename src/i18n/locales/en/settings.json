@@ -24,6 +24,11 @@
       "interface": "Interface",
       "language": { "title": "Language" },
       "colorTheme": "Color Theme",
+      "terminalTheme": {
+        "title": "Terminal colors",
+        "desc": "Choose a terminal palette independently from the desktop interface.",
+        "followInterface": "Follow interface theme"
+      },
       "import": "Import",
       "importTitle": "Import theme(s)",
       "exportAll": "Export All",
@@ -648,13 +653,15 @@
         "tabs": "Tabs",
         "navigation": "Navigation",
         "editing": "Editing",
+        "workspace": "Terminal & Workspace",
         "other": "Other"
       },
       "items": {
         "omni":           { "label": "Omni Search",      "desc": "Access everything from one place" },
+        "jumpTo":         { "label": "Jump To",          "desc": "Search and navigate to app content" },
         "shortcuts":      { "label": "Keyboard Shortcuts", "desc": "Open shortcut settings" },
         "themes":         { "label": "Settings",         "desc": "Open settings" },
-        "newTab":         { "label": "New Tab",          "desc": "Go to hosts view" },
+        "newTab":         { "label": "New Tab",          "desc": "Open the new-session tab" },
         "closeTab":       { "label": "Close Tab",        "desc": "Close active session" },
         "nextTab":        { "label": "Next Tab",         "desc": "Switch to next tab" },
         "prevTab":        { "label": "Previous Tab",     "desc": "Switch to prev tab" },
@@ -666,7 +673,12 @@
         "terminalSearch": { "label": "Find in Terminal", "desc": "Search the terminal scrollback" },
         "history":        { "label": "History Panel",    "desc": "Open command history in right panel" },
         "snippets":       { "label": "Snippets Panel",   "desc": "Open snippets in right panel" },
-        "panelThemes":    { "label": "Themes Panel",     "desc": "Open themes in right panel" }
+        "panelThemes":    { "label": "Terminal Side Panel", "desc": "Show or hide the terminal side panel" },
+        "localTerminal":  { "label": "Open Local Terminal", "desc": "Start a local shell in a new tab" },
+        "serial":         { "label": "Open Serial Connection", "desc": "Open serial connection setup" },
+        "portForwarding": { "label": "Open Port Forwarding", "desc": "Go to saved port forwarding rules" },
+        "broadcast":      { "label": "Broadcast Mode", "desc": "Toggle input broadcast across workspace panes" },
+        "workspaceView":  { "label": "Workspace View Mode", "desc": "Toggle the active workspace pane view" }
       }
     }
   }

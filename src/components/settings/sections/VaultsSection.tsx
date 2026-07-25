@@ -1558,7 +1558,7 @@ export default function VaultsSection() {
                 )}
 
                 {item.kind === "local" && hovered && (
-                  <_HoverSeparator vaultId={item.vault.id} />
+                  <HoverSeparator vaultId={item.vault.id} />
                 )}
 
                 <div className="flex items-center gap-1 shrink-0" style={{ color: "var(--t-text-dim)" }}>
@@ -1599,7 +1599,7 @@ export default function VaultsSection() {
   );
 }
 
-function _HoverSeparator({ vaultId }: { vaultId: string }) {
+function HoverSeparator({ vaultId }: { vaultId: string }) {
   const hasNonZero = useVaultContents(vaultId).some((c) => c.count > 0);
   if (!hasNonZero) return null;
   return <div className="w-px h-3.5 shrink-0" style={{ background: "var(--t-border)" }} />;

@@ -1,10 +1,12 @@
 import i18n from "@/i18n";
 import { useThemeStore } from "@/stores/themeStore";
 import type { AppTheme } from "@/themes/types";
+import { BUILT_IN_THEMES, DEFAULT_THEME_ID } from "@/themes/presets";
 import type { UserDataHandler } from "../handler";
 
 interface ThemesData {
   activeThemeId: string;
+  terminalThemeId?: string | null;
   customThemes: AppTheme[];
 }
 
@@ -14,17 +16,20 @@ export const themesHandler: UserDataHandler = {
   icon: "lucide:palette",
 
   export(): ThemesData {
-    const { activeThemeId, customThemes } = useThemeStore.getState();
-    return { activeThemeId, customThemes };
+    const { activeThemeId, terminalThemeId, customThemes } = useThemeStore.getState();
+    return { activeThemeId, terminalThemeId, customThemes };
   },
 
   async import(data: unknown): Promise<void> {
-    const { activeThemeId, customThemes } = data as ThemesData;
+    const { activeThemeId, terminalThemeId, customThemes } = data as ThemesData;
     const store = useThemeStore.getState();
     for (const theme of (customThemes ?? [])) {
-      store.saveCustomTheme({ ...theme, builtIn: false });
+      if (!BUILT_IN_THEMES.some((builtIn) => builtIn.id === theme.id)) {
+        store.saveCustomTheme({ ...theme, builtIn: false });
+      }
     }
     if (activeThemeId) store.setTheme(activeThemeId);
+    store.setTerminalTheme(terminalThemeId ?? DEFAULT_THEME_ID);
   },
 
   merge(_local, remote, localTs, remoteTs) {

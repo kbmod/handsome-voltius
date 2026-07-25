@@ -11,6 +11,7 @@ import { useAllConnections } from "@/hooks/useAllConnections";
 import { getConnectionIcon } from "@/utils/icons";
 import type { TerminalSession } from "@/types";
 import { EphemeralSerialConfigOverlay } from "@/components/connections/EphemeralSerialConfigOverlay";
+import type { SshClosedEvent } from "@/services/ssh";
 
 export function HostAwareTerminalView({
   session,
@@ -20,7 +21,7 @@ export function HostAwareTerminalView({
 }: {
   session: TerminalSession;
   active: boolean;
-  onClosed: () => void;
+  onClosed: (event?: SshClosedEvent) => void;
   /** Mobile: render the terminal compact (no minimap) and suppress the status-bar footer. */
   compact?: boolean;
 }) {

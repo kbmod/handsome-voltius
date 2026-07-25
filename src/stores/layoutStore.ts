@@ -23,6 +23,8 @@ export interface SplitNode {
 
 export interface SplitTab {
   id: string;
+  /** User-defined workspace tab label. Omitted to derive a label from panes. */
+  name?: string;
   root: PaneNode;
   activePaneId: string | null;
   maximizedPaneId: string | null;
@@ -42,6 +44,7 @@ interface LayoutStore {
   openSplitTab(sessionId?: string): void;
   setSplitTabActive(active: boolean): void;
   activateSplitTab(tabId: string): void;
+  renameSplitTab(tabId: string, name: string): void;
   closeSplitTab(tabId: string): void;
   syncTitlebarOrder(visibleKeys: string[]): void;
   placeTitlebarItem(itemKey: string, targetKey: string | null, placement: "before" | "after"): void;
@@ -250,6 +253,16 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
       if (!tab) return {};
       return fieldsFromTab(tab);
     });
+  },
+
+  renameSplitTab: (tabId, name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    set((state) => ({
+      splitTabs: state.splitTabs.map((tab) =>
+        tab.id === tabId ? { ...tab, name: trimmed } : tab,
+      ),
+    }));
   },
 
   closeSplitTab: (tabId) => {

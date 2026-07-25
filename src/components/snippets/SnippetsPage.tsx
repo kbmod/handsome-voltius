@@ -253,25 +253,25 @@ function SkeletonList() {
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-16">
+    <div className="flex min-h-[calc(100vh-15rem)] flex-col items-center justify-center gap-3 text-center">
       <div
-        className="flex items-center justify-center rounded-3xl w-[5.333rem] h-[5.333rem] text-(--t-text-dim)"
+        className="flex h-12 w-12 items-center justify-center rounded-xl text-(--t-text-dim)"
         style={{
-          background: "linear-gradient(135deg, var(--t-bg-elevated) 0%, var(--t-bg-card) 100%)",
+          background: "var(--t-bg-toolbar)",
           border: "1px solid var(--t-border)",
         }}
       >
-        <Icon icon="lucide:braces" width={36} />
+        <Icon icon="lucide:braces" width={20} />
       </div>
       <div className="flex flex-col gap-1.5">
-        <span className="text-base font-semibold text-(--t-text-primary)">{t("snippets.page.emptyState.title")}</span>
+        <span className="text-sm font-medium text-(--t-text-primary)">{t("snippets.page.emptyState.title")}</span>
         <span className="text-sm text-(--t-text-dim) max-w-[18rem]">
           {t("snippets.page.emptyState.subtitle")}
         </span>
       </div>
       <button
         onClick={onAdd}
-        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors bg-(--t-bg-elevated) text-(--t-accent) border border-(--t-border-hover)"
+        className="flex items-center gap-2 rounded-lg border border-(--t-border-hover) bg-(--t-bg-elevated) px-3 py-1.5 text-xs font-medium text-(--t-accent) transition-colors"
         onMouseEnter={(e) => (e.currentTarget.style.background = "var(--t-bg-card-hover)")}
         onMouseLeave={(e) => (e.currentTarget.style.background = "var(--t-bg-elevated)")}
       >
@@ -934,7 +934,7 @@ export function SnippetsPage() {
           openBgMenu(e);
         }}
       >
-        <div ref={itemAreaRef} data-drag-surface="true">
+        <div ref={itemAreaRef} data-drag-surface="true" className="min-h-full">
           {loading ? (
             <SkeletonList />
           ) : snippets.length === 0 ? (

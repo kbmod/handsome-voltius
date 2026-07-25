@@ -1,78 +1,68 @@
-import { test, expect, beforeEach } from "vitest";
+import { beforeEach, expect, test } from "vitest";
 import { useThemeStore } from "./themeStore";
-import { DEFAULT_THEME_ID, DEFAULT_LIGHT_THEME_ID } from "@/themes/presets";
+import { DEFAULT_THEME_ID, GRUVBOX_DARK_THEME } from "@/themes/presets";
+
+const CUSTOM_THEME = {
+  ...GRUVBOX_DARK_THEME,
+  id: "custom-terminal",
+  name: "Custom Terminal",
+  builtIn: false,
+  terminal: {
+    ...GRUVBOX_DARK_THEME.terminal,
+    background: "#000011",
+    foreground: "#eeeeff",
+  },
+};
 
 beforeEach(() => {
   useThemeStore.setState({
     activeThemeId: DEFAULT_THEME_ID,
+    terminalThemeId: DEFAULT_THEME_ID,
+    customThemes: [CUSTOM_THEME],
     mode: "manual",
-    lightThemeId: DEFAULT_LIGHT_THEME_ID,
+    lightThemeId: DEFAULT_THEME_ID,
     darkThemeId: DEFAULT_THEME_ID,
     resolvedPhase: "dark",
   });
 });
 
-test("manual mode: effective id equals activeThemeId", () => {
-  const s = useThemeStore.getState();
-  s.setMode("manual");
-  useThemeStore.setState({ activeThemeId: "nord" });
-  expect(useThemeStore.getState().getEffectiveThemeId()).toBe("nord");
+test("the application interface always resolves to built-in Gruvbox Dark", () => {
+  useThemeStore.setState({
+    activeThemeId: CUSTOM_THEME.id,
+    mode: "system",
+    resolvedPhase: "light",
+  });
+
+  expect(useThemeStore.getState().getEffectiveThemeId()).toBe(DEFAULT_THEME_ID);
+  expect(useThemeStore.getState().getActiveTheme()).toBe(GRUVBOX_DARK_THEME);
 });
 
-test("auto mode: effective id follows resolvedPhase → light/dark pair", () => {
-  const s = useThemeStore.getState();
-  s.setMode("system");
-  s.setLightThemeId("voltius-light");
-  s.setDarkThemeId("dracula");
-  s.setResolvedPhase("dark");
-  expect(useThemeStore.getState().getEffectiveThemeId()).toBe("dracula");
-  useThemeStore.getState().setResolvedPhase("light");
-  expect(useThemeStore.getState().getEffectiveThemeId()).toBe("voltius-light");
+test("legacy setTheme calls cannot recolor the fixed interface", () => {
+  useThemeStore.getState().setTheme(CUSTOM_THEME.id);
+
+  expect(useThemeStore.getState().activeThemeId).toBe(DEFAULT_THEME_ID);
+  expect(useThemeStore.getState().getActiveTheme()).toBe(GRUVBOX_DARK_THEME);
 });
 
-test("getActiveTheme resolves the effective theme object", () => {
-  const s = useThemeStore.getState();
-  s.setMode("system");
-  s.setDarkThemeId("dracula");
-  s.setResolvedPhase("dark");
-  expect(useThemeStore.getState().getActiveTheme().id).toBe("dracula");
+test("a custom terminal theme is selected independently", () => {
+  useThemeStore.getState().setTerminalTheme(CUSTOM_THEME.id);
+
+  expect(useThemeStore.getState().getActiveTheme()).toBe(GRUVBOX_DARK_THEME);
+  expect(useThemeStore.getState().getTerminalTheme()).toEqual(CUSTOM_THEME);
 });
 
-test("toggleLightDark flips active between the pair and forces manual", () => {
-  const s = useThemeStore.getState();
-  s.setLightThemeId("voltius-light");
-  s.setDarkThemeId("voltius");
-  useThemeStore.setState({ activeThemeId: "voltius", mode: "system" });
-  useThemeStore.getState().toggleLightDark();
-  let st = useThemeStore.getState();
-  expect(st.mode).toBe("manual");
-  expect(st.activeThemeId).toBe("voltius-light");
-  useThemeStore.getState().toggleLightDark();
-  expect(useThemeStore.getState().activeThemeId).toBe("voltius");
+test("missing and null terminal selections safely fall back to Gruvbox Dark", () => {
+  useThemeStore.setState({ terminalThemeId: "removed-theme" });
+  expect(useThemeStore.getState().getTerminalTheme()).toBe(GRUVBOX_DARK_THEME);
+
+  useThemeStore.setState({ terminalThemeId: null });
+  expect(useThemeStore.getState().getTerminalTheme()).toBe(GRUVBOX_DARK_THEME);
 });
 
-test("toggleLightDark flips based on the displayed effective theme when automation is active", () => {
-  const s = useThemeStore.getState();
-  s.setLightThemeId("voltius-light");
-  s.setDarkThemeId("voltius");
-  // Automation showing LIGHT (system mode, resolvedPhase light) but activeThemeId still the dark pick:
-  useThemeStore.setState({ activeThemeId: "voltius", mode: "system", resolvedPhase: "light" });
-  useThemeStore.getState().toggleLightDark();
-  const st = useThemeStore.getState();
-  expect(st.mode).toBe("manual");
-  expect(st.activeThemeId).toBe("voltius"); // displayed light → toggles to the DARK theme
-});
+test("deleting the selected custom theme returns the terminal to Gruvbox Dark", () => {
+  useThemeStore.setState({ terminalThemeId: CUSTOM_THEME.id });
+  useThemeStore.getState().deleteCustomTheme(CUSTOM_THEME.id);
 
-test("getAutomationConfig returns the current config shape", () => {
-  const s = useThemeStore.getState();
-  s.setMode("schedule");
-  s.setSchedule("06:30", "20:15");
-  const cfg = useThemeStore.getState().getAutomationConfig();
-  expect(cfg).toMatchObject({ mode: "schedule", scheduleLightStart: "06:30", scheduleDarkStart: "20:15" });
-});
-
-test("setResolvedPhase does not bump updatedAt (device-local, not synced)", () => {
-  const before = useThemeStore.getState().updatedAt;
-  useThemeStore.getState().setResolvedPhase("light");
-  expect(useThemeStore.getState().updatedAt).toBe(before);
+  expect(useThemeStore.getState().terminalThemeId).toBe(DEFAULT_THEME_ID);
+  expect(useThemeStore.getState().getTerminalTheme()).toBe(GRUVBOX_DARK_THEME);
 });

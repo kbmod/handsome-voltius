@@ -1,17 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@iconify/react";
-import i18n from "@/i18n";
 import { useVaultStore } from "@/stores/vaultStore";
 import { useUIStore } from "@/stores/uiStore";
-import { useVaultContents } from "@/hooks/useVaultContents";
-import { ContentCounts } from "@/components/shared/ContentCounts";
 import { useTeamStore } from "@/stores/teamStore";
 import type { TeamMember, TeamRole } from "@/services/teamService";
 import { StatusDot } from "@/components/shared/StatusDot";
 import { MiniAvatar, avatarColor } from "@/components/shared/AvatarStack";
-import { getSyncState, onSyncStateChange } from "@/services/sync";
-import { getAccountMode } from "@/services/account";
 
 // ─── Online members stack ─────────────────────────────────────────────────────
 
@@ -149,19 +144,6 @@ function OnlineMembersStack({ members, roles, onInviteClick }: { members: TeamMe
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function relativeTime(date: Date | null): string | null {
-  if (!date) return null;
-  const diffMs = Date.now() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return i18n.t("layout.vaultHeader.relativeTime.justNow");
-  if (diffMin < 60) return i18n.t("layout.vaultHeader.relativeTime.minutesAgo", { count: diffMin });
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return i18n.t("layout.vaultHeader.relativeTime.hoursAgo", { count: diffHr });
-  return i18n.t("layout.vaultHeader.relativeTime.daysAgo", { count: Math.floor(diffHr / 24) });
-}
-
 export default function VaultHeader() {
   const { t } = useTranslation();
   const vaults = useVaultStore((s) => s.vaults);
@@ -169,12 +151,6 @@ export default function VaultHeader() {
   const setOmniOpen = useUIStore((s) => s.setOmniOpen);
   const openMembersInvite = useUIStore((s) => s.openMembersInvite);
   const { teams, membersByTeam, rolesByTeam, loadMembers } = useTeamStore();
-
-  const [syncState, setSyncState] = useState(getSyncState);
-  useEffect(() => onSyncStateChange(() => setSyncState(getSyncState())), []);
-
-  const [accountMode, setAccountMode] = useState<string | null>(null);
-  useEffect(() => { getAccountMode().then(setAccountMode).catch(() => {}); }, []);
 
   // Use the first selected vault as the "active" vault.
   // For non-owner team members there is no local vault — the sidebar sets a
@@ -190,9 +166,6 @@ export default function VaultHeader() {
   const members = team ? (membersByTeam[team.id] ?? null) : null;
   const roles = team ? (rolesByTeam[team.id] ?? []) : [];
 
-  const contentVaultId = team?.id ?? activeVaultId ?? "personal";
-  const counts = useVaultContents(contentVaultId);
-
   useEffect(() => {
     if (team && !membersByTeam[team.id]) {
       loadMembers(team.id).catch(() => {});
@@ -201,63 +174,16 @@ export default function VaultHeader() {
 
   if (!vault && !standaloneTeam) return null;
 
-  const displayName = vault ? vault.name : (standaloneTeam!.name);
-  const initial = displayName.trim().charAt(0).toUpperCase();
-  const isE2EE = accountMode === "local";
-  const lastSync = relativeTime(syncState.lastSync);
-  const showSync = syncState.cloudActive && lastSync;
-
   return (
     <div
-      className="grid grid-cols-[1fr_auto_1fr] items-center shrink-0 px-5 gap-5"
+      className="flex items-center shrink-0 h-12 px-2 gap-2 border-b border-(--t-border)"
       style={{
-        height: "4.25rem",
         background: "transparent",
       }}
     >
-      {/* Left zone: icon + vault info */}
-      <div className="flex items-center gap-4 min-w-0">
-        <div
-          className="flex items-center justify-center shrink-0 rounded-xl text-base font-bold text-white"
-          style={{
-            width: 40,
-            height: 40,
-            background: "linear-gradient(145deg, color-mix(in srgb, var(--t-accent) 78%, #ffffff 22%) 0%, var(--t-accent) 55%, color-mix(in srgb, var(--t-accent) 82%, #000000 18%) 100%)",
-            boxShadow: "var(--t-ring), 0 6px 14px -6px color-mix(in srgb, var(--t-accent) 55%, transparent), var(--t-highlight)",
-          }}
-        >
-          {initial}
-        </div>
-
-        <div className="flex flex-col justify-center min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-base font-semibold truncate" style={{ color: "var(--t-text-primary)" }}>
-              {displayName}
-            </span>
-            {team && <Badge label={t("layout.vaultHeader.teamBadge")} />}
-            {members !== null && (
-              <Badge label={t("layout.vaultHeader.memberCount", { count: members.length })} accent />
-            )}
-            {showSync && (
-              <span className="text-xs" style={{ color: "var(--t-text-dim)" }}>{t("layout.vaultHeader.lastSync", { time: lastSync })}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-3 text-xs mt-0.5 flex-wrap" style={{ color: "var(--t-text-dim)" }}>
-            {isE2EE && (
-              <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--t-status-connected)" }} />
-                {t("layout.vaultHeader.e2ee")}
-              </span>
-            )}
-            <ContentCounts counts={counts} />
-          </div>
-        </div>
-      </div>
-
-      {/* Center zone: command palette */}
       <button
         onClick={() => setOmniOpen(true)}
-        className="flex items-center gap-2 px-3.5 h-9 rounded-lg transition-colors justify-self-center w-[clamp(20rem,30vw,27.5rem)]"
+        className="flex flex-1 min-w-0 items-center gap-2 px-3 h-8 rounded-md transition-colors"
         style={{
           background: "var(--t-bg-chrome-field)",
           color: "var(--t-text-secondary)",
@@ -298,31 +224,11 @@ export default function VaultHeader() {
         </kbd>
       </button>
 
-      {/* Right zone: online members */}
-      <div className="flex items-center justify-end min-w-0">
+      <div className="flex items-center justify-end shrink-0">
         {team && members !== null && (
           <OnlineMembersStack members={members} roles={roles} onInviteClick={openMembersInvite} />
         )}
       </div>
     </div>
-  );
-}
-
-function Badge({ label, accent }: { label: string; accent?: boolean }) {
-  return (
-    <span
-      className="px-2 py-0.5 rounded-full text-xs font-medium shrink-0"
-      style={{
-        background: accent
-          ? "color-mix(in srgb, var(--t-accent) 15%, transparent)"
-          : "var(--t-bg-elevated)",
-        color: accent ? "var(--t-accent)" : "var(--t-text-secondary)",
-        border: accent
-          ? "1px solid color-mix(in srgb, var(--t-accent) 30%, transparent)"
-          : "1px solid var(--t-border)",
-      }}
-    >
-      {label}
-    </span>
   );
 }

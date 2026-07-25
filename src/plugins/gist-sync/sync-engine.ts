@@ -68,7 +68,7 @@ let _pollInterval: ReturnType<typeof setInterval> | null = null;
 let _consecutiveFailures = 0;
 let _failureBannerId: { dismiss(): void } | null = null;
 // deviceId → last known pushedAt (change detection for pull)
-let _lastSeenPushedAt: Record<string, string> = {};
+const _lastSeenPushedAt: Record<string, string> = {};
 
 export function init(api: PluginAPI) {
   _api = api;

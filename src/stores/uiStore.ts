@@ -64,6 +64,7 @@ interface UIStore {
   sidebarOpen: boolean;
   homeView: boolean;
   activeNav: NavItem;
+  newTabOpen: boolean;
   omniOpen: boolean;
   settingsOpen: boolean;
   cloudAuthOpen: boolean;
@@ -102,6 +103,8 @@ interface UIStore {
   setSidebarOpen: (open: boolean) => void;
   setHomeView: (v: boolean) => void;
   setActiveNav: (nav: NavItem) => void;
+  openNewTab: () => void;
+  closeNewTab: () => void;
   setOmniOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   openCloudAuth: (mode?: CloudAuthMode) => void;
@@ -150,6 +153,7 @@ export const useUIStore = create<UIStore>()(
       sidebarOpen: true,
       homeView: true,
       activeNav: "hosts" as NavItem,
+      newTabOpen: false,
       omniOpen: false,
       settingsOpen: false,
       cloudAuthOpen: false,
@@ -192,6 +196,8 @@ export const useUIStore = create<UIStore>()(
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       setHomeView: (v) => set({ homeView: v }),
       setActiveNav: (nav) => set({ activeNav: nav }),
+      openNewTab: () => set({ newTabOpen: true, sftpPanelOpen: false, rightPanelOpen: false }),
+      closeNewTab: () => set({ newTabOpen: false }),
       setOmniOpen: (open) => set({ omniOpen: open }),
       setSettingsOpen: (open) => set((s) => ({ settingsOpen: open, settingsSubPage: open ? s.settingsSubPage : null })),
       openCloudAuth: (mode) => set({ cloudAuthOpen: true, cloudAuthMode: mode ?? "signin" }),

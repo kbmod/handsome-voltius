@@ -7,6 +7,7 @@ import { useThemeStore } from "@/stores/themeStore";
 import { useTerminalSettingsStore } from "@/stores/terminalSettingsStore";
 import { useTeamSessionStore } from "@/stores/teamSessionStore";
 import { withFlagEmojiFallback } from "@/utils/emojiFont";
+import { TERMINAL_RENDERING_DEFAULTS, waitForTerminalFont } from "@/components/terminal/terminalRendering";
 import "@xterm/xterm/css/xterm.css";
 
 interface Props {
@@ -26,11 +27,10 @@ export default function MultiplayerTerminalView({ localSessionId, active }: Prop
       if (!container || cleanupRef.current) return;
       containerRef.current = container;
 
-      const activeTheme = useThemeStore.getState().getActiveTheme();
+      const activeTheme = useThemeStore.getState().getTerminalTheme();
       const scrollback = useTerminalSettingsStore.getState().scrollbackLines;
       const term = new Terminal({
-        cursorBlink: true,
-        cursorStyle: "bar",
+        ...TERMINAL_RENDERING_DEFAULTS,
         fontSize: activeTheme.terminalFontSize,
         fontFamily: withFlagEmojiFallback(activeTheme.terminalFontFamily),
         scrollback,
@@ -41,6 +41,13 @@ export default function MultiplayerTerminalView({ localSessionId, active }: Prop
       const fitAddon = new FitAddon();
       term.loadAddon(fitAddon);
       term.open(container);
+
+      void waitForTerminalFont(activeTheme.terminalFontFamily, activeTheme.terminalFontSize).then(() => {
+        if (termRef.current !== term) return;
+        term.options.fontFamily = withFlagEmojiFallback(activeTheme.terminalFontFamily);
+        fitAddon.fit();
+        term.refresh(0, Math.max(0, term.rows - 1));
+      });
 
       try {
         term.loadAddon(new WebglAddon());
@@ -134,7 +141,7 @@ export default function MultiplayerTerminalView({ localSessionId, active }: Prop
       const term = termRef.current;
       const fit = fitRef.current;
       if (!term) return;
-      const theme = state.getActiveTheme();
+      const theme = state.getTerminalTheme();
       term.options.theme = theme.terminal;
       term.options.fontFamily = withFlagEmojiFallback(theme.terminalFontFamily);
       if (term.options.fontSize !== theme.terminalFontSize) {
@@ -148,7 +155,7 @@ export default function MultiplayerTerminalView({ localSessionId, active }: Prop
     <div className="flex-1 min-h-0 flex flex-col">
       <div
         ref={attach}
-        className="flex-1 pl-[14px]"
+        className="flex-1 min-h-0 px-3 py-2"
       />
     </div>
   );

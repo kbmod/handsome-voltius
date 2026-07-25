@@ -131,12 +131,18 @@ export async function onSshOutput(
   });
 }
 
+export interface SshClosedEvent {
+  /** Present when the remote shell/process exited normally. A missing status
+   * means the SSH transport disappeared without a process exit. */
+  exitStatus: number | null;
+}
+
 export async function onSshClosed(
   sessionId: string,
-  callback: () => void,
+  callback: (event: SshClosedEvent) => void,
 ): Promise<UnlistenFn> {
-  return listen(`ssh-closed-${sessionId}`, () => {
-    callback();
+  return listen<SshClosedEvent>(`ssh-closed-${sessionId}`, (event) => {
+    callback(event.payload);
   });
 }
 

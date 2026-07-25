@@ -20,6 +20,7 @@ import { useEditorStore } from "@/stores/editorStore";
 import { useToggle } from "@/stores/toggleSettingsStore";
 import { startInternalDragGesture, useSemanticDragState } from "./internalDrag";
 import { resolveTypeAheadIndex, TYPE_AHEAD_RESET_MS } from "./typeAhead";
+import { showSftpError } from "./sftpNotifications";
 import { useFileClipboardStore, sameHost, type FileEndpoint } from "@/stores/fileClipboardStore";
 
 // ── SelectionActionsCtx ───────────────────────────────────────────────────────
@@ -58,6 +59,30 @@ export function IconBtn({ icon, title, onClick }: { icon: string; title: string;
   );
 }
 
+function PaneNavButton({
+  icon,
+  title,
+  disabled,
+  onClick,
+}: {
+  icon: string;
+  title: string;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 transition-colors enabled:hover:bg-(--t-bg-card-hover) disabled:cursor-default"
+      style={{ color: disabled ? "var(--t-text-dim)" : "var(--t-text-secondary)" }}
+    >
+      <Icon icon={icon} width={13} />
+    </button>
+  );
+}
+
 // ── FilePane ──────────────────────────────────────────────────────────────────
 
 const DEFAULT_VISIBLE_COLS: VisibleCols = { size: true, modified: true, permissions: true };
@@ -68,7 +93,7 @@ export function FilePane({
   onTransferToTarget, canTransferToTarget, onChangeHost,
   filter = "", onRegisterMenuOpener, onRegisterViewMenuOpener, onOpenInTerminal,
   initialVisibleCols, onPanelDownload, onPanelUpload, onEdit,
-  onPaste, onBack, onForward,
+  onPaste, onBack, onForward, canBack = false, canForward = false,
 }: {
   sftpId: string | null;
   isLocal: boolean;
@@ -202,7 +227,8 @@ export function FilePane({
     const isPrimaryLoad = isLocal !== prev.isLocal || sftpId !== prev.sftpId || cwd !== prev.cwd;
     prevLocationRef.current = { isLocal, sftpId, cwd };
 
-    if (isPrimaryLoad) { setLoading(true); setError(null); }
+    if (isPrimaryLoad) setLoading(true);
+    setError(null);
 
     const load = isLocal
       ? fsListDir(cwd).then((files) =>
@@ -210,8 +236,8 @@ export function FilePane({
       : sftpListDir(sftpId!, cwd).then((files) =>
           files.map<FileEntry>((f: RemoteFile) => ({ name: f.name, path: f.path, size: f.size, isDir: f.is_dir, modified: f.modified ?? undefined, permissions: f.permissions ?? undefined, isSymlink: f.is_symlink })));
     load
-      .then((e) => { setEntries(e); if (isPrimaryLoad) setLoading(false); })
-      .catch((e) => { if (isPrimaryLoad) { setError(String(e)); setLoading(false); } });
+      .then((e) => { setEntries(e); setLoading(false); })
+      .catch((e) => { setError(String(e)); setLoading(false); });
   }, [isLocal, sftpId, cwd, refreshTick, autoTick]);
 
   // Parent directory of cwd, or null at a filesystem/UNC root. Shared by the
@@ -242,7 +268,7 @@ export function FilePane({
       if (isLocal) { await fsMkdir(fullPath); }
       else if (sftpId) { await sftpMkdir(sftpId, fullPath); }
       onRefresh();
-    } catch (e) { alert(String(e)); }
+    } catch (e) { showSftpError(e); }
   };
 
   const commitCreateFile = async () => {
@@ -253,7 +279,7 @@ export function FilePane({
       if (isLocal) { await fsTouch(fullPath); }
       else if (sftpId) { await sftpTouch(sftpId, fullPath); }
       onRefresh();
-    } catch (e) { alert(String(e)); }
+    } catch (e) { showSftpError(e); }
   };
 
   const selectedEntries = visibleEntries.filter((f) => selectedIdSet.has(f.path));
@@ -283,7 +309,7 @@ export function FilePane({
       }
       setSelection([]);
       onRefresh();
-    } catch (e) { alert(String(e)); }
+    } catch (e) { showSftpError(e); }
   };
 
   const startRename = (f: FileEntry) => { setRenaming(f.path); setRenameVal(f.name); };
@@ -297,7 +323,7 @@ export function FilePane({
       if (isLocal) { await fsRename(f.path, newPath); }
       else { await sftpRename(sftpId!, f.path, newPath); }
       onRefresh();
-    } catch (e) { alert(String(e)); }
+    } catch (e) { showSftpError(e); }
     setRenaming(null);
   };
 
@@ -401,7 +427,7 @@ export function FilePane({
       if (isLocal) await fsCompress(file.path, archivePath);
       else if (sftpId) await sftpCompress(sftpId, file.path, archivePath);
       onRefresh();
-    } catch (e) { alert(String(e)); }
+    } catch (e) { showSftpError(e); }
   };
 
   const handleExtract = async (file: FileEntry) => {
@@ -413,7 +439,7 @@ export function FilePane({
       if (isLocal) await fsExtract(file.path, destDir);
       else if (sftpId) await sftpExtract(sftpId, file.path, destDir);
       onRefresh();
-    } catch (e) { alert(String(e)); }
+    } catch (e) { showSftpError(e); }
   };
 
   const handlePickLocal = async () => {
@@ -473,6 +499,8 @@ export function FilePane({
 
       {/* Path bar */}
       <div className="flex items-center gap-1.5 px-2 py-2 shrink-0 border-b border-b-(--t-border) bg-(--t-bg-elevated)">
+        {onBack && <PaneNavButton icon="lucide:arrow-left" title={t("fileTransfer.side.back")} disabled={!canBack} onClick={onBack} />}
+        {onForward && <PaneNavButton icon="lucide:arrow-right" title={t("fileTransfer.side.forward")} disabled={!canForward} onClick={onForward} />}
         <span
           {...(parentPath ? { "data-drop-folder": parentPath } : {})}
           className="rounded-md"
@@ -502,6 +530,7 @@ export function FilePane({
         onContextMenu={(e) => { e.preventDefault(); setSelection([]); setMenuPos({ x: e.clientX, y: e.clientY }); }}>
         <VirtualFileList
           entries={visibleEntries} loading={loading} error={error}
+          onRetry={onRefresh}
           renaming={renaming} renameVal={renameVal} onRenameValChange={setRenameVal}
           creatingFolder={creatingFolder} creatingFile={creatingFile}
           newItemName={newItemName} onNewItemNameChange={setNewItemName}
@@ -920,7 +949,7 @@ function ColumnHeaders({ sortCol, sortDir, isLocal, colWidths, visibleCols, onSo
 
   const nameActive = sortCol === "name";
   const dataColumns = visibleDataColumns(isLocal, visibleCols);
-  const labelStyle: React.CSSProperties = { fontSize: "0.6875rem", fontWeight: 600, letterSpacing: "0.055em", textTransform: "uppercase" };
+  const labelStyle: React.CSSProperties = { fontSize: "0.6875rem", fontWeight: 600 };
 
   return (
     <div className="flex items-stretch gap-2 h-7 pl-5 pr-3 shrink-0 overflow-hidden" style={{ borderBottom: "1px solid var(--t-border)" }}>
@@ -961,7 +990,7 @@ function ColumnHeaders({ sortCol, sortDir, isLocal, colWidths, visibleCols, onSo
 // ── VirtualFileList ───────────────────────────────────────────────────────────
 
 function VirtualFileList({
-  entries, loading, error,
+  entries, loading, error, onRetry,
   renaming, renameVal, onRenameValChange,
   creatingFolder, creatingFile, newItemName, onNewItemNameChange,
   onCommitCreateFolder, onCommitCreateFile, onCancelCreate,
@@ -975,7 +1004,7 @@ function VirtualFileList({
   onMoveWithin,
   selectionActionsCtx,
 }: {
-  entries: FileEntry[]; loading: boolean; error: string | null;
+  entries: FileEntry[]; loading: boolean; error: string | null; onRetry: () => void;
   renaming: string | null; renameVal: string; onRenameValChange: (v: string) => void;
   creatingFolder: boolean; creatingFile: boolean;
   newItemName: string; onNewItemNameChange: (v: string) => void;
@@ -1035,8 +1064,16 @@ function VirtualFileList({
   }
   if (error) {
     return (
-      <div ref={itemAreaRef} data-drag-surface="true" className="h-full overflow-y-auto px-4 py-3 text-xs text-(--t-status-error)">
-        {error}
+      <div ref={itemAreaRef} data-drag-surface="true" className="h-full overflow-y-auto flex flex-col items-center justify-center gap-2 px-6 text-center">
+        <Icon icon="lucide:folder-x" width={20} className="text-(--t-status-error)" />
+        <p className="max-w-md text-xs leading-relaxed text-(--t-status-error)">{error}</p>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="px-3 py-1.5 rounded-md border border-(--t-border-hover) bg-(--t-bg-elevated) text-xs text-(--t-text-primary)"
+        >
+          {t("fileTransfer.editor.common.retry")}
+        </button>
       </div>
     );
   }

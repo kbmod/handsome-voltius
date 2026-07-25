@@ -28,6 +28,7 @@ import { usePaneDragController } from "@/components/panes/usePaneDragController"
 import { DropZones } from "@/components/panes/DropZones";
 import { DragGhost } from "@/components/panes/DragGhost";
 import { getPaneSessionIds, useLayoutStore } from "@/stores/layoutStore";
+import NewTabPage from "@/components/layout/NewTabPage";
 
 function NoVaultSelected() {
   const { t } = useTranslation();
@@ -170,6 +171,7 @@ export default function MainPanel() {
   const homeView = useUIStore((s) => s.homeView);
   const activeNav = useUIStore((s) => s.activeNav);
   const sftpPanelOpen = useUIStore((s) => s.sftpPanelOpen);
+  const newTabOpen = useUIStore((s) => s.newTabOpen);
   const selectedVaultIds = useVaultStore((s) => s.selectedVaultIds);
   const splitRoot = useLayoutStore((s) => s.root);
   const splitTabs = useLayoutStore((s) => s.splitTabs);
@@ -222,7 +224,11 @@ export default function MainPanel() {
 
   return (
     <main className="flex-1 relative overflow-hidden bg-(--t-bg-terminal)">
-      {noVaultSelected ? (
+      {newTabOpen ? (
+        <div className="absolute inset-0 flex flex-col overflow-hidden">
+          <NewTabPage />
+        </div>
+      ) : noVaultSelected ? (
         <div className="absolute inset-0 flex flex-col overflow-hidden">
           <NoVaultSelected />
         </div>
@@ -240,7 +246,7 @@ export default function MainPanel() {
             <div className="flex-1 relative">
               {splitRoot && (
                 <div className={`absolute inset-0 flex overflow-hidden${showSplitWorkspace ? "" : " invisible pointer-events-none"}`}>
-                  <PaneView node={splitRoot} />
+                  <PaneView key={splitRoot.id} node={splitRoot} />
                 </div>
               )}
               {showSplitWorkspace && !splitRoot && (
@@ -278,11 +284,14 @@ export default function MainPanel() {
                       <HostAwareTerminalView
                         session={session}
                         active={session.id === activeSessionId && session.status === "connected" && !overlayContent}
-                        onClosed={() =>
-                          handleSessionClosed(session.type, session.id, {
+                        onClosed={(close) =>
+                          handleSessionClosed(session.type, session.id, close, {
                             status: (id) => useSessionStore.getState().sessions.find((s) => s.id === id)?.status,
                             markDisconnected,
                             reconnectWithBackoff,
+                            sessionEnded: (id) => {
+                              void import("@/services/crossDeviceSessions").then((service) => service.sessionEnded(id));
+                            },
                           })
                         }
                       />

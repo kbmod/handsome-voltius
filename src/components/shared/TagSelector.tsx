@@ -106,7 +106,8 @@ export default function TagSelector({ value, onChange, vaultId }: Props) {
             onFocus={handleFocus}
             onBlur={(e) => {
               if (!(e.relatedTarget instanceof Node) || !(containerRef.current?.contains(e.relatedTarget))) {
-                (containerRef.current as HTMLDivElement | null)?.style && ((containerRef.current as HTMLDivElement).style.borderColor = "var(--t-border)");
+                const style = containerRef.current?.style;
+                if (style) style.borderColor = "var(--t-border)";
               }
             }}
             onKeyDown={handleKeyDown}

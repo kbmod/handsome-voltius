@@ -52,12 +52,20 @@ interface SessionStore {
   connectSerialEphemeral: (initialPort?: string) => Promise<void>;
   connectSerialEphemeralFinalize: (sessionId: string, params: SerialConnectParams) => Promise<void>;
   resetSerialEphemeral: (sessionId: string) => void;
+  /** Start an independent copy of an existing terminal session and return its
+   * new id immediately. Multiplayer/container child sessions are not
+   * duplicable and return null. */
+  duplicateSession: (sessionId: string) => string | null;
   disconnect: (sessionId: string) => Promise<void>;
   setActive: (sessionId: string) => void;
+  renameSession: (sessionId: string, name: string) => void;
   markDisconnected: (sessionId: string) => void;
   markConnecting: (sessionId: string) => void;
   removeSession: (sessionId: string) => void;
-  reconnect: (sessionId: string, options?: { restore?: boolean }) => Promise<void>;
+  reconnect: (
+    sessionId: string,
+    options?: { restore?: boolean; attachOnly?: boolean },
+  ) => Promise<void>;
   /** Silent reconnect for the auto-backoff loop: performs the same connect as
    * reconnect() but mutates no visible status, returning the outcome so the loop
    * can hold a single steady "reconnecting" state and decide what to surface. */
@@ -92,6 +100,15 @@ function reportConnectionAudit(connection: Connection, action: ClientAuditAction
     target_id: connection.id,
     target_name: connection.name?.trim() || `${connection.username}@${connection.host}:${connection.port}`,
   });
+}
+
+/** Native terminals can emit their first prompt immediately. Never spawn a
+ * process until its xterm output/close listeners are registered, otherwise a
+ * newly-created tab or split can begin life blank even though the process is
+ * running. Dynamic import avoids the useTerminal ↔ sessionStore module cycle. */
+async function waitForTerminalReady(sessionId: string): Promise<void> {
+  const { waitForTerminalListeners } = await import("@/hooks/useTerminal");
+  await waitForTerminalListeners([sessionId]);
 }
 
 async function buildSshConnectOptions(
@@ -234,6 +251,7 @@ async function connectSshSession(
   const opts = await buildSshConnectOptions(connection, sessionId);
 
   try {
+    await waitForTerminalReady(sessionId);
     await withSessionConnectLock(sessionId, () =>
       sshConnect({
         sessionId,
@@ -318,6 +336,7 @@ async function connectSerialSession(
   serialParams: SerialConnectParams,
 ) {
   try {
+    await waitForTerminalReady(sessionId);
     await serialConnect(serialParams);
     set((s) => ({
       sessions: s.sessions.map((sess) =>
@@ -576,6 +595,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     set((s) => ({ sessions: [...s.sessions, session], activeSessionId: sessionId }));
     useLayoutStore.getState().setSplitTabActive(false);
     try {
+      await waitForTerminalReady(sessionId);
       await localConnect(sessionId, 80, 24, preferredShell ?? undefined, undefined, getToggle("shell-integration"));
       set((s) => ({
         sessions: s.sessions.map((sess) =>
@@ -608,6 +628,7 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     set((s) => ({ sessions: [...s.sessions, session], activeSessionId: sessionId }));
     useLayoutStore.getState().setSplitTabActive(false);
     try {
+      await waitForTerminalReady(sessionId);
       await localConnect(sessionId, 80, 24, preferredShell ?? undefined, cwd, getToggle("shell-integration"));
       set((s) => ({
         sessions: s.sessions.map((sess) =>
@@ -638,7 +659,9 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     };
     set((s) => ({ sessions: [...s.sessions, session], activeSessionId: sessionId }));
     useLayoutStore.getState().setSplitTabActive(false);
-    void localConnect(sessionId, 80, 24, shell, undefined, getToggle("shell-integration")).then(() => {
+    void waitForTerminalReady(sessionId).then(() =>
+      localConnect(sessionId, 80, 24, shell, undefined, getToggle("shell-integration")),
+    ).then(() => {
       set((s) => ({
         sessions: s.sessions.map((sess) =>
           sess.id === sessionId ? { ...sess, status: "connected" as const } : sess,
@@ -728,6 +751,75 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     }));
   },
 
+  duplicateSession: (sessionId) => {
+    const source = get().sessions.find((session) => session.id === sessionId);
+    if (!source || source.type === "multiplayer" || source.containerExec) return null;
+
+    if (source.type === "ssh") {
+      try {
+        return beginConnection(set as SessionSetter, source.connectionId);
+      } catch {
+        return null;
+      }
+    }
+
+    const duplicateId = crypto.randomUUID();
+    if (source.type === "serial") {
+      if (!source.serialConfig) return null;
+      const serialConfig: SerialConnectParams = {
+        ...source.serialConfig,
+        sessionId: duplicateId,
+      };
+      const duplicate: TerminalSession = {
+        ...source,
+        id: duplicateId,
+        status: "connecting",
+        errorMessage: undefined,
+        serialConfig,
+      };
+      set((state) => ({
+        sessions: [...state.sessions, duplicate],
+        activeSessionId: duplicateId,
+      }));
+      useLayoutStore.getState().setSplitTabActive(false);
+      void waitForTerminalReady(duplicateId).then(() => serialConnect(serialConfig)).then(() => {
+        get().markConnected(duplicateId);
+      }).catch((error) => {
+        get().markError(duplicateId, error instanceof Error ? error.message : String(error));
+      });
+      return duplicateId;
+    }
+
+    const duplicate: TerminalSession = {
+      ...source,
+      id: duplicateId,
+      status: "connecting",
+      errorMessage: undefined,
+      everConnected: undefined,
+    };
+    set((state) => ({
+      sessions: [...state.sessions, duplicate],
+      activeSessionId: duplicateId,
+    }));
+    useLayoutStore.getState().setSplitTabActive(false);
+    const cwd = useTerminalCwdStore.getState().cwds[source.id];
+    void waitForTerminalReady(duplicateId).then(() =>
+      localConnect(
+        duplicateId,
+        80,
+        24,
+        source.localShell,
+        cwd,
+        getToggle("shell-integration"),
+      ),
+    ).then(() => {
+      get().markConnected(duplicateId);
+    }).catch((error) => {
+      get().markError(duplicateId, error instanceof Error ? error.message : String(error));
+    });
+    return duplicateId;
+  },
+
   disconnect: async (sessionId) => {
     cancelBackoff(sessionId);
     const session = get().sessions.find((s) => s.id === sessionId);
@@ -782,6 +874,16 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
   },
 
   setActive: (sessionId) => set({ activeSessionId: sessionId }),
+
+  renameSession: (sessionId, name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    set((s) => ({
+      sessions: s.sessions.map((session) =>
+        session.id === sessionId ? { ...session, connectionName: trimmed } : session,
+      ),
+    }));
+  },
 
   markDisconnected: (sessionId) =>
     set((s) => ({
@@ -895,7 +997,9 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
           passphrase: credentials.passphrase,
           connectionId: connection.id,
           restore: options?.restore ?? false,
-          attachOnly: !!(session.persist && session.everConnected),
+          attachOnly:
+            options?.attachOnly ??
+            !!(session.persist && session.everConnected),
           ...opts,
         });
       });

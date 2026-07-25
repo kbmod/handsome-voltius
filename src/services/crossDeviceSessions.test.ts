@@ -7,7 +7,7 @@ const h = vi.hoisted(() => ({
   removeSession: vi.fn(),
   reconnect: vi.fn(async () => {}),
   markClosed: vi.fn(),
-  sessions: [] as { id: string; status: string }[],
+  sessions: [] as { id: string; status: string; type?: string; persist?: boolean }[],
   connections: [] as { id: string }[],
   teamConnections: {} as Record<string, { id: string }[]>,
 }));
@@ -100,9 +100,18 @@ test("runClosedCheck ignores closedIds with no matching local tab", () => {
   expect(h.removeSession).not.toHaveBeenCalled();
 });
 
-test("sessionEnded removes tab, tombstones it, and republishes", () => {
+test("sessionEnded tombstones and republishes a persistent SSH session", () => {
+  h.sessions = [{ id: "s5", status: "connected", type: "ssh", persist: true }];
   sessionEnded("s5");
   expect(h.removeSession).toHaveBeenCalledWith("s5");
   expect(h.markClosed).toHaveBeenCalledWith("s5");
   expect(h.publishLiveSessionsNow).toHaveBeenCalledTimes(1);
+});
+
+test("sessionEnded closes a local shell without publishing a cross-device tombstone", () => {
+  h.sessions = [{ id: "local-1", status: "connected", type: "local" }];
+  sessionEnded("local-1");
+  expect(h.removeSession).toHaveBeenCalledWith("local-1");
+  expect(h.markClosed).not.toHaveBeenCalled();
+  expect(h.publishLiveSessionsNow).not.toHaveBeenCalled();
 });
