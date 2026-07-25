@@ -19,8 +19,9 @@ export function ConnectionAvatar({ connection, size }: Props) {
     <AvatarTile
       base={base}
       icon={isSerial ? "lucide:ethernet-port" : (iconName ?? "lucide:server")}
+      iconSize={Math.round(size * 0.56)}
       size={size}
-      radius={Math.round(size * 0.2)}
+      radius={Math.round(size * 0.23)}
       className="text-white"
     />
   );

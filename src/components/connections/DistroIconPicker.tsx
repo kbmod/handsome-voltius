@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Icon } from "@iconify/react";
 import { useTranslation } from "react-i18next";
 import { PickerSurface } from "@/components/shared/PickerSurface";
-import { filterIconOptions, getConnectionIcon, getConnectionIconColor, getConnectionIconLabel, glossyTileStyle } from "@/utils/icons";
+import { brandTileStyle, filterIconOptions, getConnectionIcon, getConnectionIconColor, getConnectionIconLabel } from "@/utils/icons";
 import { formInputClass, formInputStyle } from "@/components/shared/Panel";
 
 /** Distro/icon chooser body: search + grid of CONNECTION_ICON_OPTIONS, hosted in a
@@ -84,7 +84,7 @@ export function DistroIconPicker({
               >
                 <span
                   className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
-                  style={glossyTileStyle(getConnectionIconColor(option.id))}
+                  style={brandTileStyle(getConnectionIconColor(option.id))}
                 >
                   <Icon icon={getConnectionIcon(option.id)} width={16} />
                 </span>

@@ -40,7 +40,7 @@ import { useGlobalKeepalivePreset } from "@/stores/connectivitySettingsStore";
 import { resolveDisableOverride } from "@/utils/inheritedSetting";
 import FolderSelector from "@/components/shared/FolderSelector";
 import { selectVaultScopedItems } from "@/utils/vaultScopedItems";
-import { getConnectionIcon, getConnectionIconColor, getConnectionIconLabel, glossyTileStyle, normalizeDistro } from "@/utils/icons";
+import { brandTileStyle, getConnectionIcon, getConnectionIconColor, getConnectionIconLabel, normalizeDistro } from "@/utils/icons";
 import { DistroIconPicker } from "./DistroIconPicker";
 import {
   PanelShell,
@@ -425,7 +425,7 @@ const ConnectionForm = forwardRef<ConnectionFormHandle, Props>(function Connecti
                   type="button"
                   onClick={() => setShowDistroPicker((v) => !v)}
                   className="w-10 h-10 rounded-lg flex items-center justify-center text-white shrink-0 transition-all hover:brightness-110"
-                  style={glossyTileStyle(visibleIcon ? getConnectionIconColor(visibleIcon) : "var(--t-bg-card-avatar)")}
+                  style={brandTileStyle(visibleIcon ? getConnectionIconColor(visibleIcon) : "var(--t-bg-card-avatar)")}
                   title={visibleIcon ? t("connections.form.changeIconWithLabel", { label: getConnectionIconLabel(visibleIcon) }) : t("connections.form.changeIcon")}
                   aria-label={t("connections.form.changeIconAriaLabel")}
                 >

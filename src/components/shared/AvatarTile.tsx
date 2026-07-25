@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Icon } from "@iconify/react";
-import { glossyTileStyle, neutralTileStyle } from "@/utils/icons";
+import { brandTileStyle, neutralTileStyle } from "@/utils/icons";
 
 interface AvatarTileProps {
   /** Iconify icon name. Ignored when `children` is provided. */
@@ -24,9 +24,8 @@ interface AvatarTileProps {
 }
 
 /**
- * The shared glossy avatar tile. Brand fill (`base`) for connection/distro
- * icons, neutral fill for abstract vault objects (keys, identities, snippets,
- * folders…), so every object avatar reads as one system.
+ * Shared avatar tile. Brand fill (`base`) uses the flat connection/distro
+ * treatment; omitting it uses the neutral object treatment.
  */
 export function AvatarTile({
   icon, iconSize, size, base, radius, className = "", iconClassName, style, title, children,
@@ -43,7 +42,7 @@ export function AvatarTile({
     <div
       title={title}
       className={`flex items-center justify-center shrink-0 select-none ${className}`}
-      style={{ ...sizeStyle, ...(base ? glossyTileStyle(base) : neutralTileStyle()), ...style }}
+      style={{ ...sizeStyle, ...(base ? brandTileStyle(base) : neutralTileStyle()), ...style }}
     >
       {children ?? (icon ? <Icon icon={icon} width={resolvedIconSize} className={iconClassName} /> : null)}
     </div>
