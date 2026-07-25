@@ -99,7 +99,9 @@ export const TOGGLE_DEFS = {
     icon: "lucide:history",
     descriptionKey: "settings.toggleDefs.category.hosts",
     keywords: ["persistent", "session", "tmux", "screen", "reconnect", "survive", "resume", "sleep", "reattach", "keep alive"],
-    default: true,
+    // Opt-in: ordinary SSH connections must open the user's login shell
+    // directly and must not probe for or inject a remote multiplexer.
+    default: false,
   },
   "restore-workspace": {
     labelKey: "settings.toggleDefs.restoreWorkspace.label",

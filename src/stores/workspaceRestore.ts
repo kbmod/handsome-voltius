@@ -4,8 +4,10 @@ import {
   startWorkspaceSnapshotSync,
 } from "./workspaceSnapshotStore";
 import { getToggle } from "./toggleSettingsStore";
+import { resolvePersistSession } from "./connectivitySettingsStore";
 import { resolveRemoteSessions } from "./liveSessionManifestCore";
 import { useCrossDeviceSessionsStore } from "./crossDeviceSessionsStore";
+import { useConnectionStore } from "./connectionStore";
 import { useSessionStore } from "./sessionStore";
 import { useLayoutStore, getPaneSessionIds, type SplitTab } from "./layoutStore";
 import { useUIStore } from "./uiStore";
@@ -20,12 +22,22 @@ import type { SerialConnectParams, TerminalSession } from "@/types";
 import type { SnapshotSession } from "./workspaceSnapshotCore";
 
 function toTerminalSession(s: SnapshotSession): TerminalSession {
+  const connection = s.type === "ssh"
+    ? useConnectionStore.getState().connections.find((item) => item.id === s.connectionId)
+      ?? Object.values(useConnectionStore.getState().teamConnections)
+        .flat()
+        .find((item) => item.id === s.connectionId)
+    : undefined;
   return {
     id: s.id,
     connectionId: s.connectionId,
     connectionName: s.connectionName,
     status: "connecting",
-    persist: s.persist,
+    // Re-evaluate persistence from the current global/per-host setting instead
+    // of carrying an old default through an existing workspace snapshot.
+    persist: s.type === "ssh"
+      ? resolvePersistSession(connection?.persist_session)
+      : false,
     // Snapshot sessions existed on the host: reconnects must attach, not create.
     everConnected: true,
     type: s.type,
@@ -59,9 +71,10 @@ export async function restoreWorkspaceOnLaunch(): Promise<void> {
   }
 
   // 1. Tabs + layout reappear immediately, all "connecting".
+  const restoredSessions = snapshot.sessions.map(toTerminalSession);
   useSessionStore
     .getState()
-    .restoreSessions(snapshot.sessions.map(toTerminalSession), snapshot.activeSessionId);
+    .restoreSessions(restoredSessions, snapshot.activeSessionId);
   useLayoutStore.getState().hydrate({
     splitTabs: snapshot.layout.splitTabs as SplitTab[],
     activeSplitTabId: snapshot.layout.activeSplitTabId,
@@ -102,7 +115,7 @@ export async function restoreWorkspaceOnLaunch(): Promise<void> {
   let closedIds: string[] = [];
   if (getToggle("cross-device-sessions")) {
     const cds = useCrossDeviceSessionsStore.getState();
-    const advertisedIds = snapshot.sessions
+    const advertisedIds = restoredSessions
       .filter((session) => session.type === "ssh" && session.persist)
       .map((session) => session.id);
     closedIds = resolveRemoteSessions({
@@ -115,13 +128,17 @@ export async function restoreWorkspaceOnLaunch(): Promise<void> {
   const closed = new Set(closedIds);
   for (const id of closedIds) useSessionStore.getState().removeSession(id);
 
+  const restoredById = new Map(restoredSessions.map((session) => [session.id, session]));
   for (const s of snapshot.sessions) {
     if (closed.has(s.id)) continue; // killed on another device
     if (s.type === "ssh" || s.type === "serial") {
       // Launch restore is allowed to recreate a missing persistent tmux/screen
       // session. Attach-only is reserved for joining a session advertised by
       // another device and for reconnecting a previously live channel.
-      await reconnect(s.id, { restore: s.persist, attachOnly: false });
+      await reconnect(s.id, {
+        restore: restoredById.get(s.id)?.persist ?? false,
+        attachOnly: false,
+      });
     } else {
       try {
         const outputVersion = getTerminalOutputVersion(s.id);

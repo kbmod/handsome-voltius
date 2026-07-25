@@ -9,7 +9,8 @@ import {
   sftpDownload, sftpDownloadDir, sftpDownloadDirTar,
   sftpUploadBatchTar, sftpDownloadBatchTar, sftpTransferBatchTar,
   sftpExists, fsExists, fsHomeDir, fsCopy, wslHomeDir,
-  sftpRename, sftpDelete, fsRename, fsDelete,
+  sftpListDir, fsListDir, sftpPathType, fsPathType,
+  sftpMkdir, fsMkdir, sftpRename, sftpDelete, fsRename, fsDelete,
   pickLocalPath, pickLocalPaths,
 } from "@/services/sftp";
 import { transferItem } from "@/services/sftpTransferCore";
@@ -42,6 +43,8 @@ import { DiffTab } from "./editor/DiffTab";
 import { EditorDropOverlay } from "./editor/EditorDropOverlay";
 import { showSftpError } from "./sftpNotifications";
 import { TransferQueue } from "./TransferQueue";
+import { planDirectoryMerge, type PlannedTransfer } from "./directoryMerge";
+import { joinPath } from "./moveTargetCore";
 
 export default function SFTPPage() {
   const { t } = useTranslation();
@@ -151,7 +154,13 @@ export default function SFTPPage() {
 
   // ── Transfers ──────────────────────────────────────────────────────────────
 
-  const execTransfer = useCallback(async (file: FileEntry, fromSide: "left" | "right", useTar: boolean, targetFolder?: string) => {
+  const execTransfer = useCallback(async (
+    file: FileEntry,
+    fromSide: "left" | "right",
+    useTar: boolean,
+    targetFolder?: string,
+    exactDestinationPath?: string,
+  ) => {
     const src     = fromSide === "left" ? leftPhase  : rightPhase;
     const dst     = fromSide === "left" ? rightPhase : leftPhase;
     const srcHost = fromSide === "left" ? leftHost   : rightHost;
@@ -162,7 +171,7 @@ export default function SFTPPage() {
     if (src.tag !== "connected" || dst.tag !== "connected") return;
 
     const dstBase  = targetFolder ?? dst.cwd;
-    const destPath = `${dstBase.replace(/\/$/, "")}/${file.name}`;
+    const destPath = exactDestinationPath ?? joinPath(dstBase, file.name);
     const srcIsLocal = srcHost?.kind === "local";
     const dstIsLocal = dstHost?.kind === "local";
 
@@ -233,36 +242,136 @@ export default function SFTPPage() {
   }, [leftPhase, rightPhase, leftHost, rightHost, execBatchTar, execTransfer]);
 
   const triggerTransfer = useCallback(async (files: FileEntry[], fromSide: "left" | "right", targetFolder?: string) => {
+    const src     = fromSide === "left" ? leftPhase  : rightPhase;
     const dst     = fromSide === "left" ? rightPhase : leftPhase;
+    const srcHost = fromSide === "left" ? leftHost   : rightHost;
     const dstHost = fromSide === "left" ? rightHost  : leftHost;
-    if (dst.tag !== "connected") return;
+    if (src.tag !== "connected" || dst.tag !== "connected") return;
 
+    const srcIsLocal = srcHost?.kind === "local";
     const dstIsLocal = dstHost?.kind === "local";
     const dstBase    = targetFolder ?? dst.cwd;
+    const destinationType = (path: string) => dstIsLocal
+      ? fsPathType(path)
+      : sftpPathType(dst.sftpId!, path);
+    const listSource = async (path: string): Promise<FileEntry[]> => {
+      if (srcIsLocal) {
+        const entries = await fsListDir(path);
+        return entries.map((entry) => ({
+          name: entry.name,
+          path: entry.path,
+          size: entry.size,
+          isDir: entry.is_dir,
+          modified: entry.modified ?? undefined,
+          isSymlink: false,
+        }));
+      }
+      const entries = await sftpListDir(src.sftpId!, path);
+      return entries.map((entry) => ({
+        name: entry.name,
+        path: entry.path,
+        size: entry.size,
+        isDir: entry.is_dir,
+        modified: entry.modified ?? undefined,
+        permissions: entry.permissions ?? undefined,
+        isSymlink: entry.is_symlink,
+      }));
+    };
 
-    const conflicts = (
-      await Promise.all(files.map(async (f) => {
-        const dstPath = `${dstBase.replace(/\/$/, "")}/${f.name}`;
-        const exists = dstIsLocal ? await fsExists(dstPath) : await sftpExists(dst.sftpId!, dstPath);
-        return exists ? f : null;
-      }))
-    ).filter((f): f is FileEntry => f !== null);
+    const normalReady: FileEntry[] = [];
+    const normalConflicts: FileEntry[] = [];
+    const selectiveReady: PlannedTransfer[] = [];
+    const selectiveConflicts: PlannedTransfer[] = [];
+    const directoriesToCreate: string[] = [];
 
-    const conflictPaths = new Set(conflicts.map((f) => f.path));
-    const toTransfer = files.filter((f) => !conflictPaths.has(f.path));
+    for (const file of files) {
+      const destinationPath = joinPath(dstBase, file.name);
+      const type = await destinationType(destinationPath);
+
+      if (file.isDir && !file.isSymlink && type === "directory") {
+        const plan = await planDirectoryMerge(file, destinationPath, {
+          listSource,
+          destinationType,
+        });
+        directoriesToCreate.push(...plan.directoriesToCreate);
+        selectiveReady.push(...plan.ready);
+        selectiveConflicts.push(...plan.conflicts);
+      } else if (type === null) {
+        normalReady.push(file);
+      } else if (
+        (file.isDir && !file.isSymlink && type === "file")
+        || ((!file.isDir || file.isSymlink) && type === "directory")
+      ) {
+        selectiveConflicts.push({
+          entry: file,
+          destinationPath,
+          deleteDestination: true,
+        });
+      } else {
+        normalConflicts.push(file);
+      }
+    }
+
+    const selectiveByPath = new Map(
+      [...selectiveReady, ...selectiveConflicts]
+        .map((transfer) => [transfer.entry.path, transfer] as const),
+    );
+    const conflicts = [
+      ...normalConflicts,
+      ...selectiveConflicts.map(({ entry }) => entry),
+    ];
+    const ready = [
+      ...normalReady,
+      ...selectiveReady.map(({ entry }) => entry),
+    ];
+
+    const executePrepared = async (resolved: FileEntry[]) => {
+      try {
+        for (const directory of directoriesToCreate) {
+          if (await destinationType(directory) === null) {
+            if (dstIsLocal) await fsMkdir(directory);
+            else await sftpMkdir(dst.sftpId!, directory);
+          }
+        }
+
+        const normal = resolved.filter((entry) => !selectiveByPath.has(entry.path));
+        if (normal.length > 0) await executeFiles(normal, fromSide, targetFolder);
+
+        for (const entry of resolved) {
+          const transfer = selectiveByPath.get(entry.path);
+          if (!transfer) continue;
+          if (transfer.deleteDestination) {
+            if (dstIsLocal) await fsDelete(transfer.destinationPath);
+            else await sftpDelete(dst.sftpId!, transfer.destinationPath);
+          }
+          await execTransfer(
+            entry,
+            fromSide,
+            false,
+            targetFolder,
+            transfer.destinationPath,
+          );
+        }
+      } catch (error) {
+        showSftpError(error);
+      }
+    };
 
     if (conflicts.length > 0) {
       setPending({
         conflicts,
-        toTransfer,
+        toTransfer: ready,
         totalConflicts: conflicts.length,
-        execute: (files) => void executeFiles(files, fromSide, targetFolder),
+        execute: (resolved) => void executePrepared(resolved),
       });
       return;
     }
 
-    void executeFiles(files, fromSide, targetFolder);
-  }, [leftPhase, rightPhase, leftHost, rightHost, executeFiles, setPending]);
+    void executePrepared(ready);
+  }, [
+    leftPhase, rightPhase, leftHost, rightHost,
+    executeFiles, execTransfer, setPending,
+  ]);
 
   const transfer = useCallback((direction: "LR" | "RL") => {
     const fromSide = direction === "LR" ? "left" : "right" as const;

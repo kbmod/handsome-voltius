@@ -282,16 +282,28 @@ export async function fsCopy(from: string, to: string, transferId: string): Prom
   return invoke("fs_copy", { from, to, transferId });
 }
 
+export type PathType = "file" | "directory" | null;
+
+/** Returns the remote path type, or null when the path does not exist. */
+export async function sftpPathType(sftpId: string, path: string): Promise<PathType> {
+  const result: boolean | null = await invoke("sftp_stat", { sftpId, path });
+  return result === null ? null : result ? "directory" : "file";
+}
+
+/** Returns the local path type, or null when the path does not exist. */
+export async function fsPathType(path: string): Promise<PathType> {
+  const result: boolean | null = await invoke("fs_stat", { path });
+  return result === null ? null : result ? "directory" : "file";
+}
+
 /** Returns true if path exists on the remote, false otherwise. */
 export async function sftpExists(sftpId: string, path: string): Promise<boolean> {
-  const result: boolean | null = await invoke("sftp_stat", { sftpId, path });
-  return result !== null;
+  return (await sftpPathType(sftpId, path)) !== null;
 }
 
 /** Returns true if path exists on the local filesystem. */
 export async function fsExists(path: string): Promise<boolean> {
-  const result: boolean | null = await invoke("fs_stat", { path });
-  return result !== null;
+  return (await fsPathType(path)) !== null;
 }
 
 // ── Tar-based directory transfer ──────────────────────────────────────────────

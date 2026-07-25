@@ -597,7 +597,7 @@
       },
       "persistentSessions": {
         "title": "Persistent sessions",
-        "desc": "Keep your shell and running processes alive across disconnects by wrapping the remote shell in tmux (falls back to screen). Requires tmux or screen on the host. Can be overridden per host."
+        "desc": "Optional: keep your shell and running processes alive across disconnects by wrapping the remote shell in tmux (falls back to screen). Disabled by default and can be enabled globally or per host."
       },
       "terminalTitle": "Terminal",
       "shellIntegration": {

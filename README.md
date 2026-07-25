@@ -87,7 +87,7 @@ No account required. Everything below is free, forever.
 - **Easy Import & Export** — No vendor lock-in. Import your existing setup from Termius or MobaXterm in 1-click. Your data is always exportable as open JSON.
 - **Gist Sync** — E2EE device sync via your own private GitHub Gist. No central server, bring your own token.
 - **SFTP** — Easy file transfers and browsing, works for Host↔Host and Host↔Local with drag & drop support. [Accelerated SFTP →](https://voltius.app/blog/sftp-tar-acceleration)
-- **Persistent Sessions & Workspace Restore** — Sessions survive disconnects via tmux/screen on the host, and the whole workspace (tabs, splits, running processes, scrollback) survives full app restarts. With cloud sync, live sessions are shared across your devices — open the same terminal on a second device and both stay live, mirrored in real time. [Cross-device sessions →](https://voltius.app/blog/cross-device-session-pickup)
+- **Persistent Sessions & Workspace Restore** — Optional persistent sessions survive disconnects via tmux/screen on the host; this is disabled by default so normal SSH connections open the login shell directly. Workspace layout restore remains available independently. With persistence enabled, cloud sync can share live sessions across your devices. [Cross-device sessions →](https://voltius.app/blog/cross-device-session-pickup)
 - **Split Panes** — Split terminals as much as you want, broadcast inputs to all panes.
 - **Local Terminal** — Bash, Zsh, Fish, PowerShell, WSL, Git Bash, CMD, and more.
 - **Plugin System** — Install plugins from the [official registry](https://github.com/VoltiusApp/marketplace) or point to your own custom repo.
@@ -199,7 +199,7 @@ on macOS and Windows after installation.
 | **Security** | **End-to-End Encrypted** | Proprietary E2EE | **End-to-End Encrypted** |  | Local Only / Manual |
 | **SFTP host&lt;-&gt;host** | ✅ | ✅ | ❌ |  | ❌ |
 | **Serial Console** | ✅ | ✅ | ✅ |  | ✅ |
-| **Persistent sessions** | ✅ uses tmux/screen, default behavior | 🟡 (via Mosh, must be installed on the host; not built-in) | ❌ | ❌ | ❌ |
+| **Persistent sessions** | ✅ optional tmux/screen integration | 🟡 (via Mosh, must be installed on the host; not built-in) | ❌ | ❌ | ❌ |
 | **Cross-device live resume** | ✅ Seamless pickup | ❌ | ❌ | ❌ | ❌ |
 | **Local-first** | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Plugins** | ✅ | ❌ | ✅ | ❌ | ✅ |
