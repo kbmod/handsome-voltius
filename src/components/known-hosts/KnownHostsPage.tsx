@@ -139,42 +139,56 @@ export default function KnownHostsPage() {
       >
         <div
           ref={itemAreaRef}
-          className={`p-5 ${
-            layoutMode === "grid"
-              ? "grid gap-2.5"
-              : "flex flex-col gap-2"
-          }`}
-          style={layoutMode === "grid" ? { gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" } : undefined}
+          className="px-7 pt-4 pb-7"
         >
-          {filtered.length === 0 ? (
-            <div className="col-span-full flex flex-col items-center justify-center gap-3 py-16 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-(--t-bg-elevated) flex items-center justify-center text-(--t-text-dim)">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-                  <circle cx="12" cy="9" r="2.5"/>
-                </svg>
+          <div className="mb-2.5 flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-(--t-text-primary)">
+              {t("layout.nav.known-hosts")}
+            </h2>
+            {filtered.length > 0 && (
+              <span className="text-[11px] tabular-nums text-(--t-text-dim)">
+                {filtered.length}
+              </span>
+            )}
+          </div>
+          <div
+            className={
+              layoutMode === "grid"
+                ? "grid gap-3"
+                : "flex flex-col gap-1"
+            }
+            style={layoutMode === "grid" ? { gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" } : undefined}
+          >
+            {filtered.length === 0 ? (
+              <div className="col-span-full flex flex-col items-center justify-center gap-3 py-16 text-center">
+                <div className="w-12 h-12 rounded-xl bg-(--t-bg-elevated) flex items-center justify-center text-(--t-text-dim)">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                    <circle cx="12" cy="9" r="2.5"/>
+                  </svg>
+                </div>
+                <p className="text-(--t-text-dim) text-sm">
+                  {q ? t("knownHosts.page.noSearchResults") : t("knownHosts.page.emptyState")}
+                </p>
               </div>
-              <p className="text-(--t-text-dim) text-sm">
-                {q ? t("knownHosts.page.noSearchResults") : t("knownHosts.page.emptyState")}
-              </p>
-            </div>
-          ) : (
-            filtered.map((host) => (
-              <KnownHostCard
-                key={host.id}
-                host={host}
-                isSelected={selectedIdSet.has(host.id)}
-                isFocused={focusedId === host.id}
-                isList={layoutMode === "list"}
-                canEdit={canEdit}
-                otherVaults={otherVaultsFor(host)}
-                onSelect={(e) => handleItemSelect(host.id, e as React.MouseEvent<HTMLDivElement>)}
-                onDelete={() => handleDelete([host.id])}
-                onMoveVault={(vaultId) => moveKnownHostVault(host.id, vaultId)}
-                onCopyVault={(vaultId) => copyKnownHostVault(host.id, vaultId)}
-              />
-            ))
-          )}
+            ) : (
+              filtered.map((host) => (
+                <KnownHostCard
+                  key={host.id}
+                  host={host}
+                  isSelected={selectedIdSet.has(host.id)}
+                  isFocused={focusedId === host.id}
+                  isList={layoutMode === "list"}
+                  canEdit={canEdit}
+                  otherVaults={otherVaultsFor(host)}
+                  onSelect={(e) => handleItemSelect(host.id, e as React.MouseEvent<HTMLDivElement>)}
+                  onDelete={() => handleDelete([host.id])}
+                  onMoveVault={(vaultId) => moveKnownHostVault(host.id, vaultId)}
+                  onCopyVault={(vaultId) => copyKnownHostVault(host.id, vaultId)}
+                />
+              ))
+            )}
+          </div>
         </div>
       </DragSelectSurface>
 

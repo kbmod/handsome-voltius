@@ -74,7 +74,7 @@
       "terminal":       { "label": "Terminal",        "keywords": ["scrollback", "paste", "bracketed", "copy", "minimap", "buffer"] },
       "sftp":           { "label": "SFTP",            "keywords": ["file", "transfer", "ftp", "files"] },
       "portForwarding": { "label": "Port Forwarding", "keywords": ["tunnel", "forward", "ports", "ssh", "auto"] },
-      "hosts":          { "label": "Hosts",           "keywords": ["ping", "reachability", "connectivity", "status"] },
+      "hosts":          { "label": "Hosts",           "keywords": ["ping", "reachability", "connectivity", "status", "startup", "restore", "resume", "session", "workspace"] },
       "shortcuts":      { "label": "Shortcuts",       "keywords": ["keybind", "hotkey", "shortcut", "rebind", "keyboard"] },
       "diagnostics":    { "label": "Diagnostics",     "keywords": ["diagnostics", "bug", "report", "log", "debug", "issue"] },
       "about":          { "label": "About",           "keywords": ["version", "update", "release", "changelog"] }
@@ -571,6 +571,11 @@
       }
     },
     "hosts": {
+      "startupTitle": "Startup",
+      "restoreWorkspace": {
+        "title": "Restore sessions and workspace on launch",
+        "desc": "Reopen terminal tabs, reconnect sessions, and restore split layouts after restarting the app. Turn this off to start in Vaults with no restored terminals."
+      },
       "connectivityTitle": "Connectivity",
       "reachability": {
         "title": "Reachability check",
@@ -622,7 +627,7 @@
       "teamPresence": { "label": "Team Presence" },
       "shellIntegration": { "label": "Shell Integration" },
       "persistentSessions": { "label": "Persistent Sessions" },
-      "restoreWorkspace": { "label": "Restore Workspace on Launch" },
+      "restoreWorkspace": { "label": "Restore Sessions and Workspace on Launch" },
       "crossDeviceSessions": { "label": "Cross-Device Sessions" },
       "changelogPopup": { "label": "Show What's New After Updates" },
       "category": {

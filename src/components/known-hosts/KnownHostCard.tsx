@@ -5,6 +5,7 @@ import { BaseCard } from "@/components/shared/BaseCard";
 import { vaultMenuItems } from "@/utils/vaultMenuItems";
 import { getShortcutHint } from "@/stores/shortcutStore";
 import type { KnownHost, VaultOption } from "@/types";
+import { formatKnownHostEndpoint } from "./knownHostDisplay";
 
 interface KnownHostCardProps {
   host: KnownHost;
@@ -55,20 +56,36 @@ export function KnownHostCard({
       ? [{ label: t("common.action.delete"), icon: "lucide:trash-2", danger: true, onClick: onDelete, shortcut: getShortcutHint("delete") }]
       : []),
   ];
+  const endpoint = formatKnownHostEndpoint(host.host, host.port);
+  const label = host.name ?? endpoint;
 
   return (
     <BaseCard
       isSelected={isSelected}
       isFocused={isFocused}
       isList={isList}
-      className={isList ? "" : "gap-3 py-2 rounded-xl"}
+      className={isList ? "" : "min-h-16"}
+      style={isList ? undefined : {
+        gap: 12,
+        paddingTop: 10,
+        paddingBottom: 10,
+        borderRadius: 12,
+      }}
       onClick={onSelect}
       contextMenuItems={contextMenuItems}
       bulkContextMenuItems={bulkContextMenuItems}
       data-selectable-id={host.id}
     >
       {/* Fingerprint icon */}
-      <AvatarTile icon="lucide:fingerprint-pattern" iconSize={isList ? 14 : 18} className={`rounded-xl ${isList ? "w-7 h-7" : "w-10 h-10"}`} />
+      <AvatarTile
+        base="#0879aa"
+        icon="lucide:fingerprint-pattern"
+        iconSize={isList ? 14 : 19}
+        size={isList ? 28 : 40}
+        radius={isList ? 7 : 9}
+        className="text-white"
+        title={host.fingerprint}
+      />
 
       <div className="min-w-0 flex-1">
         {isList ? (
@@ -76,11 +93,11 @@ export function KnownHostCard({
           <div className="flex items-center gap-4">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-(--t-text-primary) truncate">
-                {host.name ?? `${host.host}:${host.port}`}
+                {label}
               </p>
               {host.name && (
                 <p className="text-xs text-(--t-text-dim) truncate">
-                  {host.host}:{host.port}
+                  {endpoint}
                 </p>
               )}
             </div>
@@ -90,19 +107,16 @@ export function KnownHostCard({
           </div>
         ) : (
           /* Grid layout */
-          <>
+          <div className="min-w-0">
             <p className="text-sm font-medium text-(--t-text-primary) truncate">
-              {host.name ?? `${host.host}:${host.port}`}
+              {label}
             </p>
             {host.name && (
-              <p className="text-xs text-(--t-text-dim) truncate mt-0.5">
-                {host.host}:{host.port}
+              <p className="text-[11px] text-(--t-text-dim) truncate mt-0.5">
+                {endpoint}
               </p>
             )}
-            <p className="text-xs text-(--t-text-dim) font-mono truncate mt-1">
-              {truncateFingerprint(host.fingerprint)}
-            </p>
-          </>
+          </div>
         )}
       </div>
 

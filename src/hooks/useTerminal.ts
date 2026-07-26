@@ -533,6 +533,21 @@ export function refitSession(sessionId: string): void {
   try { entry.fitAddon.fit(); } catch { /* container not laid out yet */ }
 }
 
+/** Re-fit and repaint a terminal after an always-mounted container becomes
+ * visible again. WebKitGTK can leave xterm's canvas blank when visibility is
+ * restored without a size change, so fit alone is not sufficient. */
+export function refreshTerminalViewport(sessionId: string): void {
+  const entry = terminalCache.get(sessionId);
+  if (!entry) return;
+  try {
+    entry.fitAddon.fit();
+    entry.terminal.refresh(0, Math.max(0, entry.terminal.rows - 1));
+  } catch {
+    // The reveal may race a pane remount; its ResizeObserver will fit it once
+    // the new container is available.
+  }
+}
+
 /** Programmatically send input to a session's PTY (used by the mobile extra-keys row).
  *  Mirrors the onData path: honors the multiplayer input gate, respects connected state,
  *  records history, encodes + sends. Does not replicate the split-pane broadcast branch

@@ -14,6 +14,7 @@ import { DirtyDot, ResetButton } from "./shared";
 
 const SHELL_INTEGRATION_DEFAULT = TOGGLE_DEFS["shell-integration"].default;
 const PERSIST_SESSIONS_DEFAULT = TOGGLE_DEFS["persistent-sessions"].default;
+const RESTORE_WORKSPACE_DEFAULT = TOGGLE_DEFS["restore-workspace"].default;
 
 export default function HostsSection() {
   const { t } = useTranslation();
@@ -28,6 +29,7 @@ export default function HostsSection() {
   const [shellIntegration, setShellIntegration] = useToggle("shell-integration");
   const [keepalivePreset, setKeepalivePreset] = useGlobalKeepalivePreset();
   const [persistSessions, setPersistSessions] = useToggle("persistent-sessions");
+  const [restoreWorkspace, setRestoreWorkspace] = useToggle("restore-workspace");
   const pollIntervalMs = useHostPingStore((s) => s.pollIntervalMs);
   const setPollIntervalMs = useHostPingStore((s) => s.setPollIntervalMs);
   const activePollIntervalMs = useHostPingStore((s) => s.activePollIntervalMs);
@@ -50,6 +52,31 @@ export default function HostsSection() {
 
   return (
     <div className="p-6 max-w-lg space-y-6">
+      <div>
+        <h3 className="text-xs font-bold uppercase tracking-widest mb-3 text-(--t-text-dim)">
+          {t("settings.hosts.startupTitle")}
+        </h3>
+        <div className="rounded-lg bg-(--t-bg-elevated) border border-(--t-border)">
+          <div className="group flex items-center justify-between px-4 py-3 gap-4">
+            <div>
+              <p className="text-sm font-medium text-(--t-text-primary)">
+                {t("settings.hosts.restoreWorkspace.title")}
+              </p>
+              <p className="text-xs mt-0.5 text-(--t-text-dim)">
+                {t("settings.hosts.restoreWorkspace.desc")}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {restoreWorkspace !== RESTORE_WORKSPACE_DEFAULT && (
+                <ResetButton onReset={() => setRestoreWorkspace(RESTORE_WORKSPACE_DEFAULT)} />
+              )}
+              {restoreWorkspace !== RESTORE_WORKSPACE_DEFAULT && <DirtyDot />}
+              <Toggle checked={restoreWorkspace} onChange={setRestoreWorkspace} />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div>
         <h3 className="text-xs font-bold uppercase tracking-widest mb-3 text-(--t-text-dim)">
           {t("settings.hosts.connectivityTitle")}

@@ -25,6 +25,7 @@ import { useHostPingPolling } from "@/hooks/useHostPingPolling";
 import { EmptySplitPane } from "@/components/panes/PaneTerminal";
 import { PaneView } from "@/components/panes/PaneView";
 import { usePaneDragController } from "@/components/panes/usePaneDragController";
+import { useRefreshVisibleTerminals } from "@/components/panes/useRefreshVisibleTerminals";
 import { DropZones } from "@/components/panes/DropZones";
 import { DragGhost } from "@/components/panes/DragGhost";
 import { getPaneSessionIds, useLayoutStore } from "@/stores/layoutStore";
@@ -196,6 +197,13 @@ export default function MainPanel() {
       teamVaultStatus === "error") &&
     !homeView;
   const showSplitWorkspace = activeNav === "terminal" && splitTabActive && !sftpPanelOpen;
+  const visibleSplitSessionIds = splitRoot ? getPaneSessionIds(splitRoot) : [];
+  const splitWorkspaceRendered =
+    showSplitWorkspace &&
+    !newTabOpen &&
+    !noVaultSelected &&
+    !showTeamVaultState;
+  useRefreshVisibleTerminals(splitWorkspaceRendered, visibleSplitSessionIds);
 
   // Determine vault/home overlay to show on top of terminals
   let overlayContent: React.ReactNode = null;

@@ -38,6 +38,9 @@ The core product requirements are:
 - Remote tmux/screen persistence is optional and disabled by default.
 - Workspace layout restore remains available independently of remote
   tmux/screen persistence.
+- Session and workspace restore can be disabled together from Settings >
+  Hosts > Startup. When disabled, the app starts in Vaults without reopening
+  terminal tabs or split layouts.
 - Releases are not being published while the project is in progress.
 - Generated `.deb` files and other build artifacts must not be committed or
   pushed.
@@ -133,6 +136,19 @@ Relevant pushed commits:
   context menus, layout controls, and metadata in the installed Debian
   application.
 
+### Known Hosts
+
+- Reworked the toolbar into the accepted compact layout with selection actions
+  on the left and search, view, and sort controls on the right.
+- Tightened the page heading, count, grid/list spacing, and empty state.
+- Reworked grid entries into compact Termius-like one-row cards with flat blue
+  fingerprint tiles.
+- Preserved richer fingerprint and endpoint metadata in list mode.
+- Omit the default SSH port from endpoints while retaining nonstandard ports.
+- Preserved selection, context-menu, delete confirmation, vault, grid/list,
+  search, and sort behavior.
+- Verified the Known Hosts surface in the installed Debian application.
+
 ### Workspace and session behavior
 
 - Fixed mixed local/SSH split-workspace restoration.
@@ -142,8 +158,13 @@ Relevant pushed commits:
 - Fixed intentional SSH `exit` from triggering an unwanted reconnect.
 - Fixed complex pane reordering that could leave a terminal visually present
   but dead.
+- Fixed WebKitGTK leaving every pane canvas blank after switching from a split
+  workspace to a standalone terminal tab and back; all visible panes are now
+  refitted and repainted after the workspace returns.
 - Verified many terminals across mixed horizontal and vertical arrangements
   without reproducing the dead-pane bug.
+- Verified split workspaces return with every prompt and existing buffer
+  immediately visible without clicking individual panes.
 - Preserved rename, focus, split, reorder, and shortcut behavior.
 - Changed remote tmux/screen persistence from automatic to explicit opt-in.
 - Re-evaluate the current global/per-host persistence setting during workspace
@@ -180,8 +201,8 @@ Relevant pushed commits:
 
 Latest automated result:
 
-- 162 test files passed;
-- 818 tests passed;
+- 166 test files passed;
+- 824 tests passed;
 - TypeScript check passed;
 - zero-error ESLint check passed;
 - Vite production build passed;
@@ -193,11 +214,13 @@ Latest locally built test package:
 - Path:
   `target/release/bundle/deb/Voltius_0.12.0_amd64.deb`
 - SHA-256:
-  `b68c21b9ab3c89cef1c286ec69c04b507cacf1423b634e5ad0420f3b8365d72f`
-- This package includes the accepted Keychain polish, WebKitGTK click fix,
-  fixed dark navy desktop shell, edge-to-edge Gruvbox terminal workspace,
-  selective directory-merge fix, opt-in tmux/screen behavior, and flat host
-  distro/service icons.
+  `deca6ac4c12ee5ee2bfa7b0ac829f283844cd2649949096629a39eff7e4d6dc3`
+- This package includes the accepted Known Hosts and Keychain polish,
+  WebKitGTK click fix, fixed dark navy desktop shell, edge-to-edge Gruvbox
+  terminal workspace, selective directory-merge fix, opt-in tmux/screen
+  behavior, flat host distro/service icons, and the visible session/workspace
+  restore control. It also includes the verified WebKitGTK repaint fix for
+  split workspaces returning from another terminal tab.
 
 Tauri successfully creates the `.deb`, then exits with a signing error because
 the upstream public updater key exists but no private release-signing key is
@@ -243,21 +266,41 @@ verified checkpoint so the next session starts from current repository truth.
 
 ## Pending work
 
-### 1. Focused remaining desktop-surface cleanup
+### 1. Handsome Voltius rebranding and ownership
+
+Remove the remaining upstream product branding before a release:
+
+- rename the visible product, application/window titles, package/bundle
+  metadata, desktop entry, and generated installer from Voltius to Handsome
+  Voltius;
+- replace or remove links to the Voltius maintainer's GitHub profile,
+  repository, website, documentation, blog, Ko-fi, donation, support, and
+  issue pages;
+- replace repository, homepage, update, and support endpoints with this fork's
+  owner-controlled destinations;
+- replace or remove upstream logos and branding in the About screen, settings,
+  splash/loading surfaces, icons, static assets, README, and package metadata;
+- remove upstream updater/signing coupling or configure the fork's own update
+  endpoint and signing keys before publishing releases;
+- preserve the upstream license, copyright notices, and required attribution.
+
+Before implementation, collect the exact owner name, repository URL, website,
+support/donation link, and update policy. Do not guess replacement destinations.
+
+### 2. Focused remaining desktop-surface cleanup
 
 This is a polish pass, not a new application-wide redesign. Work on one surface
 at a time and preserve existing functionality.
 
 Priority order:
 
-1. Known Hosts
-2. Settings layout, density, labels, and control consistency
-3. Snippets and port-forwarding surfaces
-4. Shared dialogs, menus, notifications, and right-side panels
+1. Settings layout, density, labels, and control consistency
+2. Snippets and port-forwarding surfaces
+3. Shared dialogs, menus, notifications, and right-side panels
 
-Hosts, groups, folders, vault navigation, Keychain, and their shared
-distro/service/icon treatment have been visually accepted for the current
-milestone.
+Hosts, groups, folders, vault navigation, Keychain, Known Hosts, and their
+shared distro/service/icon treatment have been visually accepted for the
+current milestone.
 
 For each surface:
 
@@ -269,7 +312,7 @@ For each surface:
 - run targeted tests and inspect the real Debian Tauri application before
   moving to the next surface.
 
-### 2. Encrypted Gist sync round-trip
+### 3. Encrypted Gist sync round-trip
 
 Perform a clean two-profile or two-installation round-trip and verify that the
 encrypted payload restores:
@@ -290,7 +333,7 @@ Acceptance requirements:
 - no data is lost when syncing between a fresh profile and the existing
   profile.
 
-### 3. Final regression and cleanup
+### 4. Final regression and cleanup
 
 - Repeat the main local shell, SSH, tabs, splits, rename, shortcuts, exit,
   reconnect, workspace restore, theme, and SFTP tests.
@@ -302,7 +345,7 @@ Acceptance requirements:
 - Update this status document and README if behavior changed.
 - Commit and push the final verified source checkpoint.
 
-### 4. Deferred work
+### 5. Deferred work
 
 These are intentionally outside the current personal Debian milestone:
 

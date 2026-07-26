@@ -69,7 +69,7 @@
       "terminal":       { "label": "Terminal",           "keywords": ["historique", "collage", "crochets", "copier", "mini-carte", "tampon"] },
       "sftp":           { "label": "SFTP",               "keywords": ["fichier", "transfert", "ftp", "fichiers"] },
       "portForwarding": { "label": "Transfert de ports", "keywords": ["tunnel", "redirection", "ports", "ssh", "auto"] },
-      "hosts":          { "label": "Hôtes",              "keywords": ["ping", "accessibilité", "connectivité", "statut"] },
+      "hosts":          { "label": "Hôtes",              "keywords": ["ping", "accessibilité", "connectivité", "statut", "démarrage", "restaurer", "reprendre", "session", "espace de travail"] },
       "shortcuts":      { "label": "Raccourcis",         "keywords": ["raccourci", "touche", "clavier", "rebind", "keyboard"] },
       "diagnostics":    { "label": "Diagnostics",        "keywords": ["diagnostics", "bug", "rapport", "journal", "débogage", "problème"] },
       "about":          { "label": "À propos",           "keywords": ["version", "mise à jour", "publication", "changelog"] }
@@ -566,6 +566,11 @@
       }
     },
     "hosts": {
+      "startupTitle": "Démarrage",
+      "restoreWorkspace": {
+        "title": "Restaurer les sessions et l'espace de travail au lancement",
+        "desc": "Rouvre les onglets de terminal, reconnecte les sessions et restaure les dispositions divisées après le redémarrage de l'application. Désactivez cette option pour démarrer dans Coffres sans terminaux restaurés."
+      },
       "connectivityTitle": "Connectivité",
       "reachability": {
         "title": "Vérification de l'accessibilité",
@@ -617,7 +622,7 @@
       "teamPresence": { "label": "Présence d'équipe" },
       "shellIntegration": { "label": "Intégration du shell" },
       "persistentSessions": { "label": "Sessions persistantes" },
-      "restoreWorkspace": { "label": "Restaurer l'espace de travail au lancement" },
+      "restoreWorkspace": { "label": "Restaurer les sessions et l'espace de travail au lancement" },
       "crossDeviceSessions": { "label": "Sessions multi-appareils" },
       "changelogPopup": { "label": "Afficher les nouveautés après les mises à jour" },
       "category": {
