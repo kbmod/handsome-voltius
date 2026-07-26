@@ -243,10 +243,10 @@
       }
     },
     "diagnostics": {
-      "intro": "Trouble with Voltius? Create a report and send it to the developer — it helps track down bugs that are hard to reproduce.",
+      "intro": "Trouble with Handsome Voltius? Create a report and send it to the developer — it helps track down bugs that are hard to reproduce.",
       "troubleshootingTitle": "Troubleshooting",
       "verboseLabel": "Verbose logging (this session)",
-      "verboseSub": "Records extra detail to help diagnose issues. Resets to normal when you restart Voltius.",
+      "verboseSub": "Records extra detail to help diagnose issues. Resets to normal when you restart Handsome Voltius.",
       "verboseHint": "Verbose logging is on. To capture the problem:\n1. Reproduce the issue now\n2. Come back and create a bug report",
       "reportTitle": "Bug report",
       "createButton": "Create bug report",
@@ -254,7 +254,7 @@
       "createdButton": "Report saved",
       "reportSub": "Includes app logs and system info. Never includes your passwords, keys, or terminal contents.",
       "whatsIncluded": "What's included?",
-      "includedBody": "Included:\n• App logs (what Voltius was doing, with sensitive values removed)\n• App version, operating system, and active plugins\nNOT included:\n• Passwords, vault contents, or private keys\n• Terminal output or anything you typed\nThe report is saved to your computer. Nothing is sent automatically — you choose where to share it.",
+      "includedBody": "Included:\n• App logs (what Handsome Voltius was doing, with sensitive values removed)\n• App version, operating system, and active plugins\nNOT included:\n• Passwords, vault contents, or private keys\n• Terminal output or anything you typed\nThe report is saved to your computer. Nothing is sent automatically — you choose where to share it.",
       "toastSaved": "Report saved — {{name}}",
       "toastError": "Couldn't create report: {{reason}}",
       "toastGenericError": "Something went wrong."
@@ -263,35 +263,22 @@
       "versionTitle": "Version",
       "loading": "Loading…",
       "updatesTitle": "Updates",
-      "checkForUpdate": "Check for update",
-      "restartToUpdate": "Restart to update · v{{version}}",
-      "status": {
-        "idle": "Not checked yet",
-        "checking": "Checking for updates…",
-        "upToDate": "You're up to date",
-        "downloading": "Downloading v{{version}} — {{progress}}%",
-        "ready": "v{{version}} ready to install"
-      },
-      "autoDownload": {
-        "title": "Auto-download updates",
-        "desc": "Check & download new versions in the background"
-      },
-      "whatsNew": {
-        "title": "Show what's new after updates",
-        "desc": "Open the changelog automatically on a new release"
+      "manualBuilds": {
+        "title": "Manual development builds",
+        "desc": "Automatic updates are disabled for this in-progress fork. Install a locally built package when you want to update."
       },
       "linksTitle": "Links",
       "links": {
-        "github": "GitHub",
-        "documentation": "Documentation",
-        "x": "X",
-        "kofi": "Ko-Fi",
-        "contact": "Contact"
+        "source": "Source repository",
+        "issues": "Issues and support",
+        "support": "Buy me a coffee",
+        "social": "Follow on X"
       },
-      "reportBug": "Report a bug"
+      "reportBug": "Create a diagnostic report",
+      "attribution": "Handsome Voltius is a personal-use fork of the open-source Voltius project. Original copyright and AGPLv3 attribution are preserved in the repository."
     },
     "sync": {
-      "voltiusCloud": "Voltius Cloud",
+      "voltiusCloud": "Legacy Voltius Cloud",
       "active": {
         "title": "Cloud sync active",
         "syncing": "Syncing…",

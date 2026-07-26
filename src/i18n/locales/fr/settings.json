@@ -238,10 +238,10 @@
       }
     },
     "diagnostics": {
-      "intro": "Un problème avec Voltius ? Créez un rapport et envoyez-le au développeur — cela aide à traquer les bugs difficiles à reproduire.",
+      "intro": "Un problème avec Handsome Voltius ? Créez un rapport et envoyez-le au développeur — cela aide à traquer les bugs difficiles à reproduire.",
       "troubleshootingTitle": "Dépannage",
       "verboseLabel": "Journalisation détaillée (cette session)",
-      "verboseSub": "Enregistre des détails supplémentaires pour aider à diagnostiquer les problèmes. Revient à la normale au redémarrage de Voltius.",
+      "verboseSub": "Enregistre des détails supplémentaires pour aider à diagnostiquer les problèmes. Revient à la normale au redémarrage de Handsome Voltius.",
       "verboseHint": "La journalisation détaillée est activée. Pour capturer le problème :\n1. Reproduisez le problème maintenant\n2. Revenez ici et créez un rapport de bug",
       "reportTitle": "Rapport de bug",
       "createButton": "Créer un rapport de bug",
@@ -249,7 +249,7 @@
       "createdButton": "Rapport enregistré",
       "reportSub": "Inclut les journaux de l'application et les infos système. N'inclut jamais vos mots de passe, clés ou le contenu du terminal.",
       "whatsIncluded": "Que contient le rapport ?",
-      "includedBody": "Inclus :\n• Journaux de l'application (ce que faisait Voltius, avec les valeurs sensibles retirées)\n• Version de l'application, système d'exploitation et extensions actives\nNON inclus :\n• Mots de passe, contenu du coffre-fort ou clés privées\n• Sortie du terminal ou tout ce que vous avez tapé\nLe rapport est enregistré sur votre ordinateur. Rien n'est envoyé automatiquement — vous choisissez où le partager.",
+      "includedBody": "Inclus :\n• Journaux de l'application (ce que faisait Handsome Voltius, avec les valeurs sensibles retirées)\n• Version de l'application, système d'exploitation et extensions actives\nNON inclus :\n• Mots de passe, contenu du coffre-fort ou clés privées\n• Sortie du terminal ou tout ce que vous avez tapé\nLe rapport est enregistré sur votre ordinateur. Rien n'est envoyé automatiquement — vous choisissez où le partager.",
       "toastSaved": "Rapport enregistré — {{name}}",
       "toastError": "Impossible de créer le rapport : {{reason}}",
       "toastGenericError": "Une erreur s'est produite."
@@ -258,35 +258,22 @@
       "versionTitle": "Version",
       "loading": "Chargement…",
       "updatesTitle": "Mises à jour",
-      "checkForUpdate": "Vérifier les mises à jour",
-      "restartToUpdate": "Redémarrer pour mettre à jour · v{{version}}",
-      "status": {
-        "idle": "Pas encore vérifié",
-        "checking": "Vérification des mises à jour…",
-        "upToDate": "Vous êtes à jour",
-        "downloading": "Téléchargement de v{{version}} — {{progress}} %",
-        "ready": "v{{version}} prête à installer"
-      },
-      "autoDownload": {
-        "title": "Téléchargement automatique des mises à jour",
-        "desc": "Vérifier et télécharger les nouvelles versions en arrière-plan"
-      },
-      "whatsNew": {
-        "title": "Afficher les nouveautés après les mises à jour",
-        "desc": "Ouvrir le journal des modifications automatiquement lors d'une nouvelle version"
+      "manualBuilds": {
+        "title": "Versions de développement manuelles",
+        "desc": "Les mises à jour automatiques sont désactivées pour ce fork en cours de développement. Installez un paquet construit localement pour effectuer une mise à jour."
       },
       "linksTitle": "Liens",
       "links": {
-        "github": "GitHub",
-        "documentation": "Documentation",
-        "x": "X",
-        "kofi": "Ko-Fi",
-        "contact": "Contact"
+        "source": "Dépôt source",
+        "issues": "Problèmes et assistance",
+        "support": "Offrez-moi un café",
+        "social": "Suivre sur X"
       },
-      "reportBug": "Signaler un bug"
+      "reportBug": "Créer un rapport de diagnostic",
+      "attribution": "Handsome Voltius est un fork personnel du projet open source Voltius. Les droits d'auteur d'origine et l'attribution AGPLv3 sont conservés dans le dépôt."
     },
     "sync": {
-      "voltiusCloud": "Voltius Cloud",
+      "voltiusCloud": "Legacy Voltius Cloud",
       "active": {
         "title": "Synchronisation cloud active",
         "syncing": "Synchronisation en cours…",

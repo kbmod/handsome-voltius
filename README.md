@@ -1,409 +1,118 @@
 > [!WARNING]
 > **Work in progress.** Handsome Voltius is a personal-use project and is not
-> currently a finished or supported release. It is a fork of
-> [Voltius](https://github.com/VoltiusApp/voltius) focused on a cleaner,
-> better-integrated Linux desktop UI—specifically for Debian and WebKitGTK.
-> Gruvbox Dark is the only bundled theme; additional terminal themes can be
-> [created in the app](#terminal-themes-in-this-fork).
+> currently a finished or supported release. It targets Debian/WebKitGTK.
 
 <div align="center">
-  <img src="src-tauri/icons/128x128.png" alt="Voltius Logo" width="96" />
-  <br/>
+  <img src="src-tauri/icons/128x128.png" alt="Handsome Voltius logo" width="96" />
   <h1>Handsome Voltius</h1>
-  
-  <p><strong>A personal Debian-focused UI fork of <a href="https://github.com/VoltiusApp/voltius">Voltius</a>.</strong></p>
-  <p>Voltius's SSH, SFTP, vault, and encrypted Gist-sync engine with a more polished Linux desktop and terminal workspace.</p>
-  
+  <p><strong>A polished Debian-focused SSH and SFTP desktop client.</strong></p>
   <p>
-    <img src="https://img.shields.io/badge/status-beta-f59e0b" alt="Beta" />
+    <img src="https://img.shields.io/badge/status-work_in_progress-f59e0b" alt="Work in progress" />
     <img src="https://img.shields.io/badge/built_with-Rust-dea584?logo=rust" alt="Rust" />
     <img src="https://img.shields.io/badge/UI-Tauri-24c8db?logo=tauri" alt="Tauri" />
-    <img src="https://img.shields.io/badge/Security-E2EE-green" alt="E2EE" />
     <img src="https://img.shields.io/github/license/kbmod/handsome-voltius" alt="License" />
   </p>
 </div>
 
----
-
-## About this fork
+## About
 
 Handsome Voltius is a personal-use fork of the open-source
-[Voltius](https://github.com/VoltiusApp/voltius) project. It keeps Voltius's
-Rust/Tauri backend, SSH and SFTP functionality, encrypted vaults, plugins, and
-free end-to-end encrypted GitHub Gist sync while replacing rough desktop
-surfaces with a denser, more coherent interface for daily use on Debian Linux.
-It may work on other operating systems, but Debian/WebKitGTK is the target used
-for development and verification.
+[Voltius project](https://github.com/VoltiusApp/voltius). It retains the
+existing Rust/Tauri SSH, SFTP, encrypted vault, import/export, plugin, and
+end-to-end encrypted GitHub Gist sync foundations while providing a denser,
+more coherent desktop interface for Debian Linux.
 
-The fork currently focuses on:
+Termius is used only as a visual and workflow reference. This project is not
+affiliated with Termius and does not access Termius cloud services or private
+application data.
 
-- A compact, Termius-inspired workspace with denser tabs, split panes, search,
-  connection states, and a vertical vault navigation list.
-- Correct `xterm-256color` terminal capability, bundled Linux-friendly fonts,
-  sharper terminal rendering, and a focused block cursor.
-- A fixed Gruvbox Dark desktop shell and terminal-only custom color schemes,
-  preventing terminal palettes from leaking into workspace chrome.
-- A flush two-pane SFTP workspace and native non-blocking error notifications.
-- Linux/WebKitGTK behavior, including reliable terminal sizing and deliberate
-  shell exits that do not trigger an unwanted reconnect.
+Current highlights include:
 
-This project is not affiliated with Termius. Termius is used only as a visual
-and workflow reference. Upstream Voltius remains available from the
-[official repository](https://github.com/VoltiusApp/voltius).
+- `xterm-256color` local and SSH terminals;
+- tabbed and split workspaces with rename, reorder, broadcast, and restore;
+- Gruvbox Dark terminal rendering and a fixed Termius-inspired navy shell;
+- compact Hosts, Keychain, Known Hosts, and SFTP surfaces;
+- reliable Debian/WebKitGTK click, focus, resize, and repaint behavior;
+- encrypted GitHub Gist sync without a paid account;
+- optional remote tmux/screen persistence, disabled by default.
 
-## Terminal themes in this fork
+## Terminal themes
 
-Handsome Voltius deliberately ships with one built-in theme: **Gruvbox Dark**.
-The desktop interface is fixed to that palette. Selecting, importing, editing,
-or creating another theme changes only xterm terminal colors and terminal font
-settings; it does not recolor tabs, active-pane borders, unread-output dots,
-settings, or other application chrome. Changes hot-apply to terminals that are
-already open.
+Gruvbox Dark is the only bundled terminal theme. The application shell uses a
+fixed palette; custom themes change only xterm colors and terminal font
+settings.
 
-The simplest way to create a compatible theme is **Settings → Appearance → New
-Custom Theme**. Start from Gruvbox Dark, set a unique name, then edit the
-terminal font and colors. The theme editor exposes every field this build uses:
+Create a compatible theme from **Settings → Appearance → New Custom Theme**.
+Start from Gruvbox Dark, give it a unique name, and configure:
 
-- `background`, `foreground`, `cursor`, and `selectionBackground`
-- the eight normal ANSI colors: `black`, `red`, `green`, `yellow`, `blue`,
-  `magenta`, `cyan`, and `white`
-- the eight bright ANSI colors: `brightBlack`, `brightRed`, `brightGreen`,
-  `brightYellow`, `brightBlue`, `brightMagenta`, `brightCyan`, and
-  `brightWhite`
-- `terminalFontFamily` and `terminalFontSize`
+- foreground, background, cursor, and selection colors;
+- all normal and bright ANSI colors;
+- terminal font family and font size.
 
-Use six-digit hexadecimal colors such as `#282828`. Font families may include
-fallbacks, for example `"'Source Code Pro', monospace"`; the named font must be
-installed or bundled for identical rendering. Exported `.voltius-theme.json`
-files retain the upstream `AppTheme` UI fields for file, plugin, and encrypted
-Gist-sync compatibility, but this fork intentionally ignores those UI values.
-Custom terminal themes and their font/rendering settings remain part of the
-encrypted theme sync payload.
+Theme changes hot-apply to open terminals. Exported
+`.voltius-theme.json` files retain the legacy format name for compatibility,
+and custom themes remain part of the encrypted Gist sync payload.
 
-## ✨ Features
+## Installation
 
-No account required. Everything below is free, forever.
-
-- **Easy Import & Export** — No vendor lock-in. Import your existing setup from Termius or MobaXterm in 1-click. Your data is always exportable as open JSON.
-- **Gist Sync** — E2EE device sync via your own private GitHub Gist. No central server, bring your own token.
-- **SFTP** — Easy file transfers and browsing, works for Host↔Host and Host↔Local with drag & drop support. [Accelerated SFTP →](https://voltius.app/blog/sftp-tar-acceleration)
-- **Persistent Sessions & Workspace Restore** — Optional persistent sessions survive disconnects via tmux/screen on the host; this is disabled by default so normal SSH connections open the login shell directly. Workspace layout restore remains available independently. With persistence enabled, cloud sync can share live sessions across your devices. [Cross-device sessions →](https://voltius.app/blog/cross-device-session-pickup)
-- **Split Panes** — Split terminals as much as you want, broadcast inputs to all panes.
-- **Local Terminal** — Bash, Zsh, Fish, PowerShell, WSL, Git Bash, CMD, and more.
-- **Plugin System** — Install plugins from the [official registry](https://github.com/VoltiusApp/marketplace) or point to your own custom repo.
-- **Container Management** — Docker and Proxmox LXC. Browse containers, open terminals, and manage resources without leaving Voltius.
-- **Process Manager** — View and kill processes on connected hosts.
-- **System Monitoring** — Live CPU, memory, and disk stats from connected hosts.
-
-> Full feature list at [docs.voltius.app](https://docs.voltius.app) *(coming soon)* · **Pro · Teams · Business** — see [voltius.app/#pricing](https://voltius.app/#pricing) for paid plans.
-
-## 📦 Install
-
-> The package repositories and download links below install official upstream
-> Voltius and do **not** currently include this fork's UI changes. To run
-> Handsome Voltius, build this repository from source using the Development &
-> Build section below.
-
-### Linux — apt & dnf/yum
-
-One command adds the signed Voltius repository and installs the app:
+There are no published package repositories, signed releases, or automatic
+updates for this in-progress fork. Build and install the Debian package
+locally:
 
 ```bash
-curl -fsSL https://repo.voltius.app/setup.sh | sudo bash
+npm install
+npm run tauri -- build --bundles deb \
+  --config '{"build":{"beforeBuildCommand":"npm run build"}}'
+sudo apt install --reinstall target/release/bundle/deb/Handsome_Voltius_*_amd64.deb
 ```
 
-After that, Voltius updates through your normal `sudo apt upgrade` / `sudo dnf upgrade`. Packages are GPG-signed and provided for both `amd64`/`x86_64` and `arm64`/`aarch64`.
+The build requires the standard Tauri 2 Linux development dependencies,
+including WebKitGTK.
 
-<details>
-<summary>Manual setup</summary>
-
-**Debian / Ubuntu**
-```bash
-curl -fsSL https://repo.voltius.app/voltius.gpg | sudo gpg --dearmor -o /usr/share/keyrings/voltius.gpg
-echo "deb [signed-by=/usr/share/keyrings/voltius.gpg] https://repo.voltius.app/deb stable main" | sudo tee /etc/apt/sources.list.d/voltius.list
-sudo apt update && sudo apt install voltius
-```
-
-**Fedora / RHEL**
-```bash
-sudo rpm --import https://repo.voltius.app/voltius.gpg
-sudo curl -fsSL https://repo.voltius.app/voltius.repo -o /etc/yum.repos.d/voltius.repo
-sudo dnf install voltius
-```
-On older dnf, replace the `curl` line with `sudo dnf config-manager --add-repo https://repo.voltius.app/voltius.repo`.
-</details>
-
-### macOS — Homebrew
-
-```sh
-brew install --cask voltiusapp/voltius/voltius
-```
-
-Voltius is ad-hoc signed but not yet notarized (no Apple Developer account yet).
-If macOS Gatekeeper blocks the first launch, right-click the app and choose
-**Open**, or install with `--no-quarantine`:
-
-```sh
-brew install --cask --no-quarantine voltiusapp/voltius/voltius
-```
-
-If you download the `.dmg` directly and macOS says **"Voltius.app is damaged and
-cannot be opened"**, the download was quarantined — clear the flag and launch again:
-
-```sh
-xattr -cr /Applications/Voltius.app
-```
-
-### Windows — winget
-
-```sh
-winget install --id Voltius.Voltius -e
-```
-
-Windows SmartScreen may warn that the publisher is unverified (the app is not yet
-code-signed) — choose **More info → Run anyway**.
-
-### Other downloads
-
-Direct installers (`.dmg`, `.msi`, `.exe`, `.AppImage`) are on
-[voltius.app/download](https://voltius.app/download). Voltius updates itself in-app
-on macOS and Windows after installation.
-
-## ⚖️ Comparison (WIP)
-
-| Feature | Voltius | Termius | [Reach](https://github.com/alexandrosnt/Reach) | [Termix](https://github.com/Termix-SSH/Termix) | Tabby |
-| --- | --- | --- | --- | --- | --- |
-| **Engine** | **Rust + Tauri** 🦀 | likely Electron (closed-source) | **Rust + Tauri** 🦀 | Web (React + Node.js) | Electron / Node.js |
-| **RAM Usage** | ~300MB | ~500MB+ | ~300MB | NOT TESTED | NOT TESTED |
-| **Installed Size** | ~40MB | ~1GB | ~40MB | NOT TESTED | NOT TESTED |
-| **Cloud Sync** | Gist (Free) / Real-Time (Paid) | 🟡 Only Pro | 🟡 Via Turso (own account) | ❌ | Community Plugins |
-| **Import/Export** | ✅ 1-click import from Termius/MobaXterm, JSON Export | 🟡 Strong Import Integrations but no Export | ✅ |  |  |
-| **Port Forwarding** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Snippets** | ✅ + multi-exec | 🟡 (Multi-exec + startup snippets only Pro) | ✅ + multi-exec | ✅ + multi-exec |  |
-| **Command Palette** | ✅ | ✅ |  |  | ✅ |
-| **Split panes** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **X11 Forwarding** | ❌ | | ❌ |  | ✅ |
-| **Docker Integration** | ✅ |  |  |  | 🟡 (community plugin) |
-| **Proxmox LXC Integration** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **System Monitoring** | ✅ |  | ✅ | ✅ |  |
-| **Jump Hosts** | ✅ | ✅ | ✅ |  | ✅ |
-| **Team vaults** | ✅ Teams or self-hosted | ✅ Teams plan | ✅ Free but complex |  |  |
-| **Audit logs** | ✅ | 🟡 Teams plan |  |  |  |
-| **Custom Themes** | ✅ |  |  | ✅ | ✅ |
-| **Folders &amp; Tags** | ✅ | ✅ | ✅ | ✅ |  |
-| **Auto-Updates** | ✅ | ✅ | ✅ |  |  |
-| **Modern UI/UX** | ✅ | ✅ | 🟡 | ✅ | 🟡 |
-| **AI assistant** | ❌ | ✅ | ✅ |  |  |
-| **Permissions** | ✅ Teams RBAC / Business custom roles | ✅ Granular perms |  |  |  |
-| **Terminal sharing** | ✅ Pro (1 guest) / Teams (unlimited) | ✅ needs Teams plan |  |  |  |
-| **Security** | **End-to-End Encrypted** | Proprietary E2EE | **End-to-End Encrypted** |  | Local Only / Manual |
-| **SFTP host&lt;-&gt;host** | ✅ | ✅ | ❌ |  | ❌ |
-| **Serial Console** | ✅ | ✅ | ✅ |  | ✅ |
-| **Persistent sessions** | ✅ optional tmux/screen integration | 🟡 (via Mosh, must be installed on the host; not built-in) | ❌ | ❌ | ❌ |
-| **Cross-device live resume** | ✅ Seamless pickup | ❌ | ❌ | ❌ | ❌ |
-| **Local-first** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Plugins** | ✅ | ❌ | ✅ | ❌ | ✅ |
-| **Platforms** | Windows, Linux, MacOS (Mobile coming soon) | Windows, Linux, MacOS, Android, IOS | Windows, Linux, MacOS, Android | All (web-based) | Windows, Linux, MacOS, Web |
-| **License** | **AGPLv3** | Commercial / Paid | MIT | Apache License Version 2.0 | MIT |
-| **OS Detection** | ✅ | ✅ | ✅ | ❌ | ❌ |
-
-## 🛡️ Architecture & Security
-Voltius is built on a **Local-First, Zero-Knowledge** architecture. Your sensitive data (private keys, passwords, and server metadata) is encrypted on your machine before it ever touches a disk or a network.
-
-### Account & Encryption Tiers
-We offer three levels of security to fit your workflow:
-
-- **OS Keychain (Local-Only)**: Uses your system's native secure storage (macOS Keychain, Windows Credential Manager, or Secret Service via keytar/libsecret). No master password required; maximum convenience for local-only use.
-
-- **Master Password:** Encrypts your vault using a user-defined passphrase. Uses Argon2id for key derivation and XChaCha20-Poly1305 for data encryption.
-
-- **Cloud Account:** Enables seamless E2EE synchronization across devices via our high-speed relay service.
-
-### Web Portal
-
-Account registration and login at [app.voltius.app](https://app.voltius.app) are also fully E2EE. The same `voltius-crypto` crate is compiled to WebAssembly and runs entirely in your browser — key derivation (Argon2id + HKDF-SHA256) happens client-side before anything touches the network. The server only ever receives an `auth_key`, never your password or encryption key.
-
-### Zero-Knowledge Synchronization
-Whether you use our professional Cloud Sync or our built-in Gist Plugin, we follow a **Zero-Knowledge** protocol. All data leaving the device is strictly ciphertext — the auth server, SSE server, and GitHub have zero knowledge of vault contents.
-
-<details>
-<summary>Sync architecture diagram</summary>
-
-```mermaid
-flowchart TD
-    classDef cleartext fill:#ffebee,stroke:#c62828,stroke-width:2px,color:#000;
-    classDef secure fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000;
-    classDef local fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#000;
-    classDef remote fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#000;
-    classDef wasm fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#000;
-    classDef note fill:#f9f9f9,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5,color:#333;
-
-    subgraph RegLayer ["0. Account Creation (one-time)"]
-        direction LR
-
-        subgraph PortalReg ["Web Portal — app.voltius.app"]
-            PortalCreds["Email + Password"]:::cleartext
-            WasmKDF["voltius-crypto-wasm\n(Argon2id + HKDF-SHA256\nsame crate · WASM target)"]:::wasm
-            AuthKeyPortal(("auth_key")):::secure
-            PortalCreds -->|"password + generated account_id"| WasmKDF
-            WasmKDF -->|"enc_key discarded\n(no vault in portal)"| WasmKDF
-            WasmKDF --> AuthKeyPortal
-        end
-
-        subgraph DesktopReg ["Desktop Client (Tauri)"]
-            DesktopCreds["Email + Password"]:::cleartext
-            NativeKDF["voltius-crypto · native Rust\n(Argon2id + HKDF-SHA256)"]:::secure
-            AuthKeyDesktop(("auth_key")):::secure
-            DesktopCreds -->|"password + generated account_id"| NativeKDF
-            NativeKDF -->|"enc_key → vault unlock\n(proceeds to step 1)"| NativeKDF
-            NativeKDF --> AuthKeyDesktop
-        end
-
-        RegServer[("Auth Server")]:::remote
-        AuthKeyPortal -->|"email + auth_key + account_id"| RegServer
-        AuthKeyDesktop -->|"email + auth_key + account_id\n+ public_key + machine_fingerprint"| RegServer
-        RegServer -->|"JWT + account_id"| PortalCreds
-        RegServer -->|"JWT + account_id"| DesktopCreds
-    end
-
-    subgraph AuthLayer ["1. Vault Unlock (Tauri Desktop — voltius-crypto · native Rust)"]
-        direction TB
-        subgraph Methods ["Vault Unlock Methods"]
-            direction LR
-            OS["OS Keychain"]:::local
-            MP["Master Password"]:::local
-            Cloud["Cloud Account\n(Email & Password)"]:::remote
-        end
-
-        KDF["Argon2id + HKDF-SHA256\n(128 MB mem · 3 iters · p=4)"]:::secure
-        EncKey(("enc_key\n(XChaCha20-Poly1305 key)")):::secure
-        AuthKey(("auth_key\n→ server login")):::secure
-
-        Cloud -->|"password + account_id"| KDF
-        MP -->|"password + account_id"| KDF
-        OS -->|"retrieves enc_key directly\n(stored after prior login)"| EncKey
-        KDF --> EncKey
-        KDF --> AuthKey
-        AuthKey -->|"POST /v1/auth/login"| AuthServer[("Auth Server")]:::remote
-        AuthServer -->|"JWT"| Cloud
-    end
-
-    RegLayer -.->|"account created — use same\ncredentials in desktop Cloud Account"| Cloud
-
-    subgraph VaultLayer ["2. Local Vault (Rust · chacha20poly1305 crate)"]
-        XChaCha{"XChaCha20-Poly1305\n(Rust, via Tauri IPC)"}:::secure
-        LocalStore[("secrets.enc\n(disk)")]:::local
-        XChaCha <==>|"encrypt / decrypt"| LocalStore
-    end
-
-    EncKey -->|"enc_key passed over Tauri IPC"| XChaCha
-
-    subgraph SyncLayer ["3. Zero-Knowledge Remote Sync"]
-        direction LR
-
-        subgraph GistSync ["Gist Sync (free · polling)"]
-            direction TB
-            GistKDF["derive_gist_key (Tauri cmd)\nArgon2id + HKDF-SHA256\npassphrase/PAT + manifest salt"]:::secure
-            GistAead{"XChaCha20-Poly1305\n(Rust)"}:::secure
-            Gist[("GitHub Gists\n(Bring-Your-Own)")]:::remote
-            GistKDF -->|"gist_enc_key"| GistAead
-            GistAead <==>|"Encrypted app-state blobs"| Gist
-        end
-
-        subgraph CloudSync ["Cloud Sync (Pro/Teams · SSE)"]
-            direction TB
-            SseAead{"XChaCha20-Poly1305\n(Rust · encrypt_payload)"}:::secure
-            SSE[("Voltius SSE Server")]:::remote
-            SseAead <==>|"Encrypted CRDT payloads"| SSE
-        end
-    end
-
-    EncKey -->|"enc_key"| SseAead
-
-    Note1>All data leaving the device is strictly ciphertext.\nAuth Server, SSE Server, and GitHub have zero knowledge of vault contents.]:::note
-    SyncLayer --- Note1
-```
-
-</details>
-
-## Prerequisites
-
-- [Node.js](https://nodejs.org/) 24+
-- [pnpm](https://pnpm.io/) — `npm i -g pnpm`
-- [Rust](https://rustup.rs/) (stable toolchain)
-- Tauri prerequisites for your platform — see [tauri.app/start/prerequisites](https://tauri.app/start/prerequisites/)
-
-## 🛠️ Development & Build
-
-This fork is primarily developed and tested on Debian-family Linux systems with
-Tauri's WebKitGTK runtime. Other platforms may continue to work through the
-upstream codebase, but they are not the focus of the UI changes.
-
-After installing the prerequisites:
+## Development
 
 ```bash
-pnpm install
-pnpm tauri dev
+npm install
+npm run tauri dev
 ```
 
-### Building in Docker (recommended)
-
-I've made a Dockerfile that allows cross-compilation to Windows ARM64/x64; Linux ARM64/x64 without needing to set up a complex toolchain on your machine:
+Run the verification suite:
 
 ```bash
-# Build the cross-compilation image
-docker build -f Dockerfile.cross-compile -t voltius-cross .
-
-# Run the build inside the container
-docker run --rm -it \
-  -v "$(pwd):/project" \
-  voltius-cross \
-  bash -c 'pnpm tauri build --target aarch64-pc-windows-msvc --runner cargo-xwin --no-bundle'
+npm test
+npx tsc --noEmit
+npm run lint -- --quiet
+npm run build
+cargo check --manifest-path src-tauri/Cargo.toml
+git diff --check
 ```
 
-Build artifacts are automatically handed back to your host user on exit, so nothing under the mounted project is left root-owned.
+## Sync and data compatibility
 
-The `--no-bundle` flag skips NSIS installer creation (not supported in cross-compilation). The built executable is at:
-```
-target/aarch64-pc-windows-msvc/release/voltius.exe
-```
+GitHub Gist sync encrypts the complete payload before upload. Existing Gists,
+vault data, settings, import/export files, plugin storage, event names, and
+keychain entries continue using their legacy `voltius` identifiers so current
+installations can upgrade without losing data.
 
-You can replace `aarch64-pc-windows-msvc` with the appropriate target. Here's a quick reference for targets:
-- Windows x64: `x86_64-pc-windows-msvc`
-- Windows ARM64: `aarch64-pc-windows-msvc`
-- Linux x64: `x86_64-unknown-linux-gnu`
-- Linux ARM64: `aarch64-unknown-linux-gnu`
+The Tauri bundle identifier also remains `com.voltius.app` for this milestone
+because changing it without migration would create a separate application data
+and WebKit storage location. This identifier is an internal compatibility
+detail, not visible product branding.
 
-If you want to build for other target, see `rustup target list` and add with `rustup target add <target>`. I have not tested other targets.
+The optional upstream cloud/team integration remains available as
+**Legacy Voltius Cloud** for compatibility. GitHub Gist sync does not require
+or use that service.
 
-> Note: build will work but throw an error except if you set TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_KEY_PASSWORD to dummy values, which is required by the Tauri build process even if you don't do code signing in cross-compilation. You can set them to any non-empty value to bypass the error.
+## Project links
 
-### 🐧WSL2 dev note
+- Source: <https://github.com/kbmod/handsome-voltius>
+- Issues: <https://github.com/kbmod/handsome-voltius/issues>
+- Support: <https://buymeacoffee.com/kbmod>
+- X: <https://x.com/stillbooting>
 
-```sh
-sudo apt install -y build-essential libssl-dev pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev libsecret-1-dev
-LIBGL_ALWAYS_SOFTWARE=1 && pnpm tauri dev
-```
+## License and attribution
 
-### Build
-
-```bash
-pnpm tauri build
-```
-
-Output installers are placed in `target/release/bundle/`.
-
-## 🧰 Tech Stack
-
-| Layer       | Tech                               |
-|-------------|------------------------------------|
-| Frontend    | React 19, TypeScript, Tailwind CSS |
-| Desktop     | Rust, Tauri 2                      |
-| Sync Server | Rust, Axum, PostgreSQL             |
-| Terminal    | xterm.js (WebGL Accelerated)       |
-| SSH/SFTP    | russh                              |
-| Security    | Argon2id, HKDF-SHA256, XChaCha20-Poly1305 (E2EE) |
-
-## 📄 Licensing
-Voltius is licensed under the AGPLv3 for the core application and MIT for plugins. This means you can use and modify the core app for free, but if you distribute a modified version, you must also share your changes under the same license. Plugins can be used and shared with more flexibility under the MIT license.
-Copyright © 2026 Killian Pavy. All rights reserved.
+Handsome Voltius remains licensed under the upstream AGPLv3 license for the
+core application; plugins retain their applicable licenses. Original Voltius
+copyright, license, and attribution are preserved. See [LICENSE](LICENSE) and
+the repository history.

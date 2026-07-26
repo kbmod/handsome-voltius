@@ -16,7 +16,7 @@ export const manifest: PluginManifest = {
   name: "GitHub Gist Sync",
   version: "1.0.0",
   description:
-    "Sync your data across devices via encrypted GitHub Gist — no Voltius account required.",
+    "Sync your data across devices via encrypted GitHub Gist — no Handsome Voltius account required.",
   permissions: [
     "vault:read",
     "vault:write",

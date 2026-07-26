@@ -46,7 +46,7 @@ export function usePaneDragController() {
             useSessionStore.getState().setActive(drag.sessionId);
             useNotificationStore.getState().addToast({
               pluginId: "core",
-              pluginName: "Voltius",
+              pluginName: "Handsome Voltius",
               type: "toast",
               message: i18n.t("panes.dragToast.alreadyVisible"),
               severity: "info",
@@ -61,7 +61,7 @@ export function usePaneDragController() {
           } else {
             useNotificationStore.getState().addToast({
               pluginId: "core",
-              pluginName: "Voltius",
+              pluginName: "Handsome Voltius",
               type: "toast",
               message: i18n.t("panes.dragToast.invalidDropTarget"),
               severity: "info",

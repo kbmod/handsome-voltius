@@ -14,7 +14,7 @@
       "masterPasswordPlaceholder": "Мастер-пароль",
       "unlock": "Разблокировать",
       "resetVault": "Сбросить хранилище (удалит все локальные данные)",
-      "chooseHowToUse": "Выберите, как вы хотите использовать Voltius",
+      "chooseHowToUse": "Выберите, как вы хотите использовать Handsome Voltius",
       "getStarted": "Начать",
       "getStartedSub": "Защищено связкой ключей ОС — пароль не требуется",
       "or": "или",
@@ -115,7 +115,7 @@
     },
     "sync": {
       "title": "Синхронизация",
-      "voltiusSync": "Синхронизация Voltius",
+      "voltiusSync": "Синхронизация Handsome Voltius",
       "gistE2ee": "Gist E2EE",
       "syncNow": "Синхронизировать сейчас",
       "signInForSync": "Войдите для облачной синхронизации",

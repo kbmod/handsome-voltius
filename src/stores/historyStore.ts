@@ -52,7 +52,7 @@ export const useHistoryStore = create<HistoryStore>((set, get) => ({
       }));
       useNotificationStore.getState().addToast({
         pluginId: "core:history",
-        pluginName: "Voltius",
+        pluginName: "Handsome Voltius",
         type: "toast",
         message: i18n.t("common.toast.undoFailed", { error: err instanceof Error ? err.message : String(err) }),
         severity: "error",
@@ -83,7 +83,7 @@ export const useHistoryStore = create<HistoryStore>((set, get) => ({
       }));
       useNotificationStore.getState().addToast({
         pluginId: "core:history",
-        pluginName: "Voltius",
+        pluginName: "Handsome Voltius",
         type: "toast",
         message: i18n.t("common.toast.redoFailed", { error: err instanceof Error ? err.message : String(err) }),
         severity: "error",

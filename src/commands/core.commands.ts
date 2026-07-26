@@ -1,7 +1,6 @@
 import type { OmniCommand } from "@/plugins/api";
 import { useUIStore } from "@/stores/uiStore";
 import { useSessionStore } from "@/stores/sessionStore";
-import { checkForUpdate } from "@/services/updater";
 import { useTeamSessionStore } from "@/stores/teamSessionStore";
 import { defineCommand, navCommand, pendingActionCommand } from "./defineCommand";
 
@@ -39,16 +38,6 @@ export const commands: OmniCommand[] = [
     icon: "lucide:settings",
     keywords: ["preferences", "config", "options", "appearance", "theme"],
     execute: () => useUIStore.getState().openSettings(),
-  }),
-  defineCommand({
-    id: "core:check-for-update",
-    label: "Check for Update",
-    icon: "lucide:refresh-cw",
-    keywords: ["update", "version", "upgrade", "release", "changelog"],
-    execute: () => {
-      checkForUpdate().catch(() => {});
-      useUIStore.getState().openSettings("about");
-    },
   }),
   defineCommand({
     id: "core:whats-new",

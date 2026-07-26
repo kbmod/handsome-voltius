@@ -76,7 +76,7 @@ export function KeyExportPanel({ sshKey, onClose }: { sshKey: SshKey; onClose: (
       const { username, password, privateKey, passphrase } = await resolveConnectionCredentials(selectedHost);
 
       const label = sshKey.name ?? "SSH";
-      const comment = `# ${label} Key by Voltius`;
+      const comment = `# ${label} Key by Handsome Voltius`;
       const command = `sh -c '${script}' sh '${location}' '${filename}' '${comment}' '${pubKey.trim()}'`;
       await sshExecCommand({
         host: selectedHost.host,

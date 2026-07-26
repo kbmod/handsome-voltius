@@ -64,8 +64,4 @@ CMD bash -c "CI=true pnpm install && \
 # docker run -d --name tauri-headless --security-opt seccomp=unconfined -v "$(pwd):/app" tauri-mcp
 #
 # docker logs -f tauri-headless
-# claude mcp add tauri-docker -- docker exec -i tauri-headless npx -y github:VoltiusApp/mcp-tauri-automation
-#
-# Then, in Claude Code, drive the live dev build via the MCP:
-#   launch_app  appPath=/app/target/debug/voltius
-#   capture_screenshot / click_element / type_text / ...
+# The container exposes tauri-driver on port 4444 for local UI automation.

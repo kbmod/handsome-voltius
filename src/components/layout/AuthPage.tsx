@@ -138,7 +138,7 @@ export default function AuthPage({ isLocked, onReady }: Props) {
           await createServerAccount(email, password, normalizedUrl);
           addToast({
             pluginId: "system",
-            pluginName: "Voltius",
+            pluginName: "Handsome Voltius",
             type: "toast",
             message: t("layout.auth.accountCreatedToast"),
             severity: "info",
@@ -206,7 +206,7 @@ export default function AuthPage({ isLocked, onReady }: Props) {
         {isSignup && (
           <p className="mt-2 text-xs text-center text-(--t-text-dim) leading-relaxed">
             {t("layout.auth.e2eeNotice")}{" "}
-            <a href="https://github.com/VoltiusApp/voltius" target="_blank" rel="noreferrer"
+            <a href="https://github.com/kbmod/handsome-voltius" target="_blank" rel="noreferrer"
               className="text-(--t-accent) hover:underline">
               {t("layout.auth.openSource")}
             </a>
@@ -247,7 +247,7 @@ function Layout({ children, onBack }: { children: React.ReactNode; onBack?: () =
 
       <div className="mb-8 text-center">
         <LogoBadge size={12} className="mb-3" />
-        <h1 className="text-lg font-bold text-(--t-text-bright)">Voltius</h1>
+        <h1 className="text-lg font-bold text-(--t-text-bright)">Handsome Voltius</h1>
       </div>
 
       <div className="w-72">{children}</div>

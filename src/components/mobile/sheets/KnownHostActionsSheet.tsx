@@ -78,7 +78,7 @@ export default function KnownHostActionsSheet({ host, onClose }: { host: KnownHo
       slug: "copy-fingerprint",
       onTap: () => {
         void writeClipboard(host.fingerprint);
-        useNotificationStore.getState().addToast({ pluginId: "core", pluginName: "Voltius", type: "toast", message: t("mobile.sheets.knownHostActions.copiedFingerprint"), severity: "success", duration: 2000 });
+        useNotificationStore.getState().addToast({ pluginId: "core", pluginName: "Handsome Voltius", type: "toast", message: t("mobile.sheets.knownHostActions.copiedFingerprint"), severity: "success", duration: 2000 });
         onClose();
       },
     },

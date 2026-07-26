@@ -124,7 +124,7 @@
       "startSharingWithVault_other": "Démarrer le partage avec {{count}} coffres",
       "selectVaultToShare": "Sélectionnez un coffre à partager",
       "shareCodeDescription": "Partagez ce code — quiconque le possède peut rejoindre :",
-      "generateLinkDescription": "Générez un lien à usage unique. Toute personne ayant un compte Voltius peut rejoindre.",
+      "generateLinkDescription": "Générez un lien à usage unique. Toute personne ayant un compte Handsome Voltius peut rejoindre.",
       "generateInviteLink": "Générer un lien d'invitation",
       "upToParticipants_one": "Jusqu'à {{count}} participant",
       "upToParticipants_other": "Jusqu'à {{count}} participants",

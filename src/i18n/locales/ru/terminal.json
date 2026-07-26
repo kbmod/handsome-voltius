@@ -128,7 +128,7 @@
       "startSharingWithVault_other": "Начать доступ с {{count}} хранилищами",
       "selectVaultToShare": "Выберите хранилище для доступа",
       "shareCodeDescription": "Поделитесь этим кодом — любой, у кого он есть, сможет присоединиться:",
-      "generateLinkDescription": "Создайте одноразовую ссылку. Присоединиться сможет любой пользователь с аккаунтом Voltius.",
+      "generateLinkDescription": "Создайте одноразовую ссылку. Присоединиться сможет любой пользователь с аккаунтом Handsome Voltius.",
       "generateInviteLink": "Создать ссылку-приглашение",
       "upToParticipants_one": "Максимум {{count}} участник",
       "upToParticipants_few": "Максимум {{count}} участника",

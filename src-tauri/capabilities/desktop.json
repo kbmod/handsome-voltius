@@ -8,6 +8,6 @@
     "main"
   ],
   "permissions": [
-    "updater:default"
+    "core:default"
   ]
 }

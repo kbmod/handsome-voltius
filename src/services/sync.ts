@@ -161,7 +161,7 @@ async function tryRefreshJwt(): Promise<string | null> {
     const { useUIStore } = await import("@/stores/uiStore");
     useNotificationStore.getState().addToast({
       pluginId: "system",
-      pluginName: "Voltius",
+      pluginName: "Handsome Voltius",
       type: "toast",
       message: i18n.t("common.toast.proSubscriptionEnded"),
       severity: "warning",

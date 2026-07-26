@@ -20,8 +20,6 @@ import { useSessionStore } from "@/stores/sessionStore";
 import { broadcastSnippetInject } from "@/services/snippets";
 import { isRunnableSession } from "@/services/snippetRun";
 import { reportSequenceResult } from "@/services/snippetSequence";
-import { initUpdaterListener } from "@/services/updater";
-import { useUpdaterPrefStore } from "@/stores/updaterPrefStore";
 import { restoreWorkspaceOnLaunch } from "@/stores/workspaceRestore";
 import { startLiveSessionPublisher } from "@/services/liveSessionPublisher";
 import { startCrossDeviceSessions } from "@/services/crossDeviceSessions";
@@ -48,7 +46,6 @@ function ProductionApp() {
   useImportExportContributions();
   useConnectionPresenceBroadcast();
   useChangelogAutoOpen();
-  useEffect(() => { initUpdaterListener(); useUpdaterPrefStore.getState().load(); }, []);
   useEffect(() => {
     if (ready) {
       void restoreWorkspaceOnLaunch().then(() => {

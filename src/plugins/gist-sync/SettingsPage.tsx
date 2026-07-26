@@ -464,7 +464,7 @@ export function createSettingsPage(api: PluginAPI): React.FC {
       try {
         const found = await listVoltiusGists(currentPat);
         setDetectedGists(found);
-        if (found.length === 0) setError("No Voltius gists found on this account.");
+        if (found.length === 0) setError("No Handsome Voltius gists found on this account.");
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -608,7 +608,7 @@ export function createSettingsPage(api: PluginAPI): React.FC {
         </div>
 
         <p className="text-sm text-(--t-text-dim) -mt-4">
-          Sync your data across devices via encrypted GitHub Gist — no Voltius account required.
+          Sync your data across devices via encrypted GitHub Gist — no Handsome Voltius account required.
           Data is XChaCha20-Poly1305 encrypted client-side before upload.
         </p>
 
@@ -740,7 +740,7 @@ export function createSettingsPage(api: PluginAPI): React.FC {
           {detectedGists !== null && detectedGists.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <p className="text-xs text-(--t-text-dim)">
-                Found {detectedGists.length} Voltius gist{detectedGists.length !== 1 ? "s" : ""} — select to link:
+                Found {detectedGists.length} Handsome Voltius gist{detectedGists.length !== 1 ? "s" : ""} — select to link:
               </p>
               {detectedGists.map((g) => {
                 const alreadyLinked = gists.some((r) => r.id === g.id);

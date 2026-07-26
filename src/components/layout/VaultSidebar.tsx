@@ -13,7 +13,6 @@ import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { CreateVaultModal } from "@/components/shared/CreateVaultModal";
 import { Modal } from "@/components/shared/Modal";
 import { openBillingCheckout } from "@/services/billingCheckout";
-import { getUpdaterState, onUpdaterStateChange, type UpdaterStatus } from "@/services/updater";
 import {
   acceptMyPendingInvitation,
   declineMyPendingInvitation,
@@ -519,33 +518,12 @@ function VaultButton({
 function WhatsNewButton({ onClick }: { onClick: () => void }) {
   const { t } = useTranslation();
   const { createRipple, rippleEls } = useRipple();
-  const [updater, setUpdater] = useState<UpdaterStatus>(getUpdaterState);
-  useEffect(() => onUpdaterStateChange(() => setUpdater(getUpdaterState())), []);
-
-  let icon = "lucide:megaphone";
-  let title = t("layout.vaultSidebar.whatsNew");
-  let iconClass = "";
-  let iconStyle: React.CSSProperties | undefined;
-  const ready = updater.status === "ready";
-  if (updater.status === "checking") {
-    icon = "lucide:loader-circle";
-    title = t("layout.vaultSidebar.checkingForUpdates");
-    iconClass = "animate-spin";
-  } else if (updater.status === "downloading") {
-    icon = "lucide:download";
-    title = t("layout.vaultSidebar.downloadingUpdate", { version: updater.version });
-    iconClass = "animate-bounce";
-  } else if (ready) {
-    icon = "lucide:download";
-    title = t("layout.vaultSidebar.updateReady", { version: updater.version });
-    iconStyle = { color: "var(--t-accent)" };
-  }
 
   return (
     <button
       onClick={onClick}
       onMouseDown={createRipple}
-      title={title}
+      title={t("layout.vaultSidebar.whatsNew")}
       className="flex items-center justify-center mb-3 relative overflow-hidden transition-all shrink-0"
       style={{
         width: 40,
@@ -567,13 +545,7 @@ function WhatsNewButton({ onClick }: { onClick: () => void }) {
       }}
     >
       {rippleEls}
-      <Icon icon={icon} width={18} className={iconClass} style={iconStyle} />
-      {ready && (
-        <span
-          className="absolute rounded-full"
-          style={{ top: 8, right: 8, width: 8, height: 8, background: "var(--t-accent)" }}
-        />
-      )}
+      <Icon icon="lucide:megaphone" width={18} />
     </button>
   );
 }

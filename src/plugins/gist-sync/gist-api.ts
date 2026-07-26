@@ -58,7 +58,7 @@ export async function createGist(
     method: "POST",
     headers: headers(pat),
     body: JSON.stringify({
-      description: "Voltius Sync — do not edit manually",
+      description: "Handsome Voltius Sync — do not edit manually",
       public: false,
       files: {
         "manifest.json": { content: JSON.stringify(manifest, null, 2) },
@@ -162,7 +162,10 @@ export async function listVoltiusGists(pat: string): Promise<{ id: string; url: 
     const data: { id: string; html_url: string; description: string }[] = await res.json();
     if (data.length === 0) break;
     for (const g of data) {
-      if (g.description === "Voltius Sync — do not edit manually")
+      if (
+        g.description === "Handsome Voltius Sync — do not edit manually" ||
+        g.description === "Voltius Sync — do not edit manually"
+      )
         results.push({ id: g.id, url: g.html_url });
     }
     if (data.length < 100) break;

@@ -65,6 +65,32 @@ Relevant pushed commits:
 - `78bfb24 fix: merge SFTP directories and opt in persistence`
 - `6c61f58 style: flatten host distro icons`
 
+### Handsome Voltius identity and ownership
+
+- Renamed the visible product, window title, JavaScript package, Rust package,
+  Debian package, and generated desktop metadata to Handsome Voltius.
+- Replaced the upstream logo with the fork's navy, Gruvbox-green, and
+  off-white terminal-prompt mark and regenerated the platform icon sets.
+- Pointed repository, issue, changelog, About, and package links at
+  `kbmod/handsome-voltius`.
+- Removed the upstream Ko-fi, social, blog, pricing, marketplace, maintainer
+  contact, and hosted-release publishing links and scripts.
+- Added the fork owner's Buy Me a Coffee and X links to the About page,
+  repository README, and package support metadata where applicable.
+- Removed the upstream automatic updater UI, commands, runtime, dependency,
+  endpoint, signing configuration, and generated updater artifacts. Local
+  packages are installed manually while the project is in progress.
+- New encrypted sync Gists use the Handsome Voltius name while discovery still
+  accepts existing Gists carrying the old Voltius description.
+- Preserved legacy internal `voltius` storage, event, import, and encryption
+  identifiers plus the `com.voltius.app` bundle identifier so existing vaults,
+  settings, WebKit data, Android integrations, and encrypted backups continue
+  to load.
+- Retained the optional upstream account integration under the explicit
+  **Legacy Voltius Cloud** label. Its API, terms, privacy, and billing links
+  remain only where that external service functionally requires them.
+- Preserved the upstream license, copyright notices, and attribution.
+
 ### Desktop shell and navigation
 
 - Reworked the desktop title bar and terminal tab strip into a denser,
@@ -201,8 +227,8 @@ Relevant pushed commits:
 
 Latest automated result:
 
-- 166 test files passed;
-- 824 tests passed;
+- 167 test files passed;
+- 827 tests passed;
 - TypeScript check passed;
 - zero-error ESLint check passed;
 - Vite production build passed;
@@ -212,19 +238,14 @@ Latest automated result:
 Latest locally built test package:
 
 - Path:
-  `target/release/bundle/deb/Voltius_0.12.0_amd64.deb`
+  `target/release/bundle/deb/Handsome Voltius_0.12.0_amd64.deb`
 - SHA-256:
-  `deca6ac4c12ee5ee2bfa7b0ac829f283844cd2649949096629a39eff7e4d6dc3`
-- This package includes the accepted Known Hosts and Keychain polish,
-  WebKitGTK click fix, fixed dark navy desktop shell, edge-to-edge Gruvbox
-  terminal workspace, selective directory-merge fix, opt-in tmux/screen
-  behavior, flat host distro/service icons, and the visible session/workspace
-  restore control. It also includes the verified WebKitGTK repaint fix for
-  split workspaces returning from another terminal tab.
-
-Tauri successfully creates the `.deb`, then exits with a signing error because
-the upstream public updater key exists but no private release-signing key is
-configured. This does not invalidate the already-created local `.deb`.
+  `c034e187331253bb664067b315f8b91b8b5705c46b4852367e28d17d85698cad`
+- Debian package name: `handsome-voltius`
+- This package includes the accepted terminal, workspace, SFTP, Known Hosts,
+  and Keychain work plus the complete Handsome Voltius identity slice.
+- The build exits successfully without updater signing because this
+  in-progress fork no longer generates or publishes updater artifacts.
 
 ## Recent completed checkpoints
 
@@ -266,28 +287,7 @@ verified checkpoint so the next session starts from current repository truth.
 
 ## Pending work
 
-### 1. Handsome Voltius rebranding and ownership
-
-Remove the remaining upstream product branding before a release:
-
-- rename the visible product, application/window titles, package/bundle
-  metadata, desktop entry, and generated installer from Voltius to Handsome
-  Voltius;
-- replace or remove links to the Voltius maintainer's GitHub profile,
-  repository, website, documentation, blog, Ko-fi, donation, support, and
-  issue pages;
-- replace repository, homepage, update, and support endpoints with this fork's
-  owner-controlled destinations;
-- replace or remove upstream logos and branding in the About screen, settings,
-  splash/loading surfaces, icons, static assets, README, and package metadata;
-- remove upstream updater/signing coupling or configure the fork's own update
-  endpoint and signing keys before publishing releases;
-- preserve the upstream license, copyright notices, and required attribution.
-
-Before implementation, collect the exact owner name, repository URL, website,
-support/donation link, and update policy. Do not guess replacement destinations.
-
-### 2. Focused remaining desktop-surface cleanup
+### 1. Focused remaining desktop-surface cleanup
 
 This is a polish pass, not a new application-wide redesign. Work on one surface
 at a time and preserve existing functionality.
@@ -312,7 +312,7 @@ For each surface:
 - run targeted tests and inspect the real Debian Tauri application before
   moving to the next surface.
 
-### 3. Encrypted Gist sync round-trip
+### 2. Encrypted Gist sync round-trip
 
 Perform a clean two-profile or two-installation round-trip and verify that the
 encrypted payload restores:
@@ -333,7 +333,7 @@ Acceptance requirements:
 - no data is lost when syncing between a fresh profile and the existing
   profile.
 
-### 4. Final regression and cleanup
+### 3. Final regression and cleanup
 
 - Repeat the main local shell, SSH, tabs, splits, rename, shortcuts, exit,
   reconnect, workspace restore, theme, and SFTP tests.
@@ -345,7 +345,7 @@ Acceptance requirements:
 - Update this status document and README if behavior changed.
 - Commit and push the final verified source checkpoint.
 
-### 5. Deferred work
+### 4. Deferred work
 
 These are intentionally outside the current personal Debian milestone:
 

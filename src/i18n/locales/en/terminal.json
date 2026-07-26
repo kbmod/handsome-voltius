@@ -124,7 +124,7 @@
       "startSharingWithVault_other": "Start sharing with {{count}} vaults",
       "selectVaultToShare": "Select a vault to share",
       "shareCodeDescription": "Share this code — anyone with it can join:",
-      "generateLinkDescription": "Generate a one-time link. Anyone with a Voltius account can join.",
+      "generateLinkDescription": "Generate a one-time link. Anyone with a Legacy Voltius Cloud account can join.",
       "generateInviteLink": "Generate invite link",
       "upToParticipants_one": "Up to {{count}} participant",
       "upToParticipants_other": "Up to {{count}} participants",

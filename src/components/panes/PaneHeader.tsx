@@ -266,7 +266,7 @@ export function PaneHeader({ paneId, session, active }: { paneId: string; sessio
     if (!candidate) {
       useNotificationStore.getState().addToast({
         pluginId: "core",
-        pluginName: "Voltius",
+        pluginName: "Handsome Voltius",
         type: "toast",
         message: t("panes.header.noSessionToSplit"),
         severity: "info",

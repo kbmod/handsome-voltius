@@ -100,13 +100,4 @@ CMD ["/usr/local/bin/boot-emulator.sh"]
 #   docker exec android-emulator adb install -r \
 #     /project/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
 #
-# Register the MCP — runs INSIDE the container, so adb is local (no
-# ADB_SERVER_SOCKET, no Windows firewall, cdpHost defaults to 127.0.0.1):
-#   claude mcp add tauri-android-emu --scope user \
-#     --env PLATFORM=android --env ANDROID_SERIAL=emulator-5554 \
-#     -- docker exec -i android-emulator npx -y github:VoltiusApp/mcp-tauri-automation#android-backend
-#
-# Restart Claude Code (tool registry is fixed at startup), then drive it:
-#   launch_app → capture_screenshot → click_element / type_text / …
-#
 # scripts/android-emulator.sh wraps build → run → wait → install in one go.

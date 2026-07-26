@@ -17,7 +17,7 @@ test("surfaces SFTP errors through the app notification system", () => {
   expect(useNotificationStore.getState().toasts).toMatchObject([
     {
       pluginId: "core",
-      pluginName: "Voltius",
+      pluginName: "Handsome Voltius",
       message: "Rename failed",
       severity: "error",
       type: "toast",

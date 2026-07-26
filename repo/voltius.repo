@@ -1,6 +1,0 @@
-[voltius]
-name=Voltius
-baseurl=https://repo.voltius.app/rpm
-enabled=1
-gpgcheck=1
-gpgkey=https://repo.voltius.app/voltius.gpg

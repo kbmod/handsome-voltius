@@ -91,7 +91,7 @@
     "userData": {
       "import": {
         "openFileLabel": "Open File…",
-        "placeholder": "Paste a Voltius settings JSON here, or drop a file…\n\n{ \"type\": \"voltius-user-data\", \"version\": 2, \"sections\": { ... } }",
+        "placeholder": "Paste a Handsome Voltius settings JSON here, or drop a file…\n\n{ \"type\": \"voltius-user-data\", \"version\": 2, \"sections\": { ... } }",
         "foundSections_one": "Found {{count}} setting section",
         "foundSections_other": "Found {{count}} setting sections",
         "applying": "Applying…",

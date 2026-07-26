@@ -1168,7 +1168,7 @@ function VaultGeneralTab({
       const { useNotificationStore } = await import("@/stores/notificationStore");
       const memberN = membersByTeam[teamId]?.length ?? 0;
       useNotificationStore.getState().addToast({
-        pluginId: "system", pluginName: "Voltius", type: "toast",
+        pluginId: "system", pluginName: "Handsome Voltius", type: "toast",
         message: memberN > 1
           ? t("settings.vaults.general.madePrivateToast", { count: memberN - 1 })
           : t("settings.vaults.general.madePrivateToastEmpty"),

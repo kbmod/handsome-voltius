@@ -1,12 +1,13 @@
-# Contributing to Voltius
+# Contributing to Handsome Voltius
 
 Contributions are welcome — bug fixes, features, and improvements of all sizes.
 
 ## Reporting issues
 
 - Search existing issues before opening a new one.
-- Include your OS, Voltius version, and steps to reproduce.
-- For security vulnerabilities, **do not open a public issue** — email [contact@voltius.app](mailto:contact@voltius.app) instead.
+- Include your OS, Handsome Voltius version, and steps to reproduce.
+- Do not include passwords, private keys, vault contents, or terminal output in
+  an issue. Use the repository issue tracker for reproducible problems.
 
 ## Development setup
 
@@ -42,4 +43,4 @@ Common types: `feat`, `fix`, `refactor`, `chore`, `docs`, `perf`, `style`. Keep 
 
 ## Plugins
 
-Plugins live in the [marketplace repo](https://github.com/VoltiusApp/marketplace) and are licensed under MIT. See that repo for plugin development guidelines.
+Plugins can be bundled locally or loaded from a custom marketplace source.

@@ -69,14 +69,5 @@ if [ -n "$APK" ]; then
   docker exec "$NAME" adb shell am start -n com.voltius.app/.MainActivity
 fi
 
-cat <<EOF
-
-Emulator ready. Register the MCP (runs inside the container — local adb):
-
-  claude mcp add tauri-android-emu --scope user \\
-    --env PLATFORM=android --env ANDROID_SERIAL=emulator-5554 \\
-    -- docker exec -i $NAME npx -y github:VoltiusApp/mcp-tauri-automation#android-backend
-
-Restart Claude Code, then: launch_app → capture_screenshot → …
-Logs: docker logs -f $NAME   |   logcat: docker exec $NAME adb logcat
-EOF
+echo "Emulator ready. Logs: docker logs -f $NAME"
+echo "Logcat: docker exec $NAME adb logcat"

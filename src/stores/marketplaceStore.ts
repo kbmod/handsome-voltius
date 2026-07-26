@@ -40,14 +40,6 @@ export interface InstalledPluginMeta {
 
 const INSTALLED_META_KEY = "installed-plugins";
 
-const FIRST_PARTY_SOURCE: MarketplaceSource = {
-  id: "voltius",
-  name: "Voltius Marketplace",
-  url: "https://raw.githubusercontent.com/voltiusApp/marketplace/main/plugins.json",
-  enabled: true,
-  deletable: false,
-};
-
 async function readInstalledMeta(): Promise<InstalledPluginMeta[]> {
   try {
     const raw = await invoke<string>("plugin_read_file", { id: "__meta__", filename: INSTALLED_META_KEY + ".json" });
@@ -96,7 +88,7 @@ interface MarketplaceState {
 
 export const useMarketplaceStore = create<MarketplaceState>((set, get) => ({
   // ── Sources ───────────────────────────────────────────────────────────
-  sources: [FIRST_PARTY_SOURCE],
+  sources: [],
 
   async addSource(url: string) {
     const res = await appFetch(url);

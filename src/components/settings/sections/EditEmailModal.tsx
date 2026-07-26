@@ -41,7 +41,7 @@ export default function EditEmailModal({ currentEmail, onClose }: Props) {
       setDone(true);
       addToast({
         pluginId: "system",
-        pluginName: "Voltius",
+        pluginName: "Handsome Voltius",
         type: "toast",
         message: t("settings.account.editEmail.toastVerification", { email: newEmail }),
         severity: "info",

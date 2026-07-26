@@ -551,15 +551,6 @@ export function TeamRolesPanel({ teamId, myUserId }: { teamId: string; myUserId:
                 {t("settings.vaults.rolesPanel.businessFeatureDesc")}
               </p>
             </div>
-            <a
-              href="https://voltius.app/#pricing"
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs px-3 py-1.5 rounded-lg font-medium"
-              style={{ background: "var(--t-accent)", color: "#fff" }}
-            >
-              {t("settings.vaults.rolesPanel.upgradeBtn")}
-            </a>
           </div>
         ) : customRoles.length === 0 ? (
           <div

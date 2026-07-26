@@ -1,18 +1,9 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import { Icon } from "@iconify/react";
 import { getVersion } from "@tauri-apps/api/app";
 import { Modal, ModalCard } from "@/components/shared/Modal";
 import { useUIStore } from "@/stores/uiStore";
-import {
-  getUpdaterState,
-  onUpdaterStateChange,
-  installUpdate,
-  checkForUpdate,
-  openDownloadPage,
-  type UpdaterStatus,
-} from "@/services/updater";
 import {
   fetchChangelog,
   parseChangelog,
@@ -20,12 +11,10 @@ import {
   type ChangelogEntry,
 } from "@/services/changelog";
 
-function getQuickLinks(t: TFunction) {
+function getQuickLinks() {
   return [
-    { icon: "simple-icons:github", title: "GitHub", href: "https://github.com/VoltiusApp/voltius" },
-    { icon: "lucide:book-open", title: t("changelog.quickLinks.documentation"), href: "https://docs.voltius.app" },
-    { icon: "simple-icons:x", title: "@VoltiusApp", href: "https://x.com/VoltiusApp" },
-    { icon: "simple-icons:kofi", title: "Ko-Fi", href: "https://ko-fi.com/kipavy" },
+    { icon: "simple-icons:github", title: "GitHub", href: "https://github.com/kbmod/handsome-voltius" },
+    { icon: "lucide:circle-dot", title: "Issues", href: "https://github.com/kbmod/handsome-voltius/issues" },
   ];
 }
 
@@ -43,7 +32,6 @@ function WhatsNewInner() {
   const [installed, setInstalled] = useState<string | null>(null);
   const [entries, setEntries] = useState<ChangelogEntry[] | null>(null);
   const [loading, setLoading] = useState(true);
-  const [updater, setUpdater] = useState<UpdaterStatus>(getUpdaterState);
   const [showOlder, setShowOlder] = useState(false);
 
   useEffect(() => {
@@ -52,9 +40,7 @@ function WhatsNewInner() {
     fetchChangelog()
       .then((raw) => { if (alive) setEntries(raw ? parseChangelog(raw) : null); })
       .finally(() => { if (alive) setLoading(false); });
-    const unsub = onUpdaterStateChange(() => setUpdater(getUpdaterState()));
-    checkForUpdate().catch(() => {});
-    return () => { alive = false; unsub(); };
+    return () => { alive = false; };
   }, []);
 
   function handleClose() {
@@ -77,7 +63,7 @@ function WhatsNewInner() {
           <Icon icon="lucide:megaphone" width={18} className="text-(--t-accent)" />
           <h2 className="text-sm font-semibold text-(--t-text-primary)">{t("changelog.title")}</h2>
           <div className="ml-auto flex items-center gap-1">
-            {getQuickLinks(t).map(({ icon, href, title }) => (
+            {getQuickLinks().map(({ icon, href, title }) => (
               <a
                 key={href}
                 href={href}
@@ -98,8 +84,6 @@ function WhatsNewInner() {
             </button>
           </div>
         </div>
-
-        <UpdateBanner state={updater} />
 
         {/* Body */}
         <div className="overflow-y-auto px-5 py-4 space-y-5">
@@ -138,71 +122,6 @@ function WhatsNewInner() {
       </ModalCard>
     </Modal>
   );
-}
-
-function UpdateBanner({ state }: { state: UpdaterStatus }) {
-  const { t } = useTranslation();
-
-  if (state.status === "downloading") {
-    return (
-      <div className="px-5 py-3 border-b border-(--t-border) bg-(--t-bg-elevated) shrink-0 space-y-2">
-        <div className="flex items-center gap-2 text-sm text-(--t-text-primary)">
-          <Icon icon="lucide:download" width={15} className="text-(--t-accent) animate-bounce" />
-          {t("changelog.updateBanner.downloading", { version: state.version, progress: state.progress })}
-        </div>
-        <div className="h-1 rounded-full overflow-hidden bg-(--t-bg-input)">
-          <div className="h-full rounded-full transition-all bg-(--t-accent)" style={{ width: `${state.progress}%` }} />
-        </div>
-      </div>
-    );
-  }
-
-  if (state.status === "ready") {
-    return (
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-(--t-border) bg-(--t-bg-elevated) shrink-0">
-        <Icon icon="lucide:sparkles" width={15} className="text-(--t-accent) shrink-0" />
-        <span className="text-sm text-(--t-text-primary) min-w-0">
-          {t("changelog.updateBanner.ready", { version: state.version })}
-        </span>
-        <button
-          onClick={() => installUpdate().catch(() => {})}
-          className="btn btn-primary ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0"
-        >
-          <Icon icon="lucide:refresh-cw" width={13} />
-          {t("changelog.updateBanner.restartToUpdate")}
-        </button>
-      </div>
-    );
-  }
-
-  if (state.status === "externalUpdate") {
-    return (
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-(--t-border) bg-(--t-bg-elevated) shrink-0">
-        <Icon icon="lucide:sparkles" width={15} className="text-(--t-accent) shrink-0" />
-        <span className="text-sm text-(--t-text-primary) min-w-0">
-          {t("changelog.updateBanner.available", { version: state.version })}
-        </span>
-        <button
-          onClick={() => openDownloadPage().catch(() => {})}
-          className="btn btn-primary ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0"
-        >
-          <Icon icon="lucide:download" width={13} />
-          {t("changelog.updateBanner.download")}
-        </button>
-      </div>
-    );
-  }
-
-  if (state.status === "checking") {
-    return (
-      <div className="flex items-center gap-2 px-5 py-2.5 border-b border-(--t-border) text-xs text-(--t-text-dim) shrink-0">
-        <Icon icon="lucide:loader-circle" width={13} className="animate-spin" />
-        {t("changelog.updateBanner.checking")}
-      </div>
-    );
-  }
-
-  return null;
 }
 
 function EntryBlock({ entry, installed }: { entry: ChangelogEntry; installed: string | null }) {

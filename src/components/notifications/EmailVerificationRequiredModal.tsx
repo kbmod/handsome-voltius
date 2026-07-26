@@ -25,7 +25,7 @@ export function EmailVerificationRequiredModal() {
       await resendVerificationEmail();
       addToast({
         pluginId: "system",
-        pluginName: "Voltius",
+        pluginName: "Handsome Voltius",
         type: "toast",
         message: t("notifications.emailVerification.toast.sent"),
         severity: "success",
@@ -34,7 +34,7 @@ export function EmailVerificationRequiredModal() {
     } catch (e) {
       addToast({
         pluginId: "system",
-        pluginName: "Voltius",
+        pluginName: "Handsome Voltius",
         type: "toast",
         message: e instanceof Error ? e.message : t("notifications.emailVerification.toast.sendFailed"),
         severity: "error",

@@ -141,7 +141,7 @@ export default function HostCard({
         void writeClipboard(connection.host);
         useNotificationStore.getState().addToast({
           pluginId: "core",
-          pluginName: "Voltius",
+          pluginName: "Handsome Voltius",
           type: "toast",
           message: t("hosts.card.copiedHost", { host: connection.host }),
           severity: "success",
