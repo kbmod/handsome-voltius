@@ -834,7 +834,7 @@ export default function KeychainPage() {
           selectionAreaRef={selectionAreaRef}
           onMouseDown={handleSelectionAreaMouseDown}
           dragBox={dragBox}
-          className="flex-1 overflow-y-auto px-9 pt-5 pb-9"
+          className="flex-1 overflow-y-auto px-7 pt-4 pb-7"
           onClick={() => {
             if (!showPanel && !editingFolder) return;
             keyFormFlushRef.current?.();
@@ -848,7 +848,7 @@ export default function KeychainPage() {
             openBgMenu(e);
           }}
         >
-          <div ref={itemAreaRef} data-drag-surface="true" className="space-y-6">
+          <div ref={itemAreaRef} data-drag-surface="true" className="space-y-5">
 
             {/* ── Folder breadcrumb ── */}
             {folderPath.length > 0 && (

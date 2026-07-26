@@ -74,3 +74,11 @@ export function detectKeyInfo(
 
   return { type: null, valid: false, error: "Unrecognized key format" };
 }
+
+export function resolveKeyType(
+  storedType: string | undefined,
+  privateKey: string | undefined,
+  publicKey: string | undefined,
+): string | undefined {
+  return storedType ?? detectKeyInfo(privateKey ?? "", publicKey ?? "").type ?? undefined;
+}

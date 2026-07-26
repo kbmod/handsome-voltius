@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, expect, test, vi } from "vitest";
-import { GRUVBOX_DARK_THEME } from "@/themes/presets";
+import { GRUVBOX_DARK_THEME, TERMIUS_DARK_UI } from "@/themes/presets";
 import { applyThemeToDom } from "./useApplyTheme";
 
 afterEach(() => {
@@ -17,6 +17,7 @@ test("custom terminal themes cannot recolor workspace chrome", () => {
     builtIn: false,
     terminal: {
       ...GRUVBOX_DARK_THEME.terminal,
+      background: "#07111f",
       foreground: "#1122ff",
       green: "#00ff00",
     },
@@ -25,12 +26,15 @@ test("custom terminal themes cannot recolor workspace chrome", () => {
   applyThemeToDom(GRUVBOX_DARK_THEME, customTerminalTheme);
 
   const style = document.documentElement.style;
+  expect(style.getPropertyValue("--t-bg-base")).toBe(TERMIUS_DARK_UI.bgBase);
+  expect(style.getPropertyValue("--t-accent")).toBe(TERMIUS_DARK_UI.accent);
+  expect(style.getPropertyValue("--t-terminal-background")).toBe("#07111f");
   expect(style.getPropertyValue("--t-terminal-foreground")).toBe("#1122ff");
   expect(style.getPropertyValue("--t-terminal-green")).toBe("#00ff00");
   expect(style.getPropertyValue("--t-terminal-active-border")).toBe("#ebdbb2");
   expect(style.getPropertyValue("--t-terminal-active-text")).toBe("#ebdbb2");
   expect(style.getPropertyValue("--t-terminal-tab-active-bg")).toBe(
-    "color-mix(in srgb, #ebdbb2 20%, #282828)",
+    `color-mix(in srgb, #ebdbb2 20%, ${TERMIUS_DARK_UI.tabBg})`,
   );
   expect(style.getPropertyValue("--t-terminal-activity")).toBe(
     "color-mix(in srgb, #b8bb26 78%, #ebdbb2)",

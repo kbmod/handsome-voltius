@@ -7,6 +7,7 @@ import type { ExportCtx, ImportCtx, ReloadFns, SelectionProps, StoreSlices } fro
 import { handlerActive, isSingleSelection, selectedIds } from "../context";
 import { saveTeamVaultSecretForVault } from "@/services/teamVaultSecrets";
 import { fetchKeySecrets, storeKeySecrets } from "../secretsLogic";
+import { resolveKeyType } from "@/components/keychain/keyDetection";
 
 export const keysHandler: DataTypeHandler = {
   key: "keys",
@@ -70,7 +71,7 @@ export const keysHandler: DataTypeHandler = {
       }
       try {
         const saved = await ctx.stores.saveKey({
-          name: key.name, key_type: key.key_type,
+          name: key.name, key_type: resolveKeyType(key.key_type, key.private_key, key.public_key),
           tags: ctx.tag ? [...(key.tags ?? []), ctx.tag] : key.tags ?? [],
           folder_id: key._folder_eid ? ctx.folderEidMap.get(key._folder_eid) : undefined,
           vault_id: ctx.vault_id,

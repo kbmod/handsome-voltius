@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@iconify/react";
 import { ToolbarViewControls, type LayoutMode, type SortMode } from "@/components/shared/ToolbarViewControls";
@@ -44,24 +45,7 @@ export function KeychainToolbar({
   return (
     <>
       <div ref={rowRef} className="flex items-center gap-2 px-5 py-2.5 shrink-0 chrome-toolbar">
-        <div ref={leftRef} className="flex items-center">
-          <ToolbarViewControls
-            search={search}
-            onSearchChange={onSearchChange}
-            filterPlaceholder={t("keychain.toolbar.filterPlaceholder")}
-            filterShortcutId="filter"
-            filterWidth={176}
-            layoutMode={layoutMode}
-            onLayoutModeChange={onLayoutModeChange}
-            sortMode={sortMode}
-            onSortModeChange={onSortModeChange}
-            availableTags={availableTags}
-            tagFilter={tagFilter}
-            onTagFilterChange={onTagFilterChange}
-          />
-        </div>
-
-        <div ref={rightRef} className="ml-auto flex items-center gap-px shrink-0">
+        <div ref={leftRef} className="flex items-center gap-px shrink-0">
           <button
             onClick={onImportKey}
             onMouseDown={rippleKey}
@@ -79,6 +63,23 @@ export function KeychainToolbar({
           </button>
           <NewKeyChevron onImport={onImportKey} onGenerate={onGenerateKey} onNewIdentity={onNewIdentity} onNewFolder={onNewFolder} accent />
         </div>
+
+        <div ref={rightRef} className="ml-auto flex items-center">
+          <ToolbarViewControls
+            search={search}
+            onSearchChange={onSearchChange}
+            filterPlaceholder={t("keychain.toolbar.filterPlaceholder")}
+            filterShortcutId="filter"
+            filterWidth={176}
+            layoutMode={layoutMode}
+            onLayoutModeChange={onLayoutModeChange}
+            sortMode={sortMode}
+            onSortModeChange={onSortModeChange}
+            availableTags={availableTags}
+            tagFilter={tagFilter}
+            onTagFilterChange={onTagFilterChange}
+          />
+        </div>
       </div>
     </>
   );
@@ -93,6 +94,7 @@ function NewKeyChevron({ onGenerate, onNewIdentity, onNewFolder, accent }: { onI
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const { createRipple, rippleEls } = useRipple();
 
   const handleClick = () => {
@@ -106,7 +108,14 @@ function NewKeyChevron({ onGenerate, onNewIdentity, onNewFolder, accent }: { onI
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(target) &&
+        !menuRef.current?.contains(target)
+      ) {
+        setOpen(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -130,8 +139,9 @@ function NewKeyChevron({ onGenerate, onNewIdentity, onNewFolder, accent }: { onI
         </span>
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
+          ref={menuRef}
           className="surface-float p-1.5 fixed z-9999"
           style={{
             top: pos.top,
@@ -142,9 +152,9 @@ function NewKeyChevron({ onGenerate, onNewIdentity, onNewFolder, accent }: { onI
           {onGenerate && <DropdownMenuItem icon="lucide:key-round" label={t("keychain.toolbar.generateKeyPair")} onClick={() => { setOpen(false); onGenerate(); }} />}
           {onNewIdentity && <DropdownMenuItem icon="lucide:user-plus" label={t("keychain.toolbar.newIdentity")} onClick={() => { setOpen(false); onNewIdentity(); }} />}
           <DropdownMenuItem icon="lucide:folder-plus" label={t("keychain.toolbar.newFolder")} onClick={() => { setOpen(false); onNewFolder(); }} />
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
 }
-

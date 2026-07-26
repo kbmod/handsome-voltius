@@ -1,10 +1,9 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { useSessionStore, type ConnectRetryOverride } from "@/stores/sessionStore";
 import { useTeamSessionStore } from "@/stores/teamSessionStore";
 import TerminalView from "@/components/terminal/Terminal";
 import { TerminalSearch } from "@/components/terminal/TerminalSearch";
 import { MultiplayerBar } from "@/components/terminal/MultiplayerBar";
-import { TerminalStatusBar } from "@/components/terminal/TerminalStatusBar";
 import { useMultiplayerHostBroadcast } from "@/hooks/useMultiplayerHostBroadcast";
 import ConnectionOverlay, { getSshSteps, getSerialSteps } from "@/components/terminal/connection-overlay";
 import { useAllConnections } from "@/hooks/useAllConnections";
@@ -35,12 +34,8 @@ export function HostAwareTerminalView({
     return mpState.controlHolder === "" || mpState.controlHolder === mpState.myUserId;
   };
 
-  const [dimensions, setDimensions] = useState<{ cols: number; rows: number } | undefined>();
-
   // Map serial to local for terminal rendering (both use raw byte I/O from xterm)
   const terminalType = session.type === "serial" ? "serial" : (session.type as "ssh" | "local");
-
-  const showStatusBar = session.type === "ssh" || session.type === "local" || session.type === "serial";
 
   return (
     <div className="absolute inset-0 flex flex-col">
@@ -52,23 +47,11 @@ export function HostAwareTerminalView({
           onClosed={onClosed}
           inputGate={inputGateRef}
           encoding={session.encoding}
-          onResize={(cols, rows) => setDimensions({ cols, rows })}
           compact={compact}
         />
         <TerminalSearch sessionId={session.id} />
       </div>
       {isSharing && <MultiplayerBar localSessionId={session.id} />}
-      {showStatusBar && !compact && (
-        <TerminalStatusBar
-          sessionId={session.id}
-          sessionType={session.type as "ssh" | "local" | "serial"}
-          connectionId={session.connectionId}
-          connectionName={session.connectionName}
-          serialConfig={session.serialConfig}
-          sessionStatus={session.status}
-          dimensions={dimensions}
-        />
-      )}
     </div>
   );
 }

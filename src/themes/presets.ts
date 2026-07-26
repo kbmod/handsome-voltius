@@ -1,12 +1,51 @@
-import type { AppTheme } from "./types";
+import type { AppTheme, UITheme } from "./types";
 
 export const DEFAULT_THEME_ID = "gruvbox-dark";
 // Kept as a compatibility alias for persisted settings and older sync payloads.
 export const DEFAULT_LIGHT_THEME_ID = DEFAULT_THEME_ID;
 
 /**
+ * Fixed desktop chrome for the Debian fork. Terminal schemes are deliberately
+ * independent from this palette.
+ */
+export const TERMIUS_DARK_UI: UITheme = {
+  bgTerminal: "#1a1c2b",
+  bgStatusBar: "#202235",
+  bgBase: "#1b1d2d",
+  bgToolbar: "#202235",
+  bgCard: "#282a3e",
+  bgCardHover: "#303348",
+  bgCardAvatar: "#30354d",
+  bgInput: "#242638",
+  bgInputHover: "#303348",
+  bgElevated: "#303247",
+  bgModal: "#242638",
+  border: "#34374c",
+  borderHover: "#464a64",
+  textDim: "#747990",
+  textMuted: "#8b90a7",
+  textSecondary: "#a9aec2",
+  textPrimary: "#dddfee",
+  textBright: "#f3f4fb",
+  accent: "#6f7fc8",
+  accentHover: "#8291d8",
+  tabBg: "#202235",
+  tabActiveBg: "#3b3d4d",
+  tabActiveText: "#e6e2d3",
+  tabActiveBorder: "#777a88",
+  vaultTabBg: "#202235",
+  vaultTabActiveBg: "#303247",
+  statusConnected: "#8fae68",
+  statusError: "#d76772",
+  statusConnecting: "#d6ad68",
+  statusWarning: "#d6ad68",
+  textNotice: "#8ba6c9",
+};
+
+/**
  * This fork intentionally ships one theme. Its UI palette is the fixed desktop
- * shell; selecting a custom theme changes only terminal rendering.
+ * compatibility payload; selecting a custom theme changes only terminal
+ * rendering. The actual desktop shell uses TERMIUS_DARK_UI.
  */
 export const GRUVBOX_DARK_THEME: AppTheme = {
   id: DEFAULT_THEME_ID,

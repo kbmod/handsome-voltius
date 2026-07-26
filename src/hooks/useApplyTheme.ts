@@ -3,14 +3,14 @@ import { useThemeStore } from "@/stores/themeStore";
 import type { AppTheme } from "@/themes/types";
 import { withFlagEmojiFallback } from "@/utils/emojiFont";
 import { appearanceFromColor } from "@/utils/appearance";
-import { GRUVBOX_DARK_THEME } from "@/themes/presets";
+import { GRUVBOX_DARK_THEME, TERMIUS_DARK_UI } from "@/themes/presets";
 
 export function applyThemeToDom(theme: AppTheme, terminalTheme: AppTheme = theme) {
   const root = document.documentElement;
   // The application chrome is deliberately fixed in this fork. Custom themes
   // are terminal color schemes and must never recolor tabs, panes, or badges.
   const shellTheme = GRUVBOX_DARK_THEME;
-  const ui = shellTheme.ui;
+  const ui = TERMIUS_DARK_UI;
   root.style.setProperty("--t-bg-terminal", ui.bgTerminal);
   root.style.setProperty("--t-bg-status-bar", ui.bgStatusBar);
   root.style.setProperty("--t-bg-base", ui.bgBase);
@@ -45,6 +45,7 @@ export function applyThemeToDom(theme: AppTheme, terminalTheme: AppTheme = theme
   root.style.setProperty("--t-font-family", withFlagEmojiFallback(shellTheme.uiFontFamily));
   root.style.setProperty("--t-font-size", `${shellTheme.uiFontSize}px`);
   root.style.setProperty("--t-terminal-foreground", terminalTheme.terminal.foreground);
+  root.style.setProperty("--t-terminal-background", terminalTheme.terminal.background);
   root.style.setProperty("--t-terminal-active-border", shellTheme.terminal.foreground);
   root.style.setProperty("--t-terminal-active-text", shellTheme.terminal.foreground);
   root.style.setProperty(

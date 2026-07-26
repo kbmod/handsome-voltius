@@ -223,7 +223,7 @@ export default function MainPanel() {
   }
 
   return (
-    <main className="flex-1 relative overflow-hidden bg-(--t-bg-terminal)">
+    <main className="flex-1 relative overflow-hidden bg-(--t-terminal-background)">
       {newTabOpen ? (
         <div className="absolute inset-0 flex flex-col overflow-hidden">
           <NewTabPage />

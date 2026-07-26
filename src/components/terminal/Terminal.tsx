@@ -32,7 +32,7 @@ export default function TerminalView({ sessionId, sessionType, onClosed, active,
   }, [active, focus, fit]);
 
   return (
-    <div className={`relative h-full w-full px-3 py-2${compact ? " terminal-compact" : ""}`}>
+    <div className={`relative h-full w-full bg-(--t-terminal-background) px-3 py-2${compact ? " terminal-compact" : ""}`}>
       <div className={terminalViewportClass(showMinimap)}>
         <div ref={attach} className="h-full w-full" />
       </div>
