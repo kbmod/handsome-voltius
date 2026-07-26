@@ -44,6 +44,12 @@ The core product requirements are:
 - Releases are not being published while the project is in progress.
 - Generated `.deb` files and other build artifacts must not be committed or
   pushed.
+- Starting with the next local package, rename the generated Debian artifact
+  to use underscores rather than spaces:
+  `Handsome_Voltius_<version>_amd64.deb`.
+- Keep the current development version at `0.12.0`. After all planned work and
+  final acceptance are complete, bump the final build to `0.12.1` before
+  packaging.
 - Real acceptance testing happens in the installed Tauri/WebKitGTK
   application, not only in a browser fixture.
 
@@ -175,6 +181,20 @@ Relevant pushed commits:
   search, and sort behavior.
 - Verified the Known Hosts surface in the installed Debian application.
 
+### Settings
+
+- Tightened the desktop Settings modal, header, navigation rail, section
+  spacing, cards, rows, controls, and corner radii.
+- Removed narrow section caps so Settings content uses the available panel
+  width instead of leaving a large empty strip.
+- Kept the density layer scoped to desktop Settings so mobile layouts remain
+  unchanged.
+- Added visible keyboard focus to navigation, links, close controls, selects,
+  and reset actions.
+- Added navigation state and select/reset accessibility attributes.
+- Verified Settings navigation, scrolling, layout density, and existing
+  controls in the installed Debian application.
+
 ### Workspace and session behavior
 
 - Fixed mixed local/SSH split-workspace restoration.
@@ -227,8 +247,8 @@ Relevant pushed commits:
 
 Latest automated result:
 
-- 167 test files passed;
-- 827 tests passed;
+- 168 test files passed;
+- 829 tests passed;
 - TypeScript check passed;
 - zero-error ESLint check passed;
 - Vite production build passed;
@@ -240,10 +260,12 @@ Latest locally built test package:
 - Path:
   `target/release/bundle/deb/Handsome Voltius_0.12.0_amd64.deb`
 - SHA-256:
-  `c034e187331253bb664067b315f8b91b8b5705c46b4852367e28d17d85698cad`
+  `17967409dfbdb426352f45c697650c275c2473e9e15a5db17c8d5b0aea93c956`
 - Debian package name: `handsome-voltius`
 - This package includes the accepted terminal, workspace, SFTP, Known Hosts,
-  and Keychain work plus the complete Handsome Voltius identity slice.
+  and Keychain work plus the complete Handsome Voltius identity slice. It also
+  includes the desktop Settings density candidate awaiting installed-app
+  visual acceptance.
 - The build exits successfully without updater signing because this
   in-progress fork no longer generates or publishes updater artifacts.
 
@@ -294,13 +316,12 @@ at a time and preserve existing functionality.
 
 Priority order:
 
-1. Settings layout, density, labels, and control consistency
-2. Snippets and port-forwarding surfaces
-3. Shared dialogs, menus, notifications, and right-side panels
+1. Snippets and port-forwarding surfaces
+2. Shared dialogs, menus, notifications, and right-side panels
 
 Hosts, groups, folders, vault navigation, Keychain, Known Hosts, and their
 shared distro/service/icon treatment have been visually accepted for the
-current milestone.
+current milestone. Desktop Settings has also been accepted.
 
 For each surface:
 
@@ -380,6 +401,10 @@ npm run tauri -- build --bundles deb \
 The explicit `beforeBuildCommand` override is used on this machine because the
 Tauri configuration names `pnpm`, while the current non-interactive shell has
 `npm` but no `pnpm` executable on its PATH.
+
+After Tauri builds the package, give the local artifact an underscore-only
+filename such as `Handsome_Voltius_0.12.0_amd64.deb`. Do not change the visible
+product name to achieve this.
 
 ## Resume instructions
 

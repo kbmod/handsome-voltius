@@ -29,6 +29,8 @@ export function FormSelect({ value, options, onChange, className = "" }: Props) 
       <button
         ref={triggerRef}
         type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className="form-input w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm"
         style={formInputStyle}

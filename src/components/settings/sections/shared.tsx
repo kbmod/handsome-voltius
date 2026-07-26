@@ -15,7 +15,7 @@ export function ActionItem({ icon, label, sub, danger, disabled, onClick }: {
     <button
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
-      className="w-full flex items-start gap-3 px-4 py-3 rounded-lg text-left transition-colors bg-(--t-bg-elevated) border border-(--t-border) hover:bg-(--t-bg-card-hover)"
+      className="settings-card settings-row w-full flex items-start gap-3 px-4 py-3 rounded-lg text-left transition-colors bg-(--t-bg-elevated) border border-(--t-border) hover:bg-(--t-bg-card-hover)"
       style={{
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.5 : 1,
@@ -58,7 +58,7 @@ export function SettingsInput({ type = "text", placeholder, value, onChange, aut
       value={value}
       autoFocus={autoFocus}
       onChange={(e) => onChange(e.target.value)}
-      className="form-input w-full px-3 py-2 rounded-lg text-sm outline-hidden bg-(--t-bg-input) border border-(--t-border) text-(--t-text-primary)"
+      className="form-input settings-input w-full px-3 py-2 rounded-lg text-sm outline-hidden bg-(--t-bg-input) border border-(--t-border) text-(--t-text-primary)"
     />
   );
 }
@@ -80,7 +80,8 @@ export function ResetButton({ onReset }: { onReset: () => void }) {
   return (
     <button
       onClick={onReset}
-      className="p-1 rounded-sm transition-opacity opacity-0 group-hover:opacity-100 text-(--t-text-muted)"
+      aria-label={t("settings.shared.resetToDefault")}
+      className="p-1 rounded-sm transition-opacity opacity-0 group-hover:opacity-100 focus:opacity-100 text-(--t-text-muted)"
       onMouseEnter={(e) => { e.currentTarget.style.color = "var(--t-text-bright)"; }}
       onMouseLeave={(e) => { e.currentTarget.style.color = "var(--t-text-muted)"; }}
       title={t("settings.shared.resetToDefault")}

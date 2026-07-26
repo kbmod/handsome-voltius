@@ -25,17 +25,18 @@ export default function SettingsModal() {
   return (
     <Modal onClose={() => setOpen(false)} blur>
       <div
-        className="surface-modal-solid rounded-[var(--r-lg)] flex overflow-hidden animate-fadeIn"
+        className="settings-desktop surface-modal-solid rounded-[var(--r-lg)] flex overflow-hidden animate-fadeIn"
         style={{
           width: "min(60rem, 92vw)",
           height: "min(38.667rem, 88vh)",
         }}
       >
         <nav
-          className="flex flex-col shrink-0 py-4 bg-(--t-bg-toolbar) border-r border-r-(--t-border)"
+          className="settings-nav flex flex-col shrink-0 py-4 bg-(--t-bg-toolbar) border-r border-r-(--t-border)"
+          aria-label={t("settings.chrome.title")}
           style={{ width: "13.333rem" }}
         >
-          <div className="px-5 mb-4">
+          <div className="settings-nav-title px-5 mb-4">
             <span className="text-xs font-bold uppercase tracking-widest text-(--t-text-dim)">
               {t("settings.chrome.title")}
             </span>
@@ -48,7 +49,8 @@ export default function SettingsModal() {
                 <button
                   key={item.id}
                   onClick={() => setSection(item.id)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-left transition-colors"
+                  aria-current={active ? "page" : undefined}
+                  className="settings-nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-left transition-colors"
                   style={{
                     background: active ? "var(--t-bg-input)" : "transparent",
                     color: active ? "var(--t-text-bright)" : "var(--t-text-secondary)",
@@ -64,21 +66,23 @@ export default function SettingsModal() {
             })}
           </div>
 
-          <div className="px-4 pt-3 border-t border-t-(--t-border)">
+          <div className="settings-nav-hint px-4 pt-3 border-t border-t-(--t-border)">
             <span className="text-xs text-(--t-text-dim)">{t("settings.chrome.openHint")}</span>
           </div>
         </nav>
 
         <div className="flex-1 flex flex-col overflow-hidden">
           <div
-            className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-b-(--t-border)"
+            className="settings-header flex items-center justify-between px-6 py-4 shrink-0 border-b border-b-(--t-border)"
           >
             <span className="text-sm font-semibold text-(--t-text-bright)">
               {nav.find((n) => n.id === section)?.label}
             </span>
             <button
+              type="button"
               onClick={() => setOpen(false)}
-              className="p-1.5 rounded-lg transition-colors text-(--t-text-muted)"
+              aria-label={t("settings.chrome.close")}
+              className="settings-close p-1.5 rounded-lg transition-colors text-(--t-text-muted)"
               onMouseEnter={(e) => { e.currentTarget.style.color = "var(--t-text-bright)"; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = "var(--t-text-muted)"; }}
             >
@@ -86,7 +90,7 @@ export default function SettingsModal() {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="settings-content flex-1 overflow-y-auto">
             {renderSettingsSection(section)}
           </div>
         </div>
