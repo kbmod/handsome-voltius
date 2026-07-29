@@ -96,8 +96,8 @@ export default function MobilePortForwardingScreen() {
                 <div className="text-[11px] text-(--t-text-dim) truncate">{st.statusLabel}</div>
                 <div className="text-[11px] font-mono text-(--t-text-dim) truncate">{rule.local_port} &rarr; {rule.remote_host}:{rule.remote_port}</div>
               </button>
-              <button data-pf-toggle className="shrink-0 p-2 text-(--t-text-primary)" onClick={(e) => { e.stopPropagation(); if (st.status === "active") void stopRule(rule); else void startRule(rule); }}>
-                <Icon icon={st.isBusy ? "lucide:loader-circle" : st.status === "active" ? "lucide:pause" : "lucide:play"} width={18} className={st.isBusy ? "animate-spin" : undefined} />
+              <button data-pf-toggle className="shrink-0 p-2 text-(--t-text-primary)" onClick={(e) => { e.stopPropagation(); if (st.status !== "inactive") void stopRule(rule); else void startRule(rule); }}>
+                <Icon icon={st.isBusy ? "lucide:loader-circle" : st.status !== "inactive" ? "lucide:pause" : "lucide:play"} width={18} className={st.isBusy ? "animate-spin" : undefined} />
               </button>
             </div>
           );

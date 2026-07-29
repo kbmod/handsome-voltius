@@ -58,6 +58,7 @@
       "pauseForwarding": "Suspendre la redirection",
       "resumeForwarding": "Reprendre la redirection",
       "active": "Active",
+      "waitingForTraffic": "En attente de trafic",
       "error": "Erreur",
       "stopped": "Arrêtée",
       "noSshSession": "Aucune session SSH",
@@ -77,6 +78,7 @@
       "forwardCount_other": "{{count}} redirections",
       "errorCount": "{{count}} erreur",
       "activeCountLabel": "{{count}} active",
+      "waitingCount": "{{count}} en attente",
       "connected": "Connecté",
       "local": "Local",
       "remote": "Distant",
@@ -85,9 +87,23 @@
       "adHoc": "Ponctuel",
       "portLabel": "Port {{port}}",
       "socksPortLabel": "SOCKS5 :{{port}}",
+      "socksEndpointLabel": "SOCKS5 127.0.0.1:{{port}}",
       "pauseForwarding": "Suspendre la redirection",
       "resumeForwarding": "Reprendre la redirection",
-      "openUrl": "Ouvrir {{url}}"
+      "openUrl": "Ouvrir {{url}}",
+      "requestFailed": "Échec de la demande de redirection",
+      "waitingForTraffic": "En attente de trafic",
+      "pauseFailed": "Impossible de suspendre la redirection. Les détails complets ont été écrits dans le journal de l'application.",
+      "resumeFailed": "Impossible de reprendre la redirection. Les détails complets ont été écrits dans le journal de l'application.",
+      "deleteFailed": "Impossible de supprimer la redirection. Les détails complets ont été écrits dans le journal de l'application."
+    },
+    "notifications": {
+      "denied": "Le serveur SSH a refusé la demande de redirection. Les détails complets ont été écrits dans le journal de l'application.",
+      "destination": "Le serveur SSH n'a pas pu atteindre la destination. Les détails complets ont été écrits dans le journal de l'application.",
+      "generic": "La redirection de port a échoué. Les détails complets ont été écrits dans le journal de l'application.",
+      "startFailed": "Impossible de démarrer la redirection de port. Les détails complets ont été écrits dans le journal de l'application.",
+      "stopFailed": "Impossible d'arrêter la redirection de port. Les détails complets ont été écrits dans le journal de l'application.",
+      "openDiagnostics": "Ouvrir les diagnostics"
     },
     "ruleForm": {
       "editRule": "Modifier la règle",

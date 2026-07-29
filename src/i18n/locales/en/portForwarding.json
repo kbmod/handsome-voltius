@@ -58,6 +58,7 @@
       "pauseForwarding": "Pause forwarding",
       "resumeForwarding": "Resume forwarding",
       "active": "Active",
+      "waitingForTraffic": "Waiting for traffic",
       "error": "Error",
       "stopped": "Stopped",
       "noSshSession": "No SSH session",
@@ -77,6 +78,7 @@
       "forwardCount_other": "{{count}} forwards",
       "errorCount": "{{count}} error",
       "activeCountLabel": "{{count}} active",
+      "waitingCount": "{{count}} waiting",
       "connected": "Connected",
       "local": "Local",
       "remote": "Remote",
@@ -85,9 +87,23 @@
       "adHoc": "Ad-hoc",
       "portLabel": "Port {{port}}",
       "socksPortLabel": "SOCKS5 :{{port}}",
+      "socksEndpointLabel": "SOCKS5 127.0.0.1:{{port}}",
       "pauseForwarding": "Pause forwarding",
       "resumeForwarding": "Resume forwarding",
-      "openUrl": "Open {{url}}"
+      "openUrl": "Open {{url}}",
+      "requestFailed": "Forwarding request failed",
+      "waitingForTraffic": "Waiting for traffic",
+      "pauseFailed": "Could not pause forwarding. Full details were written to the app log.",
+      "resumeFailed": "Could not resume forwarding. Full details were written to the app log.",
+      "deleteFailed": "Could not remove forwarding. Full details were written to the app log."
+    },
+    "notifications": {
+      "denied": "The SSH server denied the forwarding request. Full details were written to the app log.",
+      "destination": "The SSH server could not reach the forwarding destination. Full details were written to the app log.",
+      "generic": "Port forwarding failed. Full details were written to the app log.",
+      "startFailed": "Could not start port forwarding. Full details were written to the app log.",
+      "stopFailed": "Could not stop port forwarding. Full details were written to the app log.",
+      "openDiagnostics": "Open Diagnostics"
     },
     "ruleForm": {
       "editRule": "Edit Rule",

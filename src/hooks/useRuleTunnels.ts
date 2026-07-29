@@ -6,6 +6,8 @@ import { useAllConnections } from "@/hooks/useAllConnections";
 import { useAccessibleVaultIds } from "@/hooks/useAccessibleVaultIds";
 import { getPfState, openPfTunnel, closePfTunnel } from "@/services/portForwardingTunnels";
 import { getLocalTunnelHttpUrl } from "@/utils/tunnelFormat";
+import { log } from "@/lib/logger";
+import { useNotificationStore } from "@/stores/notificationStore";
 import type { ActiveTunnel, PortForwardingRule, TerminalSession } from "@/types";
 
 interface PfStatePayload {
@@ -20,7 +22,7 @@ export interface RuleTunnelState {
 }
 
 export interface RuleStatus {
-  status: "active" | "error" | "inactive";
+  status: "waiting" | "active" | "error" | "inactive";
   isActive: boolean;
   statusLabel: string;
   isBusy: boolean;
@@ -109,7 +111,7 @@ export function useRuleTunnels(): {
     let error = 0;
     for (const { tunnel } of ruleTunnelState.values()) {
       if (typeof tunnel.state === "object" && "error" in tunnel.state) error += 1;
-      else active += 1;
+      else if (tunnel.state === "active") active += 1;
     }
     return { active, error };
   }, [ruleTunnelState]);
@@ -124,15 +126,28 @@ export function useRuleTunnels(): {
     const activeState = ruleTunnelState.get(rule.id);
     const tunnel = activeState?.tunnel;
     const isError = tunnel ? typeof tunnel.state === "object" && "error" in tunnel.state : false;
-    const status = tunnel ? (isError ? "error" : "active") : "inactive";
-    const errorLabel = tunnel && isError ? (tunnel.state as { error: string }).error : undefined;
+    const status = tunnel
+      ? isError
+        ? "error"
+        : tunnel.state === "waiting"
+          ? "waiting"
+          : "active"
+      : "inactive";
     const webUrl = tunnel && !isError
       ? getLocalTunnelHttpUrl(rule.tunnel_type ?? "local", rule.remote_port, tunnel.local_port)
       : null;
     return {
       status,
       isActive: status === "active",
-      statusLabel: errorLabel ?? (status === "active" ? t("portForwarding.ruleCard.active") : pickSessionForRule(rule) ? t("portForwarding.ruleCard.stopped") : t("portForwarding.ruleCard.noSshSession")),
+      statusLabel: status === "error"
+        ? t("portForwarding.ruleCard.error")
+        : status === "waiting"
+          ? t("portForwarding.ruleCard.waitingForTraffic")
+        : status === "active"
+          ? t("portForwarding.ruleCard.active")
+          : pickSessionForRule(rule)
+            ? t("portForwarding.ruleCard.stopped")
+            : t("portForwarding.ruleCard.noSshSession"),
       isBusy: busyRuleIds.has(rule.id),
       webUrl,
     };
@@ -154,7 +169,17 @@ export function useRuleTunnels(): {
         ruleId: rule.id,
         ruleName: rule.name,
       });
-    } catch (e) { console.error("pf_tunnel_open failed:", e); }
+    } catch (e) {
+      log.error("pf_tunnel_open failed", { ruleId: rule.id, sessionId: session.id, error: String(e) });
+      useNotificationStore.getState().addToast({
+        pluginId: "__pf__",
+        pluginName: "Port Forwarding",
+        type: "toast",
+        message: t("portForwarding.notifications.startFailed"),
+        severity: "error",
+        duration: 8000,
+      });
+    }
     finally { setRuleBusy(rule.id, false); }
   }
 
@@ -163,7 +188,17 @@ export function useRuleTunnels(): {
     if (!state) return;
     setRuleBusy(rule.id, true);
     try { await closePfTunnel(state.sessionId, state.tunnel.id); }
-    catch (e) { console.error("pf_tunnel_close failed:", e); }
+    catch (e) {
+      log.error("pf_tunnel_close failed", { ruleId: rule.id, sessionId: state.sessionId, error: String(e) });
+      useNotificationStore.getState().addToast({
+        pluginId: "__pf__",
+        pluginName: "Port Forwarding",
+        type: "toast",
+        message: t("portForwarding.notifications.stopFailed"),
+        severity: "error",
+        duration: 8000,
+      });
+    }
     finally { setRuleBusy(rule.id, false); }
   }
 

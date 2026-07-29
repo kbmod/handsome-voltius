@@ -142,6 +142,12 @@ export async function onSshClosed(
   callback: (event: SshClosedEvent) => void,
 ): Promise<UnlistenFn> {
   return listen<SshClosedEvent>(`ssh-closed-${sessionId}`, (event) => {
+    // A closed SSH channel can no longer carry any local, remote, or SOCKS
+    // forwarding traffic. Tear its native session down immediately so bound
+    // local listeners are released before reconnecting or opening the same
+    // rule against another host. The reconnect path will create fresh tunnels
+    // on the replacement SSH handle.
+    void sshDisconnect(sessionId).catch(() => {});
     callback(event.payload);
   });
 }

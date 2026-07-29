@@ -7,10 +7,12 @@ import { useSessionStore } from "@/stores/sessionStore";
 import { useAllConnections } from "@/hooks/useAllConnections";
 import { useAccessibleVaultIds } from "@/hooks/useAccessibleVaultIds";
 import { useUIStore } from "@/stores/uiStore";
+import { useNotificationStore } from "@/stores/notificationStore";
 import { getPfState, closePfTunnel, resumeAutoPort } from "@/services/portForwardingTunnels";
 import { formatActiveTunnelLabel, getLocalTunnelHttpUrl } from "@/utils/tunnelFormat";
 import { getConnectionIcon, getConnectionIconColor } from "@/utils/icons";
 import { AvatarTile } from "@/components/shared/AvatarTile";
+import { log } from "@/lib/logger";
 import type { ActiveTunnel } from "@/types";
 
 interface PfStatePayload {
@@ -44,6 +46,7 @@ export function ActiveTunnelsSection() {
   const connections = useAllConnections();
   const accessibleVaultIds = useAccessibleVaultIds();
   const layoutMode = useUIStore((s) => s.portForwardingLayoutMode);
+  const addToast = useNotificationStore((s) => s.addToast);
 
   const [pfStateMap, setPfStateMap] = useState<Map<string, SessionPfState>>(new Map());
   const [busy, setBusy] = useState<Set<string>>(new Set());
@@ -112,7 +115,8 @@ export function ActiveTunnelsSection() {
         const activePorts = new Set(tunnels.map((tunnel) => tunnel.remote_port));
         const suppressedPorts = (state?.suppressedPorts ?? []).filter((port) => !activePorts.has(port) && !hiddenPorts.has(`${session.id}:${port}`));
         const errorCount = tunnels.filter((tunnel) => typeof tunnel.state === "object" && "error" in tunnel.state).length;
-        return { session, connection, tunnels, suppressedPorts, errorCount };
+        const waitingCount = tunnels.filter((tunnel) => tunnel.state === "waiting").length;
+        return { session, connection, tunnels, suppressedPorts, errorCount, waitingCount };
       })
       .filter(({ tunnels, suppressedPorts }) => tunnels.length > 0 || suppressedPorts.length > 0);
   }, [hostSessions, connections, pfStateMap, hiddenPorts]);
@@ -130,11 +134,25 @@ export function ActiveTunnelsSection() {
     });
   }
 
+  function showActionError(message: string) {
+    addToast({
+      pluginId: "core",
+      pluginName: "Handsome Voltius",
+      type: "toast",
+      message,
+      severity: "error",
+      duration: 6000,
+    });
+  }
+
   async function handlePause(sessionId: string, tunnelId: string) {
     const key = `${sessionId}-${tunnelId}`;
     setBusyKey(key, true);
     try { await closePfTunnel(sessionId, tunnelId); }
-    catch (e) { console.error("pf_tunnel_close failed:", e); }
+    catch (e) {
+      log.error("pf_tunnel_close failed", { sessionId, tunnelId, error: String(e) });
+      showActionError(t("portForwarding.activeTunnels.pauseFailed"));
+    }
     finally { setBusyKey(key, false); }
   }
 
@@ -142,7 +160,10 @@ export function ActiveTunnelsSection() {
     const key = `${sessionId}-${port}`;
     setBusyKey(key, true);
     try { await resumeAutoPort(sessionId, port); }
-    catch (e) { console.error("pf_tunnel_resume_auto failed:", e); }
+    catch (e) {
+      log.error("pf_tunnel_resume_auto failed", { sessionId, port, error: String(e) });
+      showActionError(t("portForwarding.activeTunnels.resumeFailed"));
+    }
     finally { setBusyKey(key, false); }
   }
 
@@ -152,7 +173,10 @@ export function ActiveTunnelsSection() {
     try {
       await closePfTunnel(sessionId, tunnel.id);
       setHiddenPorts((prev) => new Set([...prev, `${sessionId}:${tunnel.remote_port}`]));
-    } catch (e) { console.error("pf_tunnel_close failed:", e); }
+    } catch (e) {
+      log.error("pf_tunnel_close failed", { sessionId, tunnelId: tunnel.id, error: String(e) });
+      showActionError(t("portForwarding.activeTunnels.deleteFailed"));
+    }
     finally { setBusyKey(key, false); }
   }
 
@@ -161,8 +185,8 @@ export function ActiveTunnelsSection() {
   }
 
   return (
-    <div className="mb-4">
-      <div className="flex items-center justify-between px-1 py-2">
+    <div className="mb-3">
+      <div className="flex items-center justify-between px-0.5 py-1.5">
         <span className="text-xs font-semibold uppercase tracking-wider text-(--t-text-dim)">
           {t("portForwarding.activeTunnels.sectionTitle")}
         </span>
@@ -173,49 +197,48 @@ export function ActiveTunnelsSection() {
       </div>
 
       <div className={layoutMode === "grid"
-        ? "grid grid-cols-[repeat(auto-fill,minmax(21rem,1fr))] gap-4"
-        : "flex flex-col gap-3"
+        ? "grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-2.5"
+        : "flex flex-col gap-2"
       }>
-        {sessionCards.map(({ session, connection, tunnels, suppressedPorts, errorCount }) => {
+        {sessionCards.map(({ session, connection, tunnels, suppressedPorts, errorCount, waitingCount }) => {
           const displayIcon = connection ? (connection.icon || connection.distro) : null;
           const distroIcon = displayIcon ? getConnectionIcon(displayIcon) : null;
           const distroColor = displayIcon ? getConnectionIconColor(displayIcon) : "var(--t-bg-card-avatar)";
-          const activeCount = tunnels.length - errorCount;
+          const activeCount = tunnels.length - errorCount - waitingCount;
           const totalForwards = tunnels.length + suppressedPorts.length;
 
           return (
             <div
               key={session.id}
-              className="group overflow-hidden rounded-[1.35rem] border border-(--t-border) bg-(--t-bg-card) transition-all duration-150 hover:border-(--t-border-hover) hover:bg-(--t-bg-card-hover)"
+              className="group overflow-hidden rounded-xl border border-(--t-border) bg-(--t-bg-card) transition-colors duration-150 hover:border-(--t-border-hover)"
               data-card="true"
             >
-              <div
-                className="relative flex items-center gap-3 px-4 py-4"
-                style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${distroColor} 24%, transparent), transparent 62%)` }}
-              >
-                <AvatarTile base={distroColor} icon={distroIcon ?? "lucide:server"} iconSize={30} className="h-14 w-14 rounded-2xl text-white" />
+              <div className="relative flex items-center gap-2.5 px-3 py-2.5 border-b border-(--t-border)">
+                <AvatarTile base={distroColor} icon={distroIcon ?? "lucide:server"} iconSize={20} className="h-9 w-9 rounded-lg text-white" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 min-w-0">
-                    <p className="truncate text-base font-bold text-(--t-text-bright)">{session.connectionName}</p>
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-green-500" title={t("portForwarding.activeTunnels.connected")} />
+                    <p className="truncate text-sm font-semibold text-(--t-text-bright)">{session.connectionName}</p>
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" title={t("portForwarding.activeTunnels.connected")} />
                   </div>
                   <p className="truncate text-xs text-(--t-text-dim)">
                     {connection ? `${connection.username}@${connection.host}:${connection.port}` : session.id}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="rounded-md bg-(--t-bg-input) text-(--t-text-dim) border border-(--t-border) px-2 py-1 text-[10px] font-semibold uppercase tracking-wider">
+                  <span className="rounded-md bg-(--t-bg-input) text-(--t-text-dim) border border-(--t-border) px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
                     {t("portForwarding.activeTunnels.forwardCount", { count: totalForwards })}
                   </span>
                   {errorCount > 0 ? (
                     <span className="text-[10px] font-medium text-red-400">{t("portForwarding.activeTunnels.errorCount", { count: errorCount })}</span>
+                  ) : waitingCount > 0 ? (
+                    <span className="text-[10px] font-medium text-amber-400">{t("portForwarding.activeTunnels.waitingCount", { count: waitingCount })}</span>
                   ) : (
                     <span className="text-[10px] font-medium text-green-400">{t("portForwarding.activeTunnels.activeCountLabel", { count: activeCount })}</span>
                   )}
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1.5 px-3 pb-3">
+              <div className="flex flex-col gap-1 px-2.5 py-2">
                 {tunnels.map((tunnel) => {
                   const key = `${session.id}-${tunnel.id}`;
                   const deleteKey = `del-${session.id}-${tunnel.id}`;
@@ -223,21 +246,21 @@ export function ActiveTunnelsSection() {
                   const isDeleting = busy.has(deleteKey);
                   const isAuto = tunnel.origin.type === "auto";
                   const isError = typeof tunnel.state === "object" && "error" in tunnel.state;
-                  const errorMsg = isError ? (tunnel.state as { error: string }).error : null;
+                  const isWaiting = tunnel.state === "waiting";
                   const portLabel = formatActiveTunnelLabel(tunnel);
                   const webUrl = !isError ? getLocalTunnelHttpUrl(tunnel.tunnel_type ?? "local", tunnel.remote_port, tunnel.local_port) : null;
 
                   return (
                     <div
                       key={key}
-                      className="flex items-center gap-2 rounded-xl border border-transparent bg-(--t-bg-elevated)/70 px-2.5 py-2 transition-colors hover:border-(--t-border-hover)"
+                      className="flex items-center gap-2 rounded-lg border border-transparent bg-(--t-bg-elevated)/70 px-2.5 py-1.5 transition-colors hover:border-(--t-border-hover)"
                     >
-                      <div className={`h-2 w-2 shrink-0 rounded-full ${isError ? "bg-red-500" : "bg-green-500"}`} />
+                      <div className={`h-2 w-2 shrink-0 rounded-full ${isError ? "bg-red-500" : isWaiting ? "bg-amber-400" : "bg-green-500"}`} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <p className="truncate text-sm font-semibold text-(--t-text-bright)">
+                          <p className="truncate text-xs font-semibold text-(--t-text-bright)">
                             {tunnel.tunnel_type === "dynamic"
-                              ? t("portForwarding.activeTunnels.socksPortLabel", { port: tunnel.local_port })
+                              ? t("portForwarding.activeTunnels.socksEndpointLabel", { port: tunnel.local_port })
                               : t("portForwarding.activeTunnels.portLabel", { port: tunnel.remote_port })}
                           </p>
                           <span className={`text-[10px] px-1 py-0.5 rounded-sm font-medium shrink-0 leading-none ${isAuto ? "bg-purple-500/20 text-purple-400" : "bg-(--t-bg-subtle) text-(--t-text-muted)"}`}>
@@ -246,7 +269,11 @@ export function ActiveTunnelsSection() {
                           <TunnelTypeBadge tunnelType={tunnel.tunnel_type} />
                         </div>
                         <p className={`truncate text-xs font-mono ${isError ? "text-red-400" : "text-(--t-text-secondary)"}`}>
-                          {isError ? errorMsg : portLabel}
+                          {isError
+                            ? t("portForwarding.activeTunnels.requestFailed")
+                            : isWaiting
+                              ? t("portForwarding.activeTunnels.waitingForTraffic")
+                              : portLabel}
                         </p>
                       </div>
                       <button
@@ -290,12 +317,12 @@ export function ActiveTunnelsSection() {
                   return (
                     <div
                       key={`suppressed-${session.id}-${port}`}
-                      className="flex items-center gap-2 rounded-xl border border-transparent bg-(--t-bg-elevated)/70 px-2.5 py-2 transition-colors hover:border-(--t-border-hover)"
+                      className="flex items-center gap-2 rounded-lg border border-transparent bg-(--t-bg-elevated)/70 px-2.5 py-1.5 transition-colors hover:border-(--t-border-hover)"
                     >
                       <div className="h-2 w-2 shrink-0 rounded-full bg-(--t-text-dim) opacity-40" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <p className="truncate text-sm font-semibold text-(--t-text-bright)">{t("portForwarding.activeTunnels.portLabel", { port })}</p>
+                          <p className="truncate text-xs font-semibold text-(--t-text-bright)">{t("portForwarding.activeTunnels.portLabel", { port })}</p>
                           <span className="text-[10px] px-1 py-0.5 rounded-sm font-medium shrink-0 leading-none bg-purple-500/20 text-purple-400">{t("portForwarding.activeTunnels.auto")}</span>
                         </div>
                         <p className="truncate text-xs font-mono text-(--t-text-secondary)">{port} → 127.0.0.1:{port}</p>

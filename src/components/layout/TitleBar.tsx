@@ -555,8 +555,6 @@ export default function TitleBar() {
             className="group relative flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-(--t-terminal-active-border) bg-(--t-terminal-tab-active-bg) px-2 text-sm font-medium text-(--t-terminal-active-text)"
             title={t("layout.titleBar.newTab")}
           >
-            <Icon icon="lucide:plus" width={14} />
-            <span className="max-w-[140px] truncate">{t("layout.titleBar.newTab")}</span>
             <span
               role="button"
               tabIndex={0}
@@ -567,10 +565,11 @@ export default function TitleBar() {
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") closeNewTab();
               }}
-              className="ml-0.5 rounded-sm p-0.5 text-(--t-text-muted) transition-colors hover:text-(--t-status-error)"
+              className="rounded-sm p-0.5 text-(--t-terminal-active-text) transition-colors hover:text-(--t-status-error)"
             >
               <Icon icon="lucide:x" width={15} />
             </span>
+            <span className="max-w-[140px] truncate">{t("layout.titleBar.newTab")}</span>
           </button>
         )}
 

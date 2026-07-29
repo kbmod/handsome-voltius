@@ -9,10 +9,10 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc, Mutex};
 use tokio_util::sync::CancellationToken;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum TunnelOrigin {
     Auto,
@@ -20,9 +20,10 @@ pub enum TunnelOrigin {
     Rule { rule_id: String, rule_name: String },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TunnelState {
+    Waiting,
     Active,
     Error(String),
 }
@@ -437,8 +438,10 @@ impl PortForwardManager {
         origin: TunnelOrigin,
     ) -> Result<ActiveTunnel, ForwardError> {
         let cancel = CancellationToken::new();
+        let (status_tx, mut status_rx) = mpsc::unbounded_channel();
         let (bound_port, bytes) =
-            socks::create_socks_tunnel(Arc::clone(&handle), local_port, cancel.clone()).await?;
+            socks::create_socks_tunnel(Arc::clone(&handle), local_port, cancel.clone(), status_tx)
+                .await?;
 
         let tunnel = ActiveTunnel {
             id: uuid::Uuid::new_v4().to_string(),
@@ -449,7 +452,10 @@ impl PortForwardManager {
             bind_host: None,
             target_host: None,
             origin,
-            state: TunnelState::Active,
+            // A SOCKS listener is locally ready at this point, but the SSH
+            // server has not accepted a direct-tcpip channel yet. Do not claim
+            // the tunnel is active until the first proxied request succeeds.
+            state: TunnelState::Waiting,
             bytes_transferred: 0,
         };
 
@@ -479,6 +485,41 @@ impl PortForwardManager {
         }
 
         self.emit_state_for_key(&key).await;
+        let sessions = Arc::clone(&self.sessions);
+        let session_keys = Arc::clone(&self.session_keys);
+        let app = self.app.clone();
+        let tunnel_id = tunnel.id.clone();
+        let status_key = key.clone();
+        tokio::spawn(async move {
+            while let Some(status) = status_rx.recv().await {
+                let changed = {
+                    let mut all_sessions = sessions.lock().await;
+                    let Some(session) = all_sessions.get_mut(&status_key) else {
+                        break;
+                    };
+                    let Some(entry) = session
+                        .tunnels
+                        .iter_mut()
+                        .find(|entry| entry.tunnel.id == tunnel_id)
+                    else {
+                        break;
+                    };
+                    let next = match status {
+                        socks::SocksTunnelStatus::Active => TunnelState::Active,
+                        socks::SocksTunnelStatus::Error(message) => TunnelState::Error(message),
+                    };
+                    if entry.tunnel.state == next {
+                        false
+                    } else {
+                        entry.tunnel.state = next;
+                        true
+                    }
+                };
+                if changed {
+                    emit_state_shared(&sessions, &session_keys, &app, &status_key).await;
+                }
+            }
+        });
         Ok(tunnel)
     }
 
@@ -805,32 +846,47 @@ impl PortForwardManager {
     /// Emit shared port-forward state for a host to every live terminal of that
     /// host (each filters `pf-state-changed` by its own `session_id`).
     async fn emit_state_for_key(&self, key: &str) {
-        let (tunnels, suppressed_ports) = {
-            let sessions = self.sessions.lock().await;
-            match sessions.get(key) {
-                Some(s) => (
-                    s.tunnels.iter().map(snapshot_tunnel).collect::<Vec<_>>(),
-                    s.suppressed_ports.iter().copied().collect::<Vec<_>>(),
-                ),
-                None => (vec![], vec![]),
-            }
-        };
-        let live = self.live_sessions_for_key(key).await;
-        let targets = if live.is_empty() {
-            vec![key.to_string()]
-        } else {
-            live
-        };
-        for sid in targets {
-            let _ = self.app.emit(
-                "pf-state-changed",
-                PfStatePayload {
-                    session_id: sid,
-                    tunnels: tunnels.clone(),
-                    suppressed_ports: suppressed_ports.clone(),
-                },
-            );
+        emit_state_shared(&self.sessions, &self.session_keys, &self.app, key).await;
+    }
+}
+
+async fn emit_state_shared(
+    sessions: &Arc<Mutex<HashMap<String, SessionPfState>>>,
+    session_keys: &Arc<Mutex<HashMap<String, String>>>,
+    app: &AppHandle,
+    key: &str,
+) {
+    let (tunnels, suppressed_ports) = {
+        let sessions = sessions.lock().await;
+        match sessions.get(key) {
+            Some(s) => (
+                s.tunnels.iter().map(snapshot_tunnel).collect::<Vec<_>>(),
+                s.suppressed_ports.iter().copied().collect::<Vec<_>>(),
+            ),
+            None => (vec![], vec![]),
         }
+    };
+    let live = session_keys
+        .lock()
+        .await
+        .iter()
+        .filter(|(_, value)| value.as_str() == key)
+        .map(|(session_id, _)| session_id.clone())
+        .collect::<Vec<_>>();
+    let targets = if live.is_empty() {
+        vec![key.to_string()]
+    } else {
+        live
+    };
+    for session_id in targets {
+        let _ = app.emit(
+            "pf-state-changed",
+            PfStatePayload {
+                session_id,
+                tunnels: tunnels.clone(),
+                suppressed_ports: suppressed_ports.clone(),
+            },
+        );
     }
 }
 
@@ -856,6 +912,14 @@ mod tests {
     use super::*;
     use std::time::Duration;
     use tokio::net::TcpListener;
+
+    #[test]
+    fn waiting_state_has_stable_frontend_wire_value() {
+        assert_eq!(
+            serde_json::to_value(TunnelState::Waiting).unwrap(),
+            serde_json::Value::String("waiting".into())
+        );
+    }
 
     /// Build a TunnelEntry whose `_cancel` token guards a real accept loop bound
     /// to `port`, mirroring `create_tunnel`: the loop holds a *clone* of the

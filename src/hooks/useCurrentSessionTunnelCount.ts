@@ -37,5 +37,5 @@ export function useCurrentSessionTunnelCount(): number {
     return () => { cleanup?.(); };
   }, [activeSessionId, isSsh]);
 
-  return tunnels.filter((t) => t.state === "active").length;
+  return tunnels.filter((t) => t.state === "active" || t.state === "waiting").length;
 }

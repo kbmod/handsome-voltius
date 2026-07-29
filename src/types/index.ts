@@ -314,7 +314,7 @@ export type TunnelOrigin =
   | { type: "ad_hoc" }
   | { type: "rule"; rule_id: string; rule_name: string };
 
-export type TunnelState = "active" | { error: string };
+export type TunnelState = "waiting" | "active" | { error: string };
 
 export interface ActiveTunnel {
   id: string;

@@ -268,24 +268,27 @@ export function PortsPanel() {
       )}
       {rules.map((rule) => {
         const tunnel = ruleToTunnel.get(rule.id);
-        const isActive = !!tunnel;
+        const isRunning = !!tunnel;
         const isError = tunnel && typeof tunnel.state === "object" && "error" in tunnel.state;
+        const isWaiting = tunnel?.state === "waiting";
+        const isActive = tunnel?.state === "active";
         return (
           <PortRow
             key={rule.id}
             label={rule.name}
             portInfo={formatRuleLabel(rule)}
             isActive={isActive && !isError}
+            isWaiting={isWaiting}
             isError={!!isError}
             isBusy={busy.has(rule.id)}
             isDeleting={busy.has(`del-${rule.id}`)}
             badge={null}
             bytesTransferred={tunnel?.bytes_transferred}
             localPort={tunnel?.local_port}
-            httpUrl={isActive && !isError && tunnel
+            httpUrl={isRunning && !isError && tunnel
               ? getLocalTunnelHttpUrl(rule.tunnel_type ?? "local", rule.remote_port, tunnel.local_port)
               : null}
-            onToggle={() => isActive ? handleRuleDisable(tunnel!.id, rule.id) : handleRuleEnable(rule)}
+            onToggle={() => isRunning ? handleRuleDisable(tunnel!.id, rule.id) : handleRuleEnable(rule)}
             onDelete={() => handleRuleDelete(rule, tunnel)}
             isRenaming={renamingRuleId === rule.id}
             defaultName={rule.name}
@@ -308,6 +311,7 @@ export function PortsPanel() {
             const isAuto = tunnel.origin.type === "auto";
             const key = `unclaimed-${tunnel.id}`;
             const isError = typeof tunnel.state === "object" && "error" in tunnel.state;
+            const isWaiting = tunnel.state === "waiting";
             const label = tunnel.tunnel_type === "dynamic"
               ? `SOCKS5 :${tunnel.local_port}`
               : `Port ${tunnel.remote_port}`;
@@ -315,8 +319,9 @@ export function PortsPanel() {
               <PortRow
                 key={tunnel.id}
                 label={label}
-                portInfo={formatActiveTunnelLabel(tunnel)}
-                isActive={!isError}
+                portInfo={isWaiting ? t("portForwarding.activeTunnels.waitingForTraffic") : formatActiveTunnelLabel(tunnel)}
+                isActive={tunnel.state === "active"}
+                isWaiting={isWaiting}
                 isError={isError}
                 isBusy={busy.has(key)}
                 isDeleting={busy.has(`del-${key}`)}
@@ -361,4 +366,3 @@ export function PortsPanel() {
     </div>
   );
 }
-

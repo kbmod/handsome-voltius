@@ -479,7 +479,7 @@ export function PortForwardingPage() {
           selectionAreaRef={selectionAreaRef}
           onMouseDown={handleSelectionAreaMouseDown}
           dragBox={dragBox}
-          className="flex-1 overflow-y-auto px-9 pt-5 pb-9"
+          className="flex-1 overflow-y-auto px-7 pt-4 pb-7"
           onClick={() => {
             if (!showForm && !editingFolder) return;
             closeForm();
@@ -493,7 +493,7 @@ export function PortForwardingPage() {
         >
           <ActiveTunnelsSection />
 
-          <div ref={itemAreaRef} data-drag-surface="true" className="min-h-full space-y-6 mt-4">
+          <div ref={itemAreaRef} data-drag-surface="true" className="min-h-full space-y-5 mt-3">
 
             {/* ── Folder breadcrumb ── */}
             {folderPath.length > 0 && (
@@ -539,7 +539,7 @@ export function PortForwardingPage() {
                   </button>
                 </div>
                 <div
-                  className={layoutMode === "grid" ? "grid gap-4" : "flex flex-col gap-1"}
+                  className={layoutMode === "grid" ? "grid gap-2.5" : "flex flex-col gap-1"}
                   style={layoutMode === "grid" ? { gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" } : undefined}
                 >
                   {visibleFolders.map((folder) => {
@@ -575,7 +575,7 @@ export function PortForwardingPage() {
             {/* ── Eject drop zone ── */}
             {activeFolderId && (
               <div
-                className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-150"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150"
                 style={{
                   border: dragOverEject ? "2px solid var(--t-accent)" : "2px dashed var(--t-border-hover)",
                   background: dragOverEject ? "color-mix(in srgb, var(--t-accent) 8%, var(--t-bg-card))" : "transparent",
@@ -631,7 +631,7 @@ export function PortForwardingPage() {
                 )}
                 <div
                   className={layoutMode === "grid"
-                    ? "grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4"
+                    ? "grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-2.5"
                     : "flex flex-col gap-1"
                   }
                 >

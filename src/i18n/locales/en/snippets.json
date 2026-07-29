@@ -15,6 +15,7 @@
       },
       "error": {
         "needsTerminal": "Script step requires an open terminal session for this target",
+        "needsShellIntegration": "Multiple snippet steps require Shell Integration so each command can finish before the next starts",
         "noSftp": "No SFTP connection for transfer step",
         "destExists": "Destination already exists: {{path}}"
       }

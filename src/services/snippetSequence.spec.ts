@@ -184,7 +184,38 @@ describe("executeSequenceForTargets", () => {
     expect(res.targets.find((t) => t.label === "web-1")?.ok).toBe(true);
     expect(res.targets.find((t) => t.label === "web-2")?.ok).toBe(false);
     expect(res.targets.find((t) => t.label === "web-2")?.error).toMatch(/perm denied/);
-    expect(good.runScript).toHaveBeenCalledWith("x");
+    expect(good.runScript).toHaveBeenCalledWith("x", false);
+  });
+
+  it("does not inject a later script step until the earlier step completes", async () => {
+    let finishFirst!: () => void;
+    const firstFinished = new Promise<void>((resolve) => { finishFirst = resolve; });
+    const runScript = vi.fn(async (content: string) => {
+      if (content === "first") await firstFinished;
+    });
+    const exec = {
+      runScript,
+      runTransfer: vi.fn(async () => {}),
+      close: vi.fn(async () => {}),
+    };
+
+    const running = executeSequenceForTargets([{
+      label: "terminal",
+      steps: [
+        { kind: "script", content: "first" },
+        { kind: "script", content: "second" },
+      ],
+      exec,
+    }]);
+
+    await vi.waitFor(() => expect(runScript).toHaveBeenCalledTimes(1));
+    expect(runScript).toHaveBeenNthCalledWith(1, "first", true);
+
+    finishFirst();
+    await running;
+
+    expect(runScript).toHaveBeenCalledTimes(2);
+    expect(runScript).toHaveBeenNthCalledWith(2, "second", false);
   });
 });
 

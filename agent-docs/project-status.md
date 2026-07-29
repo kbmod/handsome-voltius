@@ -1,6 +1,6 @@
 # Handsome Voltius project status
 
-Last updated: 2026-07-25
+Last updated: 2026-07-26
 
 This is the only active handoff and status document for this fork. Older
 redesign, Termius-recreation, and Termius-database bridge plans were removed
@@ -247,8 +247,11 @@ Relevant pushed commits:
 
 Latest automated result:
 
-- 168 test files passed;
-- 829 tests passed;
+- 173 test files passed;
+- 839 tests passed;
+- 7 targeted Rust port-forwarding tests passed, covering domain and IPv6
+  SOCKS5 negotiation, the waiting-state wire contract, local listener
+  lifecycle, and bind behavior;
 - TypeScript check passed;
 - zero-error ESLint check passed;
 - Vite production build passed;
@@ -258,14 +261,45 @@ Latest automated result:
 Latest locally built test package:
 
 - Path:
-  `target/release/bundle/deb/Handsome Voltius_0.12.0_amd64.deb`
+  `target/release/bundle/deb/Handsome_Voltius_0.12.0_amd64.deb`
 - SHA-256:
-  `17967409dfbdb426352f45c697650c275c2473e9e15a5db17c8d5b0aea93c956`
+  `dcd2bc6bdfed393551928a20162571599e57c209150f86e231c6a03b878153a4`
 - Debian package name: `handsome-voltius`
 - This package includes the accepted terminal, workspace, SFTP, Known Hosts,
-  and Keychain work plus the complete Handsome Voltius identity slice. It also
-  includes the desktop Settings density candidate awaiting installed-app
-  visual acceptance.
+  Keychain, Settings, Snippets, port-forwarding, and Handsome Voltius identity
+  work.
+- The Snippets and port-forwarding desktop polish is installed-app verified:
+  - create controls are aligned left while search, layout, and sort remain on
+    the right;
+  - the Snippet folder menu is portaled above desktop stacking contexts and
+    has single-click regression coverage;
+  - Snippet, forwarding-rule, and active-tunnel cards are flatter and denser;
+  - Snippet command previews no longer use the oversized faux terminal frame;
+  - user-triggered active-tunnel failures use in-app error notifications.
+- The accepted slice also corrects its installed-app findings:
+  - the New Tab close control is back on the left;
+  - multiple script steps wait for the prior shell prompt before injecting the
+    next command, rather than queueing every command into the PTY immediately;
+  - multi-step script execution reports a clear error when Shell Integration is
+    disabled and no reliable command-completion boundary is available;
+  - dynamic forwarding shows the exact local SOCKS5 endpoint and passes
+    bracket-free IPv6 literals to the SSH direct-TCP channel.
+  - per-request SOCKS5 channel failures now replace the misleading active state
+    with the actual SSH error and return to active after a later successful
+    request.
+  - forwarding failures now show one concise in-app notification, write the
+    complete tunnel context and SSH error to the rotating application log, and
+    retain only a compact error status in forwarding cards.
+  - dynamic SOCKS tunnels begin in an amber **Waiting for traffic** state
+    after the local listener opens, become Active only after the SSH server
+    accepts a real proxied request, and become Error when that request is
+    rejected.
+  - native SSH close events now tear down the closed session's forwarding
+    listeners before UI exit/reconnect handling, so the requested local port is
+    released and the same rule can move cleanly to another server.
+  - the terminal right-side panel is now strictly terminal-scoped: navigating
+    to Vaults, Hosts, Keychain, Port Forwarding, or any other application
+    surface closes its state and prevents the terminal panel from rendering.
 - The build exits successfully without updater signing because this
   in-progress fork no longer generates or publishes updater artifacts.
 
@@ -273,6 +307,13 @@ Latest locally built test package:
 
 The current verified checkpoint contains:
 
+- compact Snippets and port-forwarding toolbars, cards, and menus;
+- sequential multi-step snippet execution using real shell prompt boundaries;
+- functional dynamic SOCKS5 forwarding with remote DNS and IPv6 handling;
+- honest Waiting, Active, and Error tunnel lifecycle states;
+- concise forwarding notifications with full errors in application logs;
+- immediate forwarding-listener teardown when the owning SSH connection closes;
+- terminal-only right-panel scope across application navigation;
 - focused Keychain list/grid polish and blue identity/key tiles;
 - deterministic crypto-type metadata for existing and future imports;
 - single-click WebKitGTK controls through removal of stateful ripple rendering;
@@ -314,14 +355,13 @@ verified checkpoint so the next session starts from current repository truth.
 This is a polish pass, not a new application-wide redesign. Work on one surface
 at a time and preserve existing functionality.
 
-Priority order:
-
-1. Snippets and port-forwarding surfaces
-2. Shared dialogs, menus, notifications, and right-side panels
+The next surface is shared dialogs, menus, notifications, and right-side
+panels.
 
 Hosts, groups, folders, vault navigation, Keychain, Known Hosts, and their
 shared distro/service/icon treatment have been visually accepted for the
-current milestone. Desktop Settings has also been accepted.
+current milestone. Desktop Settings, Snippets, and port forwarding have also
+been accepted.
 
 For each surface:
 

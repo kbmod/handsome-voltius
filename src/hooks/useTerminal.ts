@@ -178,6 +178,10 @@ type CacheEntry = {
    * uses this to distinguish a spawned PTY from a shell that actually reached
    * an interactive prompt. */
   outputVersion: number;
+  /** Monotonic count of shell prompts reported through OSC 7. Snippet sequences
+   * use this as a command-completion boundary instead of queueing every step
+   * into the PTY at once. */
+  promptVersion: number;
   dispose: () => void; // full teardown, called only when the session is deleted
 };
 
@@ -244,6 +248,30 @@ export async function waitForTerminalOutput(
 
 export function getTerminalOutputVersion(sessionId: string): number {
   return terminalCache.get(sessionId)?.outputVersion ?? 0;
+}
+
+export function getTerminalPromptVersion(sessionId: string): number {
+  return terminalCache.get(sessionId)?.promptVersion ?? 0;
+}
+
+/** Wait until shell integration reports a prompt newer than `afterVersion`.
+ * Long-running and interactive commands are allowed; the session disappearing
+ * is the only early failure. */
+export async function waitForTerminalPrompt(
+  sessionId: string,
+  afterVersion: number,
+  timeoutMs = 30 * 60_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (true) {
+    const entry = terminalCache.get(sessionId);
+    if (!entry) throw new Error(`Terminal was removed while a snippet step was running: ${sessionId}`);
+    if (entry.promptVersion > afterVersion) return;
+    if (Date.now() >= deadline) {
+      throw new Error("Timed out waiting for the terminal command to finish");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
 }
 
 // ─── Search controller (module-level, callable from anywhere) ────────────────
@@ -871,6 +899,7 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
         onResizeRef: { current: onResize },
         listenersReady,
         outputVersion: 0,
+        promptVersion: 0,
         dispose: () => {}, // filled in below
       };
       terminalCache.set(sessionId, entry);
@@ -986,6 +1015,7 @@ export function useTerminal({ sessionId, sessionType, onClosed, inputGate, encod
       const oscCwdDispose = term.parser.registerOscHandler(7, (data) => {
         try {
           if (!data.startsWith("file://")) return false;
+          entry.promptVersion += 1;
           // Manual parse — URL constructor mangles Windows backslashes and
           // throws on unencoded characters that cmd's $P happily includes.
           const rest = data.slice("file://".length);

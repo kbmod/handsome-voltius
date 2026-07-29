@@ -248,10 +248,16 @@ function PanelContent() {
 export default function RightPanel() {
   const rightPanelOpen = useUIStore((s) => s.rightPanelOpen);
   const activeNav = useUIStore((s) => s.activeNav);
+  const newTabOpen = useUIStore((s) => s.newTabOpen);
+  const sftpPanelOpen = useUIStore((s) => s.sftpPanelOpen);
   const { sessions, activeSessionId } = useSessionStore();
 
   const hasActiveSession = activeSessionId !== null && sessions.length > 0;
-  const isTerminalView = hasActiveSession && activeNav !== "hosts";
+  const isTerminalView =
+    hasActiveSession &&
+    activeNav === "terminal" &&
+    !newTabOpen &&
+    !sftpPanelOpen;
 
   if (!isTerminalView) return null;
 

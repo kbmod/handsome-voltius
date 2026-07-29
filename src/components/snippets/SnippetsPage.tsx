@@ -922,7 +922,7 @@ export function SnippetsPage() {
         selectionAreaRef={selectionAreaRef}
         onMouseDown={handleSelectionAreaMouseDown}
         dragBox={dragBox}
-        className="flex-1 overflow-y-auto px-9 pt-5 pb-9"
+        className="flex-1 overflow-y-auto px-7 pt-4 pb-7"
         onClick={() => {
           if (folderEp.panelOpen) { folderEp.closeEdit(); return; }
           if (!ep.panelOpen) return;
@@ -940,7 +940,7 @@ export function SnippetsPage() {
           ) : snippets.length === 0 ? (
             <EmptyState onAdd={() => openSnippet("new")} />
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-5">
 
               {/* ── Breadcrumb (when inside a folder) ── */}
               {folderPath.length > 0 && (
@@ -975,7 +975,7 @@ export function SnippetsPage() {
               {/* ── Recent executions (root only) ── */}
               {!hasSearch && !activeFolderId && scopedRecentEntries.length > 0 && (
                 <div
-                  className="rounded-2xl p-3"
+                  className="rounded-xl p-2.5 bg-(--t-bg-card)"
                   style={{ border: "1px solid var(--t-border)" }}
                 >
                   <div className="flex items-center justify-between mb-2.5 px-1">
@@ -993,7 +993,7 @@ export function SnippetsPage() {
                     </button>
                   </div>
                   <div
-                    className={layoutMode === "grid" ? "grid gap-4" : "flex flex-col gap-1"}
+                    className={layoutMode === "grid" ? "grid gap-2.5" : "flex flex-col gap-1"}
                     style={layoutMode === "grid" ? { gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" } : undefined}
                   >
                     {(showAllRecent ? scopedRecentEntries : scopedRecentEntries.slice(0, RECENT_PREVIEW_COUNT)).map((entry) => (
@@ -1010,7 +1010,7 @@ export function SnippetsPage() {
                   {scopedRecentEntries.length > RECENT_PREVIEW_COUNT && (
                     <button
                       onClick={() => setShowAllRecent((v) => !v)}
-                      className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-xs text-(--t-text-dim) hover:text-(--t-text-primary) transition-colors"
+                      className="mt-2 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs text-(--t-text-dim) hover:text-(--t-text-primary) transition-colors"
                       style={{ background: "var(--t-bg-elevated)" }}
                     >
                       <Icon icon={showAllRecent ? "lucide:chevron-up" : "lucide:chevron-down"} width={12} />
@@ -1024,7 +1024,7 @@ export function SnippetsPage() {
               {favorites.length > 0 && (
                 <div>
                   <SectionHeader label={t("snippets.page.pinned")} count={favorites.length} />
-                  <div className={layoutMode === "grid" ? "grid gap-4" : "flex flex-col gap-1"} style={layoutMode === "grid" ? { gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" } : undefined}>{favorites.map(renderCard)}</div>
+                  <div className={layoutMode === "grid" ? "grid gap-2.5" : "flex flex-col gap-1"} style={layoutMode === "grid" ? { gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" } : undefined}>{favorites.map(renderCard)}</div>
                 </div>
               )}
 
@@ -1064,7 +1064,7 @@ export function SnippetsPage() {
               {/* ── Eject drop zone (inside folder, visible only while dragging) ── */}
               {activeFolderId && (
                 <div
-                  className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-150"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-150"
                   style={{
                     border: dragOverEject ? "2px solid var(--t-accent)" : "2px dashed var(--t-border-hover)",
                     background: dragOverEject
@@ -1096,7 +1096,7 @@ export function SnippetsPage() {
                       count={viewSnippets.length}
                     />
                   )}
-                  <div className={layoutMode === "grid" ? "grid gap-4" : "flex flex-col gap-1"} style={layoutMode === "grid" ? { gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" } : undefined}>{viewSnippets.map(renderCard)}</div>
+                  <div className={layoutMode === "grid" ? "grid gap-2.5" : "flex flex-col gap-1"} style={layoutMode === "grid" ? { gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" } : undefined}>{viewSnippets.map(renderCard)}</div>
                 </div>
               ) : !hasSearch && filtered.length > 0 && activeFolderId ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-3">

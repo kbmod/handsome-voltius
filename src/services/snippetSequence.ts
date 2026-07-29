@@ -17,6 +17,7 @@ import { useNotificationStore } from "@/stores/notificationStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useLayoutStore } from "@/stores/layoutStore";
 import { waitForConnectedSessionIds } from "@/components/shared/sessionPickerTargets";
+import { getTerminalPromptVersion, waitForTerminalPrompt } from "@/hooks/useTerminal";
 import i18n from "@/i18n";
 import type { Snippet, Connection, TerminalSession } from "@/types";
 import type { ParsedVariable, DynamicContext } from "./snippetParser";
@@ -114,7 +115,7 @@ export interface TargetRunResult { label: string; ok: boolean; error?: string }
 export interface SequenceRunResult { targets: TargetRunResult[]; flattenErrors: string[] }
 
 export interface TargetExec {
-  runScript(content: string): Promise<void>;
+  runScript(content: string, waitForCompletion: boolean): Promise<void>;
   runTransfer(step: TransferStep): Promise<void>;
   close(): Promise<void>;
 }
@@ -123,8 +124,8 @@ export interface PreparedTarget { label: string; steps: LeafStep[]; exec: Target
 
 async function runOneTarget(steps: LeafStep[], exec: TargetExec): Promise<void> {
   try {
-    for (const step of steps) {
-      if (step.kind === "script") await exec.runScript(step.content);
+    for (const [index, step] of steps.entries()) {
+      if (step.kind === "script") await exec.runScript(step.content, index < steps.length - 1);
       else await exec.runTransfer(step);
     }
   } finally {
@@ -280,9 +281,14 @@ async function prepareTarget(target: RunTarget, steps: LeafStep[]): Promise<Prep
   const channels: TransferChannels = { remoteSftpId, remoteSftpId2 };
 
   const exec: TargetExec = {
-    async runScript(content) {
+    async runScript(content, waitForCompletion) {
       if (!sessionId) throw new Error(i18n.t("snippets.sequence.error.needsTerminal"));
+      const promptVersion = getTerminalPromptVersion(sessionId);
+      if (waitForCompletion && promptVersion === 0) {
+        throw new Error(i18n.t("snippets.sequence.error.needsShellIntegration"));
+      }
       await snippetInject(sessionId, sessionType, content, true);
+      if (waitForCompletion) await waitForTerminalPrompt(sessionId, promptVersion);
     },
     async runTransfer(step) {
       await runTransferStep(step, channels);

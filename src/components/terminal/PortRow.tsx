@@ -17,6 +17,7 @@ export function PortRow({
   label,
   portInfo,
   isActive,
+  isWaiting,
   isError,
   isBusy,
   isDeleting,
@@ -36,6 +37,7 @@ export function PortRow({
   label: string;
   portInfo: string;
   isActive: boolean;
+  isWaiting?: boolean;
   isError?: boolean;
   isBusy: boolean;
   isDeleting: boolean;
@@ -71,6 +73,7 @@ export function PortRow({
   }, [isRenaming, defaultName, label]);
 
   const bytes = formatBytes(bytesTransferred ?? 0);
+  const isRunning = isActive || !!isWaiting || !!isError;
 
   async function copyAddress() {
     if (localPort == null) return;
@@ -82,7 +85,7 @@ export function PortRow({
     <div className="flex items-center gap-1.5 px-2 py-1.5 group hover:bg-(--t-bg-elevated)">
       {/* Status dot */}
       <div className={`w-2 h-2 rounded-full shrink-0 transition-colors ${
-        isError ? "bg-red-500" : isActive ? "bg-green-500" : "bg-(--t-text-dim) opacity-40"
+        isError ? "bg-red-500" : isActive ? "bg-green-500" : isWaiting ? "bg-amber-400" : "bg-(--t-text-dim) opacity-40"
       }`} />
 
       {/* Label + port info */}
@@ -133,17 +136,17 @@ export function PortRow({
       <button
         onClick={(e) => { e.stopPropagation(); onToggle(); }}
         disabled={isBusy}
-        title={isActive ? t("terminal.ports.pauseForwarding") : t("terminal.ports.resumeForwarding")}
+        title={isRunning ? t("terminal.ports.pauseForwarding") : t("terminal.ports.resumeForwarding")}
         className={`w-5 h-5 flex items-center justify-center rounded shrink-0 transition-all
           opacity-0 group-hover:opacity-100
-          ${isActive
+          ${isRunning
             ? "text-(--t-text-muted) hover:text-amber-400 hover:bg-amber-500/10"
             : "text-(--t-text-muted) hover:text-green-400 hover:bg-green-500/10"
           }`}
       >
         {isBusy ? (
           <Icon icon="lucide:loader-circle" width={11} className="animate-spin" />
-        ) : isActive ? (
+        ) : isRunning ? (
           <Icon icon="lucide:pause" width={11} />
         ) : (
           <Icon icon="lucide:play" width={11} />

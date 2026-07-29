@@ -136,7 +136,6 @@ export function SnippetCard({
       <>
         <BaseCard
           isList={false}
-          glass
           isEditing={isEditing}
           isSelected={isSelected}
           isFocused={isFocused}
@@ -152,7 +151,7 @@ export function SnippetCard({
           style={{ opacity: dimmed ? 0.45 : 1 }}
         >
           {/* self-start overrides BaseCard's items-center so content is top-left aligned */}
-          <div className="flex-1 min-w-0 self-start flex flex-col gap-2.5">
+          <div className="flex-1 min-w-0 self-start flex flex-col gap-2">
             {/* Header: avatar + name/fav/tags + description */}
             <div className="flex items-start gap-2 min-w-0">
               <AvatarTile icon="lucide:braces" iconSize={14} className="w-8 h-8 rounded-lg" />
@@ -186,18 +185,14 @@ export function SnippetCard({
               </div>
             </div>
 
-            {/* Terminal content preview */}
+            {/* Compact command preview */}
             <div
-              className="rounded-md overflow-hidden w-full"
-              style={{ background: "var(--t-bg-terminal)" }}
+              className="flex items-start gap-2 rounded-md w-full px-2.5 py-2"
+              style={{ background: "var(--t-bg-elevated)", border: "1px solid var(--t-border)" }}
             >
-              <div className="flex items-center gap-1 px-2.5 pt-2 pb-1">
-                <span className="w-2 h-2 rounded-full bg-[#ff5f56]" />
-                <span className="w-2 h-2 rounded-full bg-[#ffbd2e]" />
-                <span className="w-2 h-2 rounded-full bg-[#27c93f]" />
-              </div>
+              <span className="shrink-0 text-[11px] font-mono text-(--t-accent)">$</span>
               <p
-                className="px-2.5 pb-2.5 text-[11px] leading-relaxed break-all"
+                className="min-w-0 text-[11px] leading-relaxed break-all"
                 style={{
                   fontFamily: "var(--t-terminal-font-family)",
                   color: snippetSearchText(snippet) ? "var(--t-terminal-foreground)" : "var(--t-text-dim)",
@@ -207,7 +202,7 @@ export function SnippetCard({
                   overflow: "hidden",
                 }}
               >
-                {`> ${snippetSearchText(snippet) || t("snippets.card.noContent")}`}
+                {snippetSearchText(snippet) || t("snippets.card.noContent")}
               </p>
             </div>
 

@@ -15,6 +15,7 @@
       },
       "error": {
         "needsTerminal": "Une étape de script nécessite une session terminal ouverte pour cette cible",
+        "needsShellIntegration": "Plusieurs étapes de snippet nécessitent l'intégration au shell pour que chaque commande se termine avant le démarrage de la suivante",
         "noSftp": "Aucune connexion SFTP pour l'étape de transfert",
         "destExists": "La destination existe déjà : {{path}}"
       }

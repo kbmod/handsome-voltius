@@ -195,7 +195,11 @@ export const useUIStore = create<UIStore>()(
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       setHomeView: (v) => set({ homeView: v }),
-      setActiveNav: (nav) => set({ activeNav: nav }),
+      setActiveNav: (nav) =>
+        set((state) => ({
+          activeNav: nav,
+          rightPanelOpen: nav === "terminal" ? state.rightPanelOpen : false,
+        })),
       openNewTab: () => set({ newTabOpen: true, sftpPanelOpen: false, rightPanelOpen: false }),
       closeNewTab: () => set({ newTabOpen: false }),
       setOmniOpen: (open) => set({ omniOpen: open }),

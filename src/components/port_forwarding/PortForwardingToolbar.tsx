@@ -31,21 +31,17 @@ export function PortForwardingToolbar({
   return (
     <>
       <div ref={rowRef} className="flex items-center gap-2 px-5 py-2.5 shrink-0 chrome-toolbar">
-        <div ref={leftRef} className="flex items-center">
-          <ToolbarViewControls
-            search={search}
-            onSearchChange={onSearchChange}
-            filterPlaceholder={t("portForwarding.toolbar.filterPlaceholder")}
-            filterShortcutId="filter"
-            filterWidth={176}
-            layoutMode={layoutMode}
-            onLayoutModeChange={onLayoutModeChange}
-            sortMode={sortMode}
-            onSortModeChange={onSortModeChange}
+        <div ref={leftRef} className="flex items-center gap-2 shrink-0">
+          <ToolbarDropdown
+            icon="lucide:plus"
+            label={compact ? undefined : t("portForwarding.toolbar.newRule")}
+            onAction={onNewRule ?? (() => {})}
+            items={onNewFolder ? [{ label: t("portForwarding.toolbar.newFolder"), icon: "lucide:folder-plus", onClick: onNewFolder }] : []}
+            disabled={!onNewRule}
+            variant="accent"
+            align="left"
+            menuWidth={160}
           />
-        </div>
-
-        <div ref={rightRef} className="flex items-center gap-2 ml-auto shrink-0">
           {selectedCount > 0 && onDeleteSelected && (
             <button
               onClick={onDeleteSelected}
@@ -60,17 +56,21 @@ export function PortForwardingToolbar({
                   <span className="opacity-70">({selectedCount})</span>
                 </span>
               )}
-            </button>
+              </button>
           )}
-          <ToolbarDropdown
-            icon="lucide:plus"
-            label={compact ? undefined : t("portForwarding.toolbar.newRule")}
-            onAction={onNewRule ?? (() => {})}
-            items={onNewFolder ? [{ label: t("portForwarding.toolbar.newFolder"), icon: "lucide:folder-plus", onClick: onNewFolder }] : []}
-            disabled={!onNewRule}
-            variant="accent"
-            align="right"
-            menuWidth={160}
+        </div>
+
+        <div ref={rightRef} className="flex items-center ml-auto shrink-0">
+          <ToolbarViewControls
+            search={search}
+            onSearchChange={onSearchChange}
+            filterPlaceholder={t("portForwarding.toolbar.filterPlaceholder")}
+            filterShortcutId="filter"
+            filterWidth={176}
+            layoutMode={layoutMode}
+            onLayoutModeChange={onLayoutModeChange}
+            sortMode={sortMode}
+            onSortModeChange={onSortModeChange}
           />
         </div>
       </div>

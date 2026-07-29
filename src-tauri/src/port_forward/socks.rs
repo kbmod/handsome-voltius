@@ -2,9 +2,16 @@ use crate::port_forward::ForwardError;
 use russh::ChannelMsg;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::TcpStream;
+use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
+
+#[derive(Debug)]
+pub(crate) enum SocksTunnelStatus {
+    Active,
+    Error(String),
+}
 
 /// Bind a local SOCKS5 listener and spawn an accept loop.
 /// Returns `(bound_local_port, bytes_transferred_counter)`.
@@ -12,6 +19,7 @@ pub async fn create_socks_tunnel(
     handle: Arc<russh::client::Handle<crate::ssh::client::SshClient>>,
     local_port: u16,
     cancel: CancellationToken,
+    status_tx: mpsc::UnboundedSender<SocksTunnelStatus>,
 ) -> Result<(u16, Arc<AtomicU64>), ForwardError> {
     let mut listener = None;
     let mut bound_port = local_port;
@@ -42,6 +50,7 @@ pub async fn create_socks_tunnel(
                         bound_port,
                         cancel2.clone(),
                         Arc::clone(&bytes_accept),
+                        status_tx.clone(),
                     ));
                 }
             }
@@ -57,6 +66,7 @@ async fn socks_bridge(
     local_port: u16,
     cancel: CancellationToken,
     bytes: Arc<AtomicU64>,
+    status_tx: mpsc::UnboundedSender<SocksTunnelStatus>,
 ) {
     let (target_host, target_port) = match negotiate_socks5(&mut tcp).await {
         Ok(t) => t,
@@ -73,12 +83,24 @@ async fn socks_bridge(
         .await
     {
         Ok(c) => c,
-        Err(_) => {
-            // Send SOCKS5 host unreachable reply
-            let _ = tcp.write_all(&socks5_reply(0x04)).await;
+        Err(error) => {
+            let message =
+                format!("SOCKS5 connection to {target_host}:{target_port} failed: {error}");
+            let _ = status_tx.send(SocksTunnelStatus::Error(message));
+            let reply = match error {
+                russh::Error::ChannelOpenFailure(
+                    russh::ChannelOpenFailure::AdministrativelyProhibited,
+                ) => 0x02,
+                russh::Error::ChannelOpenFailure(russh::ChannelOpenFailure::ResourceShortage) => {
+                    0x01
+                }
+                _ => 0x04,
+            };
+            let _ = tcp.write_all(&socks5_reply(reply)).await;
             return;
         }
     };
+    let _ = status_tx.send(SocksTunnelStatus::Active);
 
     // Send SOCKS5 success reply: bound address 0.0.0.0:0
     if tcp.write_all(&socks5_reply(0x00)).await.is_err() {
@@ -131,7 +153,10 @@ async fn socks_bridge(
 }
 
 /// Perform SOCKS5 handshake; return (target_host, target_port) on success.
-async fn negotiate_socks5(tcp: &mut TcpStream) -> Result<(String, u16), ()> {
+async fn negotiate_socks5<S>(tcp: &mut S) -> Result<(String, u16), ()>
+where
+    S: AsyncRead + AsyncWrite + Unpin,
+{
     // --- Auth negotiation ---
     let mut header = [0u8; 2];
     tcp.read_exact(&mut header).await.map_err(|_| ())?;
@@ -185,11 +210,7 @@ async fn negotiate_socks5(tcp: &mut TcpStream) -> Result<(String, u16), ()> {
             // IPv6
             let mut addr = [0u8; 16];
             tcp.read_exact(&mut addr).await.map_err(|_| ())?;
-            let segments: Vec<String> = addr
-                .chunks(2)
-                .map(|c| format!("{:02x}{:02x}", c[0], c[1]))
-                .collect();
-            format!("[{}]", segments.join(":"))
+            std::net::Ipv6Addr::from(addr).to_string()
         }
         _ => {
             let _ = tcp.write_all(&socks5_reply(0x08)).await;
@@ -207,4 +228,43 @@ async fn negotiate_socks5(tcp: &mut TcpStream) -> Result<(String, u16), ()> {
 fn socks5_reply(rep: u8) -> [u8; 10] {
     // VER REP RSV ATYP BND.ADDR(4 bytes IPv4 0.0.0.0) BND.PORT(2 bytes 0)
     [0x05, rep, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn stream_pair() -> (tokio::io::DuplexStream, tokio::io::DuplexStream) {
+        tokio::io::duplex(256)
+    }
+
+    #[tokio::test]
+    async fn negotiates_domain_target_and_remote_dns() {
+        let (mut client, mut server) = stream_pair();
+        let domain = b"example.com";
+        let mut request = vec![0x05, 0x01, 0x00, 0x05, 0x01, 0x00, 0x03, domain.len() as u8];
+        request.extend_from_slice(domain);
+        request.extend_from_slice(&443u16.to_be_bytes());
+        client.write_all(&request).await.unwrap();
+
+        let target = negotiate_socks5(&mut server).await.unwrap();
+        assert_eq!(target, ("example.com".to_string(), 443));
+
+        let mut auth_reply = [0u8; 2];
+        client.read_exact(&mut auth_reply).await.unwrap();
+        assert_eq!(auth_reply, [0x05, 0x00]);
+    }
+
+    #[tokio::test]
+    async fn formats_ipv6_without_uri_brackets_for_ssh() {
+        let (mut client, mut server) = stream_pair();
+        let address: std::net::Ipv6Addr = "2001:db8::1".parse().unwrap();
+        let mut request = vec![0x05, 0x01, 0x00, 0x05, 0x01, 0x00, 0x04];
+        request.extend_from_slice(&address.octets());
+        request.extend_from_slice(&80u16.to_be_bytes());
+        client.write_all(&request).await.unwrap();
+
+        let target = negotiate_socks5(&mut server).await.unwrap();
+        assert_eq!(target, ("2001:db8::1".to_string(), 80));
+    }
 }

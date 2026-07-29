@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@iconify/react";
 import { FilterInput, SORT_MODE_ICONS, type SortMode, type LayoutMode } from "@/components/shared/ToolbarViewControls";
@@ -36,11 +37,19 @@ export function SnippetsToolbar({
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
     const handler = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setMenuOpen(false);
+      const target = e.target as Node;
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(target) &&
+        !menuRef.current?.contains(target)
+      ) {
+        setMenuOpen(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -56,42 +65,9 @@ export function SnippetsToolbar({
 
   return (
     <>
-      <div
-        ref={rowRef}
-        className="flex items-center gap-2 px-5 py-2.5 chrome-toolbar"
-      >
-        <div ref={leftRef} className="flex items-center gap-1.5">
-          <FilterInput
-            value={search}
-            onChange={onSearchChange}
-            placeholder={t("snippets.toolbar.filterPlaceholder")}
-            width={176}
-            shortcutId="filter"
-          />
-          <Pills
-            options={[
-              { value: "grid", label: t("snippets.toolbar.gridLabel"), icon: "lucide:layout-grid" },
-              { value: "list", label: t("snippets.toolbar.listLabel"), icon: "lucide:layout-list" },
-            ]}
-            value={layoutMode}
-            onChange={onLayoutModeChange}
-          />
-          <ToolbarDropdown
-            icon={SORT_MODE_ICONS[sortMode]}
-            value={sortMode}
-            menuWidth={200}
-            options={[
-              { value: "name-asc",  label: t("snippets.toolbar.sortNameAsc"),  icon: "lucide:arrow-up-a-z" },
-              { value: "name-desc", label: t("snippets.toolbar.sortNameDesc"), icon: "lucide:arrow-down-a-z" },
-              { value: "newest",    label: t("snippets.toolbar.sortNewest"),   icon: "lucide:arrow-down-0-1" },
-              { value: "oldest",    label: t("snippets.toolbar.sortOldest"),   icon: "lucide:arrow-up-0-1" },
-            ]}
-            onChange={onSortModeChange}
-          />
-        </div>
-
-        <div ref={rightRef} className="ml-auto shrink-0">
-        <div className="relative flex items-center gap-px" ref={wrapperRef}>
+      <div ref={rowRef} className="flex items-center gap-2 px-5 py-2.5 chrome-toolbar">
+        <div ref={leftRef} className="flex items-center gap-px shrink-0" >
+          <div className="relative flex items-center gap-px" ref={wrapperRef}>
           <button
             onClick={onNewSnippet}
             onMouseDown={createRipple}
@@ -123,8 +99,9 @@ export function SnippetsToolbar({
             </span>
           </button>
 
-          {menuOpen && (
+          {menuOpen && createPortal(
             <div
+              ref={menuRef}
               className="surface-float p-1.5 fixed z-9999"
               style={{
                 top: menuPos.top,
@@ -137,9 +114,40 @@ export function SnippetsToolbar({
                 label={t("snippets.toolbar.newFolder")}
                 onClick={() => { setMenuOpen(false); onNewFolder(); }}
               />
-            </div>
+            </div>,
+            document.body,
           )}
+          </div>
         </div>
+
+        <div ref={rightRef} className="ml-auto flex items-center gap-1.5 shrink-0">
+          <FilterInput
+            value={search}
+            onChange={onSearchChange}
+            placeholder={t("snippets.toolbar.filterPlaceholder")}
+            width={176}
+            shortcutId="filter"
+          />
+          <Pills
+            options={[
+              { value: "grid", label: t("snippets.toolbar.gridLabel"), icon: "lucide:layout-grid" },
+              { value: "list", label: t("snippets.toolbar.listLabel"), icon: "lucide:layout-list" },
+            ]}
+            value={layoutMode}
+            onChange={onLayoutModeChange}
+          />
+          <ToolbarDropdown
+            icon={SORT_MODE_ICONS[sortMode]}
+            value={sortMode}
+            menuWidth={200}
+            options={[
+              { value: "name-asc",  label: t("snippets.toolbar.sortNameAsc"),  icon: "lucide:arrow-up-a-z" },
+              { value: "name-desc", label: t("snippets.toolbar.sortNameDesc"), icon: "lucide:arrow-down-a-z" },
+              { value: "newest",    label: t("snippets.toolbar.sortNewest"),   icon: "lucide:arrow-down-0-1" },
+              { value: "oldest",    label: t("snippets.toolbar.sortOldest"),   icon: "lucide:arrow-up-0-1" },
+            ]}
+            onChange={onSortModeChange}
+          />
         </div>
       </div>
     </>
