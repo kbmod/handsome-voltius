@@ -55,7 +55,7 @@ export function MenuItemList({
   };
 
   return (
-    <div onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+    <div role="menu" onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
       {items.map((item, i) => {
         const isSubActive = activeSub?.idx === i;
         return (
@@ -64,8 +64,10 @@ export function MenuItemList({
               <div className="my-1 mx-1 h-px bg-(--t-border)" />
             )}
             <button
+              type="button"
+              role="menuitem"
               onClick={item.children ? undefined : () => { item.onClick?.(); onClose(); }}
-              className="flex items-center gap-2.5 p-3 rounded-lg transition-colors w-full"
+              className="flex items-center gap-2 px-2.5 py-2 rounded-md transition-colors w-full focus-visible:outline-1 focus-visible:outline-(--t-accent)"
               style={{
                 background: isSubActive ? "var(--t-bg-card-hover)" : "transparent",
                 color: item.danger ? "var(--t-status-error)" : "var(--t-text-secondary)",
@@ -82,7 +84,7 @@ export function MenuItemList({
                 if (item.children) scheduleClose();
               }}
             >
-              {item.icon && <Icon icon={item.icon} width={16} className="shrink-0" />}
+              {item.icon && <Icon icon={item.icon} width={14} className="shrink-0" />}
               <span className="flex-1 text-left text-sm font-medium" style={{ color: item.danger ? "var(--t-status-error)" : "var(--t-text-primary)" }}>
                 {item.label}
               </span>

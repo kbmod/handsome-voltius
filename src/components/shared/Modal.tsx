@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
 interface Props {
@@ -10,13 +10,21 @@ interface Props {
 }
 
 export function Modal({ onClose, onEnter, children, blur = true }: Props) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key === "Enter" && onEnter) { e.stopPropagation(); onEnter(); }
     };
     document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    return () => {
+      document.removeEventListener("keydown", handler);
+      previouslyFocused?.focus();
+    };
   }, [onClose, onEnter]);
 
   return createPortal(
@@ -29,7 +37,14 @@ export function Modal({ onClose, onEnter, children, blur = true }: Props) {
       }}
       onClick={onClose}
     >
-      <div role="dialog" onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={-1}
+        className="outline-none"
+        onClick={(e) => e.stopPropagation()}
+      >
         {children}
       </div>
     </div>,

@@ -107,7 +107,8 @@ export async function reportClientEvent(
       | "key.created" | "key.updated" | "key.deleted"
       | "snippet.created" | "snippet.updated" | "snippet.deleted"
       | "folder.created" | "folder.updated" | "folder.deleted"
-      | "port_forward.created" | "port_forward.updated" | "port_forward.deleted";
+      | "port_forward.created" | "port_forward.updated" | "port_forward.deleted"
+      | "port_forward.started" | "port_forward.active" | "port_forward.stopped" | "port_forward.failed";
     vault_id?: string;
     target_type?: string;
     target_id?: string;

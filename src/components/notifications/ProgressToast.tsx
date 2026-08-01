@@ -23,7 +23,9 @@ export function ProgressToast({ toast, onDismiss, pluginUnloaded }: Props) {
 
   return (
     <div
-      className="pointer-events-auto flex flex-col gap-1.5 px-3 py-2.5 rounded-xl shadow-lg text-sm animate-fadeIn"
+      role={displaySeverity === "error" ? "alert" : "status"}
+      aria-atomic="true"
+      className="pointer-events-auto flex flex-col gap-1.5 px-3 py-2.5 rounded-lg shadow-lg text-sm animate-fadeIn"
       style={{
         minWidth: "16rem",
         maxWidth: "24rem",
@@ -32,32 +34,35 @@ export function ProgressToast({ toast, onDismiss, pluginUnloaded }: Props) {
         borderLeft: `2px solid ${borderColor}`,
       }}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-start gap-2">
         {isFinished ? (
           <Icon
             icon={displaySeverity === "error" ? "lucide:circle-x" : "lucide:circle-check-big"}
             width={14}
-            style={{ color: borderColor, flexShrink: 0 }}
+            style={{ color: borderColor, flexShrink: 0, marginTop: 2 }}
           />
         ) : (
           <Icon
             icon="lucide:loader-circle"
             width={14}
             className="animate-spin"
-            style={{ color: "var(--t-text-muted)", flexShrink: 0 }}
+            style={{ color: "var(--t-text-muted)", flexShrink: 0, marginTop: 2 }}
           />
         )}
-        <span
-          className="text-xs shrink-0"
-          style={{ color: "var(--t-text-dim)" }}
-          title={toast.pluginName}
-        >
-          [{toast.pluginName.slice(0, 20)}]
-        </span>
-        <span className="flex-1 text-(--t-text-primary) font-medium truncate">{toast.message}</span>
+        <div className="flex-1 min-w-0">
+          <div
+            className="text-[10px] leading-tight truncate"
+            style={{ color: "var(--t-text-dim)" }}
+            title={toast.pluginName}
+          >
+            {toast.pluginName.slice(0, 20)}
+          </div>
+          <div className="text-(--t-text-primary) font-medium leading-snug break-words">{toast.message}</div>
+        </div>
         {(isFinished || toast.cancellable) && (
           <button
             onClick={onDismiss}
+            aria-label="Dismiss notification"
             disabled={pluginUnloaded && !isFinished}
             className="w-4 h-4 flex items-center justify-center rounded-sm shrink-0 transition-colors"
             style={{ color: "var(--t-text-dim)" }}

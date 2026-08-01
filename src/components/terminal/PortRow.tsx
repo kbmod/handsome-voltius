@@ -19,6 +19,7 @@ export function PortRow({
   isActive,
   isWaiting,
   isError,
+  isInUse,
   isBusy,
   isDeleting,
   isSaving,
@@ -27,6 +28,7 @@ export function PortRow({
   httpUrl,
   localPort,
   onToggle,
+  toggleDisabled,
   onDelete,
   onSaveAsRule,
   isRenaming,
@@ -39,6 +41,7 @@ export function PortRow({
   isActive: boolean;
   isWaiting?: boolean;
   isError?: boolean;
+  isInUse?: boolean;
   isBusy: boolean;
   isDeleting: boolean;
   isSaving?: boolean;
@@ -47,6 +50,7 @@ export function PortRow({
   httpUrl?: string | null;
   localPort?: number;
   onToggle: () => void;
+  toggleDisabled?: boolean;
   onDelete: () => void;
   onSaveAsRule?: () => void;
   isRenaming?: boolean;
@@ -85,7 +89,7 @@ export function PortRow({
     <div className="flex items-center gap-1.5 px-2 py-1.5 group hover:bg-(--t-bg-elevated)">
       {/* Status dot */}
       <div className={`w-2 h-2 rounded-full shrink-0 transition-colors ${
-        isError ? "bg-red-500" : isActive ? "bg-green-500" : isWaiting ? "bg-amber-400" : "bg-(--t-text-dim) opacity-40"
+        isError ? "bg-red-500" : isActive ? "bg-green-500" : isWaiting ? "bg-amber-400" : isInUse ? "bg-blue-400" : "bg-(--t-text-dim) opacity-40"
       }`} />
 
       {/* Label + port info */}
@@ -135,10 +139,10 @@ export function PortRow({
       {/* Toggle pause/resume — hover only */}
       <button
         onClick={(e) => { e.stopPropagation(); onToggle(); }}
-        disabled={isBusy}
-        title={isRunning ? t("terminal.ports.pauseForwarding") : t("terminal.ports.resumeForwarding")}
+        disabled={isBusy || toggleDisabled}
+        title={toggleDisabled ? portInfo : isRunning ? t("terminal.ports.pauseForwarding") : t("terminal.ports.resumeForwarding")}
         className={`w-5 h-5 flex items-center justify-center rounded shrink-0 transition-all
-          opacity-0 group-hover:opacity-100
+          ${toggleDisabled ? "invisible pointer-events-none" : "opacity-0 group-hover:opacity-100"}
           ${isRunning
             ? "text-(--t-text-muted) hover:text-amber-400 hover:bg-amber-500/10"
             : "text-(--t-text-muted) hover:text-green-400 hover:bg-green-500/10"

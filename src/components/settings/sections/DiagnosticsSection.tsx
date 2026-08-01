@@ -3,7 +3,7 @@ import { Icon } from "@iconify/react";
 import { useTranslation } from "react-i18next";
 import { Toggle } from "@/components/shared/Toggle";
 import { useNotificationStore } from "@/stores/notificationStore";
-import { setVerboseLogging, createBugReport } from "@/services/diagnostics";
+import { setVerboseLogging, createBugReport, revealAppLog } from "@/services/diagnostics";
 import { getLoggerVerbose } from "@/lib/logger";
 
 type ReportState = "idle" | "working" | "done";
@@ -46,6 +46,18 @@ export default function DiagnosticsSection() {
     }
   };
 
+  const onRevealLog = async () => {
+    try {
+      await revealAppLog();
+    } catch (e) {
+      addToast({
+        pluginId: "core", pluginName: "Handsome Voltius", type: "toast",
+        message: t("settings.diagnostics.toastLogError", { reason: String(e) }),
+        severity: "error", duration: 6000,
+      });
+    }
+  };
+
   const buttonLabel =
     reportState === "working" ? t("settings.diagnostics.creatingButton")
     : reportState === "done" ? t("settings.diagnostics.createdButton")
@@ -79,6 +91,19 @@ export default function DiagnosticsSection() {
               {t("settings.diagnostics.verboseHint")}
             </div>
           )}
+          <div className="pt-2 border-t border-(--t-border)">
+            <button
+              type="button"
+              onClick={() => void onRevealLog()}
+              className="btn btn-secondary inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium"
+            >
+              <Icon icon="lucide:file-text" width={14} />
+              {t("settings.diagnostics.showLogButton")}
+            </button>
+            <p className="text-xs mt-1.5 text-(--t-text-dim)">
+              {t("settings.diagnostics.showLogSub")}
+            </p>
+          </div>
         </div>
       </div>
 

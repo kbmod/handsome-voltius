@@ -26,7 +26,7 @@ export default function DesktopShell() {
       <TitleBar />
       <EmailVerificationBanner />
       <div className="flex flex-1 overflow-hidden">
-        {showFrame && !showVaultChrome && <VaultSidebar />}
+        {showFrame && <VaultSidebar />}
         <div
           className={`flex flex-col flex-1 overflow-hidden bg-(--t-bg-terminal) relative z-10 ${showFrame ? "chrome-slab" : ""}`}
         >

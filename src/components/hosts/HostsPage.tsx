@@ -403,12 +403,8 @@ export default function HostsPage() {
 
   const handleDeleteConnection = useCallback((id: string) => {
     const targetIds = getHostDeleteTargetIds(id, selectedIdSet, selectedConnections.map((c) => c.id));
-    if (targetIds.length > 1) {
-      setConfirmDeleteIds(targetIds);
-      return;
-    }
-    void deleteConnection(id);
-  }, [deleteConnection, selectedConnections, selectedIdSet]);
+    setConfirmDeleteIds(targetIds);
+  }, [selectedConnections, selectedIdSet]);
 
   const bulkContextMenuItems = useMemo<ContextMenuItem[] | undefined>(() => {
     if (selectedIdSet.size === 0) return undefined;
@@ -837,7 +833,7 @@ export default function HostsPage() {
               onClose={() => { setShowSerialForm(false); setEditingId(null); }}
               onDuplicate={editing ? () => handleDuplicate(editing) : undefined}
               onConnect={editing ? () => void handleConnect(editing) : undefined}
-              onDelete={editing ? () => { deleteConnection(editing.id); setShowSerialForm(false); setEditingId(null); } : undefined}
+              onDelete={editing ? () => setConfirmDeleteIds([editing.id]) : undefined}
               vaults={editing ? vaultOptions.filter((v) => v.id !== (editing.vault_id ?? "personal")) : []}
               canEdit={editing ? can("EDIT_CONNECTIONS", editing.vault_id ?? "personal") : false}
               onMoveToVault={editing ? (vaultId) => { void handleMoveConnectionToVault(editing, vaultId); } : undefined}
@@ -853,7 +849,7 @@ export default function HostsPage() {
               onClose={() => { setShowForm(false); setEditingId(null); }}
               onDuplicate={editing ? () => handleDuplicate(editing) : undefined}
               onConnect={editing ? () => void handleConnect(editing) : undefined}
-              onDelete={editing ? () => { deleteConnection(editing.id); setShowForm(false); setEditingId(null); } : undefined}
+              onDelete={editing ? () => setConfirmDeleteIds([editing.id]) : undefined}
               vaults={editing ? vaultOptions.filter((v) => v.id !== (editing.vault_id ?? "personal")) : []}
               canEdit={editing ? can("EDIT_CONNECTIONS", editing.vault_id ?? "personal") : false}
               onMoveToVault={editing ? (vaultId) => { void handleMoveConnectionToVault(editing, vaultId); } : undefined}
@@ -1217,9 +1213,15 @@ export default function HostsPage() {
           message={t("hosts.page.confirmDelete.message", { count: confirmDeleteIds.length })}
           confirmLabel={t("common.action.delete")}
           onConfirm={() => {
+            const closesEditor = editingId !== null && confirmDeleteIds.includes(editingId);
             for (const id of confirmDeleteIds) {
               if (scopedFolders.some((f) => f.id === id)) void deleteFolder(id);
               else void deleteConnection(id);
+            }
+            if (closesEditor) {
+              setShowForm(false);
+              setShowSerialForm(false);
+              setEditingId(null);
             }
             setSelection([]);
             setConfirmDeleteIds(null);

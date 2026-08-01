@@ -9,3 +9,7 @@ export async function setVerboseLogging(enabled: boolean): Promise<void> {
 export function createBugReport(): Promise<string> {
   return invoke("create_bug_report");
 }
+
+export function revealAppLog(): Promise<string> {
+  return invoke("reveal_app_log");
+}

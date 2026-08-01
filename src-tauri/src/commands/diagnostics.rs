@@ -16,6 +16,25 @@ pub fn set_verbose_logging(enabled: bool) {
     });
 }
 
+#[tauri::command]
+pub fn reveal_app_log(app: tauri::AppHandle) -> Result<String, String> {
+    let log_path = app
+        .path()
+        .app_log_dir()
+        .map_err(|e| format!("no log dir: {e}"))?
+        .join("voltius.log");
+
+    if !log_path.is_file() {
+        return Err(format!("log file not found: {}", log_path.display()));
+    }
+
+    app.opener()
+        .reveal_item_in_dir(&log_path)
+        .map_err(|e| format!("reveal log: {e}"))?;
+
+    Ok(log_path.to_string_lossy().into_owned())
+}
+
 const README_TEXT: &str = "\
 Handsome Voltius bug report
 ==================

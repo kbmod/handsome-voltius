@@ -140,6 +140,10 @@ pub struct PortForwardManager {
     /// per-terminal ids the frontend speaks into the shared host key, and fan
     /// state events back out to every live terminal of a host.
     pub(crate) session_keys: Arc<Mutex<HashMap<String, String>>>,
+    /// Saved rule id -> host key currently owning that rule. A local listening
+    /// port can only be bound once, so an "Any connection" rule must not
+    /// auto-activate independently on every connected host.
+    pub(crate) rule_owners: Arc<Mutex<HashMap<String, String>>>,
     pub(crate) app: AppHandle,
 }
 
@@ -148,8 +152,21 @@ impl PortForwardManager {
         Self {
             sessions: Arc::new(Mutex::new(HashMap::new())),
             session_keys: Arc::new(Mutex::new(HashMap::new())),
+            rule_owners: Arc::new(Mutex::new(HashMap::new())),
             app,
         }
+    }
+
+    pub async fn claim_rule(&self, session_id: &str, rule_id: &str) -> bool {
+        let key = self.key_of(session_id).await;
+        let mut owners = self.rule_owners.lock().await;
+        claim_rule_owner(&mut owners, rule_id, &key)
+    }
+
+    pub async fn release_rule(&self, session_id: &str, rule_id: &str) {
+        let key = self.key_of(session_id).await;
+        let mut owners = self.rule_owners.lock().await;
+        release_rule_owner(&mut owners, rule_id, &key);
     }
 
     /// Register a terminal under its host key. `connection_id` empty → the
@@ -543,11 +560,20 @@ impl PortForwardManager {
         }
 
         let entry = state.tunnels.remove(pos);
+        let rule_id = match &entry.tunnel.origin {
+            TunnelOrigin::Rule { rule_id, .. } => Some(rule_id.clone()),
+            _ => None,
+        };
         // Stop the accept loop + bridges and free the local listener. Removing
         // the entry is not enough: its `_cancel` token is cloned into the loop,
         // and a CancellationToken does NOT cancel on drop.
         cancel_entry(&entry);
         drop(sessions);
+
+        if let Some(rule_id) = rule_id {
+            let mut owners = self.rule_owners.lock().await;
+            release_rule_owner(&mut owners, &rule_id, &key);
+        }
 
         // Best-effort remote forward cancellation (after releasing lock).
         if let Some(rc) = entry.remote_cleanup {
@@ -589,6 +615,10 @@ impl PortForwardManager {
             }
         }
         drop(sessions);
+        self.rule_owners
+            .lock()
+            .await
+            .retain(|_, owner_key| owner_key != key);
 
         let _ = self.app.emit(
             "pf-state-changed",
@@ -770,6 +800,9 @@ impl PortForwardManager {
             {
                 continue;
             }
+            if !self.claim_rule(session_id, &rule.id).await {
+                continue;
+            }
             let origin = TunnelOrigin::Rule {
                 rule_id: rule.id.clone(),
                 rule_name: rule.name.clone(),
@@ -850,6 +883,22 @@ impl PortForwardManager {
     }
 }
 
+fn claim_rule_owner(owners: &mut HashMap<String, String>, rule_id: &str, key: &str) -> bool {
+    match owners.get(rule_id) {
+        Some(owner) => owner == key,
+        None => {
+            owners.insert(rule_id.to_string(), key.to_string());
+            true
+        }
+    }
+}
+
+fn release_rule_owner(owners: &mut HashMap<String, String>, rule_id: &str, key: &str) {
+    if owners.get(rule_id).is_some_and(|owner| owner == key) {
+        owners.remove(rule_id);
+    }
+}
+
 async fn emit_state_shared(
     sessions: &Arc<Mutex<HashMap<String, SessionPfState>>>,
     session_keys: &Arc<Mutex<HashMap<String, String>>>,
@@ -919,6 +968,20 @@ mod tests {
             serde_json::to_value(TunnelState::Waiting).unwrap(),
             serde_json::Value::String("waiting".into())
         );
+    }
+
+    #[test]
+    fn saved_rule_has_only_one_host_owner_at_a_time() {
+        let mut owners = HashMap::new();
+        assert!(claim_rule_owner(&mut owners, "rule-1", "host-a"));
+        assert!(claim_rule_owner(&mut owners, "rule-1", "host-a"));
+        assert!(!claim_rule_owner(&mut owners, "rule-1", "host-b"));
+
+        release_rule_owner(&mut owners, "rule-1", "host-b");
+        assert!(!claim_rule_owner(&mut owners, "rule-1", "host-b"));
+
+        release_rule_owner(&mut owners, "rule-1", "host-a");
+        assert!(claim_rule_owner(&mut owners, "rule-1", "host-b"));
     }
 
     /// Build a TunnelEntry whose `_cancel` token guards a real accept loop bound

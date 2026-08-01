@@ -54,7 +54,9 @@ function RegularToast({
       style={{ pointerEvents: "auto" }}
     >
       <div
-        className="relative flex items-center gap-2 px-3 py-2 rounded-xl shadow-lg text-sm overflow-hidden"
+        role={toast.severity === "error" ? "alert" : "status"}
+        aria-atomic="true"
+        className="relative flex items-start gap-2 px-3 py-2 rounded-lg shadow-lg text-sm overflow-hidden"
         style={{
           minWidth: "16rem",
           maxWidth: "24rem",
@@ -64,15 +66,17 @@ function RegularToast({
           backdropFilter: "blur(4px)",
         }}
       >
-        <Icon icon={icon} width={14} style={{ color, flexShrink: 0 }} />
-        <span
-          className="text-xs shrink-0 truncate"
-          style={{ color: "var(--t-text-dim)", maxWidth: "5rem" }}
-          title={toast.pluginName}
-        >
-          [{toast.pluginName.slice(0, 20)}]
-        </span>
-        <span className="flex-1 text-(--t-text-primary) truncate">{toast.message}</span>
+        <Icon icon={icon} width={14} style={{ color, flexShrink: 0, marginTop: 2 }} />
+        <div className="flex-1 min-w-0">
+          <div
+            className="text-[10px] leading-tight truncate"
+            style={{ color: "var(--t-text-dim)" }}
+            title={toast.pluginName}
+          >
+            {toast.pluginName.slice(0, 20)}
+          </div>
+          <div className="text-(--t-text-primary) leading-snug break-words">{toast.message}</div>
+        </div>
         {toast.action && (
           <button
             onClick={toast.action.onClick}
@@ -90,6 +94,7 @@ function RegularToast({
         )}
         <button
           onClick={onDismiss}
+          aria-label="Dismiss notification"
           className="w-4 h-4 flex items-center justify-center rounded-sm shrink-0 transition-colors"
           style={{ color: "var(--t-text-dim)" }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--t-text-muted)"; }}

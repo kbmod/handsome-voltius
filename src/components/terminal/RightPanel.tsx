@@ -267,7 +267,7 @@ export default function RightPanel() {
         <aside
           className="flex flex-col absolute inset-y-2 right-2 bg-(--t-bg-modal) border border-(--t-border) overflow-hidden rounded-[0.8rem]"
           style={{
-            width: "20rem",
+            width: PANEL_WIDTH,
           }}
         >
           <PanelContent />

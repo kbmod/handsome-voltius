@@ -4,7 +4,12 @@ import i18n from "@/i18n";
 import { log } from "@/lib/logger";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useSessionStore } from "@/stores/sessionStore";
+import { useConnectionStore } from "@/stores/connectionStore";
+import { usePortForwardingStore } from "@/stores/portForwardingStore";
 import { getToggle } from "@/stores/toggleSettingsStore";
+import { auditContextForVaultId } from "@/services/auditContextResolver";
+import { reportAuditClientEvent, type ClientAuditAction } from "@/services/auditReporter";
 import type { ActiveTunnel } from "@/types";
 
 interface PfPortDetectedPayload {
@@ -32,11 +37,103 @@ export function classifyPortForwardingError(error: string): "denied" | "destinat
   return "generic";
 }
 
+export interface PortForwardingAuditTransition {
+  action: Extract<ClientAuditAction,
+    "port_forward.started" | "port_forward.active" | "port_forward.stopped" | "port_forward.failed">;
+  tunnel: ActiveTunnel;
+  error?: string;
+}
+
+function tunnelError(tunnel: ActiveTunnel | undefined): string | undefined {
+  return tunnel && typeof tunnel.state === "object" && "error" in tunnel.state
+    ? tunnel.state.error
+    : undefined;
+}
+
+export function getPortForwardingAuditTransitions(
+  previous: ActiveTunnel[],
+  current: ActiveTunnel[],
+): PortForwardingAuditTransition[] {
+  const transitions: PortForwardingAuditTransition[] = [];
+  const previousById = new Map(previous.map((tunnel) => [tunnel.id, tunnel]));
+  const currentById = new Map(current.map((tunnel) => [tunnel.id, tunnel]));
+
+  for (const tunnel of current) {
+    const prior = previousById.get(tunnel.id);
+    if (!prior) transitions.push({ action: "port_forward.started", tunnel });
+
+    const priorError = tunnelError(prior);
+    const currentError = tunnelError(tunnel);
+    if (currentError && currentError !== priorError) {
+      transitions.push({ action: "port_forward.failed", tunnel, error: currentError });
+    } else if (prior?.state === "waiting" && tunnel.state === "active") {
+      transitions.push({ action: "port_forward.active", tunnel });
+    }
+  }
+
+  for (const tunnel of previous) {
+    if (!currentById.has(tunnel.id)) {
+      transitions.push({ action: "port_forward.stopped", tunnel });
+    }
+  }
+
+  return transitions;
+}
+
+function reportPortForwardingTransition(
+  sessionId: string,
+  transition: PortForwardingAuditTransition,
+): void {
+  const { tunnel, action, error } = transition;
+  const session = useSessionStore.getState().sessions.find((item) => item.id === sessionId);
+  const connectionState = useConnectionStore.getState();
+  const connections = [
+    ...connectionState.connections,
+    ...Object.values(connectionState.teamConnections).flat(),
+  ];
+  const connection = session?.connectionId
+    ? connections.find((item) => item.id === session.connectionId)
+    : undefined;
+  const forwardingState = usePortForwardingStore.getState();
+  const rules = [
+    ...forwardingState.rules,
+    ...Object.values(forwardingState.teamRules).flat(),
+  ];
+  const ruleId = tunnel.origin.type === "rule" ? tunnel.origin.rule_id : undefined;
+  const rule = ruleId ? rules.find((item) => item.id === ruleId) : undefined;
+  const vaultId = rule?.vault_id ?? connection?.vault_id ?? "personal";
+  const targetId = tunnel.origin.type === "rule" ? tunnel.origin.rule_id : tunnel.id;
+  const targetName = tunnel.origin.type === "rule"
+    ? tunnel.origin.rule_name
+    : tunnel.tunnel_type === "dynamic"
+      ? `SOCKS5 ${tunnel.bind_host ?? "127.0.0.1"}:${tunnel.local_port}`
+      : `${tunnel.remote_host}:${tunnel.remote_port}`;
+
+  reportAuditClientEvent(auditContextForVaultId(vaultId), action, {
+    vault_id: vaultId,
+    target_type: "port_forward",
+    target_id: targetId,
+    target_name: targetName,
+    metadata: {
+      tunnel_id: tunnel.id,
+      tunnel_type: tunnel.tunnel_type,
+      session_id: sessionId,
+      connection_id: session?.connectionId,
+      local_port: tunnel.local_port,
+      remote_host: tunnel.remote_host,
+      remote_port: tunnel.remote_port,
+      state: error ? "error" : tunnel.state,
+      ...(error ? { error } : {}),
+    },
+  });
+}
+
 export function usePfToastBridge() {
   const pendingPorts = useRef<PfPortDetectedPayload[]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastIdRef = useRef<string | null>(null);
   const errorsBySessionRef = useRef<Map<string, Set<string>>>(new Map());
+  const tunnelsBySessionRef = useRef<Map<string, ActiveTunnel[]>>(new Map());
 
   useEffect(() => {
     function flush() {
@@ -91,6 +188,12 @@ export function usePfToastBridge() {
     });
 
     const unlistenStatePromise = listen<PfStatePayload>("pf-state-changed", ({ payload }) => {
+      const previousTunnels = tunnelsBySessionRef.current.get(payload.session_id) ?? [];
+      for (const transition of getPortForwardingAuditTransitions(previousTunnels, payload.tunnels)) {
+        reportPortForwardingTransition(payload.session_id, transition);
+      }
+      tunnelsBySessionRef.current.set(payload.session_id, payload.tunnels);
+
       const previousErrors = new Set(
         [...errorsBySessionRef.current.values()].flatMap((errors) => [...errors]),
       );

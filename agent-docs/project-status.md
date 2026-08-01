@@ -1,6 +1,6 @@
 # Handsome Voltius project status
 
-Last updated: 2026-07-26
+Last updated: 2026-08-01
 
 This is the only active handoff and status document for this fork. Older
 redesign, Termius-recreation, and Termius-database bridge plans were removed
@@ -243,15 +243,57 @@ Relevant pushed commits:
   - Skip leaves the destination unchanged;
   - Overwrite safely replaces the destination with the source type.
 
+### Shared dialogs, menus, notifications, and panels
+
+- Tightened `Modal`, `ConfirmModal`, `ContextMenu`, and `DropdownMenuItem`
+  padding, row heights, icon sizes, and corner radii.
+- Notification toasts and progress toasts wrap their full message instead of
+  truncating it, and carry `role="alert"`/`role="status"` plus labelled
+  dismiss controls.
+- Active toasts now also appear in the notification bell while they are still
+  on screen, and history entries stay readable rather than truncated.
+- Terminal right-panel width and scoping corrected.
+
+### Review findings addressed from `agent-docs/response.txt`
+
+- Host deletion always routes through `ConfirmModal`, including single-host
+  deletes and the delete action inside the connection editor; confirming a
+  delete that targets the open editor also closes it.
+- Port-forward runtime lifecycle is now audited, not just rule CRUD:
+  `port_forward.started`, `.active`, `.stopped`, and `.failed` are emitted,
+  labelled, and filterable on the Logs page in all three locales.
+- Settings > Diagnostics gained **Show app log**, which invokes the new
+  `reveal_app_log` command and opens the file manager on `voltius.log`. Its
+  helper copy states that the sidebar **Logs** page is vault audit history
+  rather than the diagnostic application log.
+- The welcome/home surface was removed. The app opens directly in the selected
+  vault and `VaultSidebar` stays mounted, so Account and Settings remain
+  reachable from persistent navigation.
+
+### Single-owner port forwarding rules
+
+The reported "Any connection" defect is fixed as proposed in the review: a
+saved rule may be owned by only one host at a time.
+
+- `PortForwardManager` tracks `rule_owners` (rule id → owning host key).
+- `pf_tunnel_open` claims the rule first and releases the claim if the tunnel
+  fails to open; closing a tunnel and tearing down a session release it too.
+- Auto-activation skips rules already claimed by another host, so a rule can no
+  longer bind the same local port from a second connection.
+- Multiple terminal tabs of the *same* host still share ownership.
+- `PortsPanel` watches every connected SSH session, shows the owning session's
+  real tunnel status, and renders non-owning sessions as **In use by
+  \<SERVER\>** with no usable toggle instead of a status that cannot change.
+
 ### Verification completed for the current source
 
 Latest automated result:
 
-- 173 test files passed;
-- 839 tests passed;
-- 7 targeted Rust port-forwarding tests passed, covering domain and IPv6
+- 176 test files passed;
+- 850 tests passed;
+- 8 targeted Rust port-forwarding tests passed, covering domain and IPv6
   SOCKS5 negotiation, the waiting-state wire contract, local listener
-  lifecycle, and bind behavior;
+  lifecycle, bind behavior, and single-host rule ownership;
 - TypeScript check passed;
 - zero-error ESLint check passed;
 - Vite production build passed;
@@ -263,11 +305,13 @@ Latest locally built test package:
 - Path:
   `target/release/bundle/deb/Handsome_Voltius_0.12.0_amd64.deb`
 - SHA-256:
-  `dcd2bc6bdfed393551928a20162571599e57c209150f86e231c6a03b878153a4`
+  `7348b4483ec4f26a4aa2f483c126de85654be522fba6c92838d69de84a9e276d`
 - Debian package name: `handsome-voltius`
 - This package includes the accepted terminal, workspace, SFTP, Known Hosts,
-  Keychain, Settings, Snippets, port-forwarding, and Handsome Voltius identity
-  work.
+  Keychain, Settings, Snippets, port-forwarding, shared dialog/menu/
+  notification, and Handsome Voltius identity work.
+- This artifact was installed and visually accepted, including the two-server
+  single-owner port-forwarding behavior described above.
 - The Snippets and port-forwarding desktop polish is installed-app verified:
   - create controls are aligned left while search, layout, and sort remain on
     the right;
@@ -307,6 +351,16 @@ Latest locally built test package:
 
 The current verified checkpoint contains:
 
+- compact shared dialogs, context menus, dropdowns, and notification toasts;
+- full-message notification wrapping with accessible alert roles and labelled
+  dismiss controls, plus active toasts mirrored into the notification bell;
+- always-confirmed host deletion, including from the connection editor;
+- port-forward runtime lifecycle auditing in the vault Logs page;
+- a Diagnostics **Show app log** action that reveals `voltius.log` and
+  distinguishes it from vault audit history;
+- vault-first startup with Account and Settings in persistent navigation;
+- single-host ownership of saved forwarding rules with an **In use by
+  \<SERVER\>** indicator on non-owning connections;
 - compact Snippets and port-forwarding toolbars, cards, and menus;
 - sequential multi-step snippet execution using real shell prompt boundaries;
 - functional dynamic SOCKS5 forwarding with remote DNS and IPv6 handling;
@@ -350,28 +404,19 @@ verified checkpoint so the next session starts from current repository truth.
 
 ## Pending work
 
-### 1. Focused remaining desktop-surface cleanup
+### 1. Focused remaining desktop-surface cleanup — complete
 
-This is a polish pass, not a new application-wide redesign. Work on one surface
-at a time and preserve existing functionality.
+Every planned surface in the polish pass has now been visually accepted in the
+installed Debian application:
 
-The next surface is shared dialogs, menus, notifications, and right-side
-panels.
+- Hosts, groups, folders, vault navigation, Keychain, Known Hosts, and the
+  shared distro/service/icon treatment;
+- desktop Settings, Snippets, and port forwarding;
+- shared dialogs, menus, notifications, and right-side panels, together with
+  the review findings recorded in `agent-docs/response.txt`.
 
-Hosts, groups, folders, vault navigation, Keychain, Known Hosts, and their
-shared distro/service/icon treatment have been visually accepted for the
-current milestone. Desktop Settings, Snippets, and port forwarding have also
-been accepted.
-
-For each surface:
-
-- remove unnecessary padding and oversized controls;
-- use consistent compact row heights, typography, icons, borders, and focus
-  states;
-- remove browser-native alerts and broken/dead controls;
-- preserve keyboard behavior and accessibility labels;
-- run targeted tests and inspect the real Debian Tauri application before
-  moving to the next surface.
+No further surface is queued. Reopen this item only if a later regression pass
+finds a surface that regressed.
 
 ### 2. Encrypted Gist sync round-trip
 

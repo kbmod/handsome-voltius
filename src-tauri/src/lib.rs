@@ -187,6 +187,7 @@ pub fn run() {
             terminal_kbd::terminal_show_keyboard,
             terminal_kbd::terminal_hide_keyboard,
             commands::diagnostics::set_verbose_logging,
+            commands::diagnostics::reveal_app_log,
             commands::diagnostics::create_bug_report,
             commands::ping::ping_host,
             commands::ping::ping_host_via_jumps,

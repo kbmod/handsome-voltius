@@ -65,6 +65,7 @@
       },
       "pauseForwarding": "Suspendre la redirection",
       "resumeForwarding": "Reprendre la redirection",
+      "inUseBy": "Utilisée par {{server}}",
       "saveAsRule": "Enregistrer comme règle",
       "copyAddress": "Copier localhost:{{port}}",
       "openUrl": "Ouvrir {{url}}",

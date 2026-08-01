@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { Icon } from "@iconify/react";
 import { useNotificationStore } from "@/stores/notificationStore";
-import type { BannerEntry, HistoryEntry } from "@/stores/notificationStore";
+import type { BannerEntry, HistoryEntry, ToastEntry } from "@/stores/notificationStore";
 
 const SEVERITY_ICONS: Record<string, string> = {
   info: "lucide:info",
@@ -80,6 +80,50 @@ function BannerRow({ banner, onDismiss }: { banner: BannerEntry; onDismiss: () =
   );
 }
 
+function ToastRow({ toast, onDismiss }: { toast: ToastEntry; onDismiss: () => void }) {
+  const severity = toast.finishedSeverity ?? toast.severity;
+  const color = SEVERITY_COLORS[severity] ?? SEVERITY_COLORS.info;
+  const icon = SEVERITY_ICONS[severity] ?? SEVERITY_ICONS.info;
+
+  return (
+    <div
+      className="flex items-start gap-2 px-3 py-2.5 rounded-lg"
+      style={{
+        background: "var(--t-bg-elevated)",
+        borderLeft: `2px solid ${color}`,
+      }}
+    >
+      <Icon icon={icon} width={13} style={{ color, flexShrink: 0, marginTop: 2 }} />
+      <div className="flex-1 min-w-0">
+        <span className="text-xs" style={{ color: "var(--t-text-dim)" }}>
+          [{toast.pluginName.slice(0, 20)}]
+        </span>
+        <p className="text-sm text-(--t-text-primary) leading-snug break-words">{toast.message}</p>
+        {toast.action && (
+          <button
+            type="button"
+            onClick={toast.action.onClick}
+            className="text-xs mt-1 text-(--t-accent) hover:underline"
+          >
+            {toast.action.label}
+          </button>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss notification"
+        className="w-4 h-4 flex items-center justify-center rounded-sm shrink-0"
+        style={{ color: "var(--t-text-dim)" }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--t-text-muted)"; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--t-text-dim)"; }}
+      >
+        <Icon icon="lucide:x" width={11} />
+      </button>
+    </div>
+  );
+}
+
 function HistoryRow({ entry }: { entry: HistoryEntry }) {
   const color = SEVERITY_COLORS[entry.severity] ?? SEVERITY_COLORS.info;
   const icon = SEVERITY_ICONS[entry.severity] ?? SEVERITY_ICONS.info;
@@ -91,7 +135,7 @@ function HistoryRow({ entry }: { entry: HistoryEntry }) {
         <span className="text-xs" style={{ color: "var(--t-text-dim)" }}>
           [{entry.pluginName.slice(0, 20)}]
         </span>
-        <p className="text-xs text-(--t-text-secondary) truncate">{entry.message}</p>
+        <p className="text-xs text-(--t-text-secondary) leading-snug break-words">{entry.message}</p>
       </div>
       <span className="text-xs shrink-0" style={{ color: "var(--t-text-dim)" }}>
         {relativeTime(entry.dismissedAt)}
@@ -102,10 +146,12 @@ function HistoryRow({ entry }: { entry: HistoryEntry }) {
 
 export function NotificationBell() {
   const { t } = useTranslation();
+  const toasts = useNotificationStore((s) => s.toasts);
   const banners = useNotificationStore((s) => s.banners);
   const history = useNotificationStore((s) => s.history);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const dismissBanner = useNotificationStore((s) => s.dismissBanner);
+  const dismissToast = useNotificationStore((s) => s.dismissToast);
   const markAllRead = useNotificationStore((s) => s.markAllRead);
   const clearHistory = useNotificationStore((s) => s.clearHistory);
 
@@ -138,7 +184,7 @@ export function NotificationBell() {
   };
 
   const displayCount = Math.min(unreadCount, 9);
-  const hasItems = banners.length > 0 || history.length > 0;
+  const hasItems = toasts.length > 0 || banners.length > 0 || history.length > 0;
 
   return (
     <>
@@ -224,6 +270,12 @@ export function NotificationBell() {
               </div>
             ) : (
               <div className="flex flex-col gap-0.5 p-2">
+                {toasts.map((toast) => (
+                  <ToastRow key={toast.id} toast={toast} onDismiss={() => dismissToast(toast.id)} />
+                ))}
+                {toasts.length > 0 && (banners.length > 0 || history.length > 0) && (
+                  <div className="my-1 h-px bg-(--t-border)" />
+                )}
                 {banners.length > 0 && (
                   <>
                     {banners.map((b) => (

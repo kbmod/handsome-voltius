@@ -151,7 +151,7 @@ export const useUIStore = create<UIStore>()(
   persist(
     (set) => ({
       sidebarOpen: true,
-      homeView: true,
+      homeView: false,
       activeNav: "hosts" as NavItem,
       newTabOpen: false,
       omniOpen: false,

@@ -34,6 +34,13 @@ pub async fn pf_tunnel_open(
 ) -> Result<ActiveTunnel, String> {
     let handle = state.get_handle(&session_id).await?;
 
+    let claimed_rule_id = rule_id.clone();
+    if let Some(rid) = claimed_rule_id.as_deref() {
+        if !pf.claim_rule(&session_id, rid).await {
+            return Err("Port forwarding rule is already in use by another connection".into());
+        }
+    }
+
     let origin = match rule_id {
         Some(rid) => TunnelOrigin::Rule {
             rule_id: rid,
@@ -42,7 +49,7 @@ pub async fn pf_tunnel_open(
         None => TunnelOrigin::AdHoc,
     };
 
-    match tunnel_type.unwrap_or(TunnelType::Local) {
+    let result = match tunnel_type.unwrap_or(TunnelType::Local) {
         TunnelType::Local => {
             let host = remote_host.unwrap_or_else(|| "127.0.0.1".to_string());
             let rport = remote_port.unwrap_or(local_port);
@@ -75,7 +82,15 @@ pub async fn pf_tunnel_open(
             .open_dynamic_tunnel(&session_id, handle, local_port, origin)
             .await
             .map_err(|e| e.to_string()),
+    };
+
+    if result.is_err() {
+        if let Some(rid) = claimed_rule_id.as_deref() {
+            pf.release_rule(&session_id, rid).await;
+        }
     }
+
+    result
 }
 
 #[tauri::command]

@@ -9,14 +9,15 @@ interface Props {
   iconSize?: number;
 }
 
-export function DropdownMenuItem({ icon, label, onClick, checked, iconSize = 20 }: Props) {
+export function DropdownMenuItem({ icon, label, onClick, checked, iconSize = 16 }: Props) {
   const { createRipple, rippleEls } = useRipple();
   return (
     <button
       type="button"
+      role="menuitem"
       onClick={onClick}
       onMouseDown={createRipple}
-      className="w-full flex items-center gap-2.5 p-3 rounded-lg text-md font-medium-bold transition-colors whitespace-nowrap text-(--t-text-secondary) bg-transparent relative overflow-hidden"
+      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap text-(--t-text-secondary) bg-transparent relative overflow-hidden focus-visible:outline-1 focus-visible:outline-(--t-accent)"
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLButtonElement).style.background = "var(--t-bg-card-hover)";
         (e.currentTarget as HTMLButtonElement).style.color = "var(--t-text-primary)";

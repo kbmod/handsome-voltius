@@ -67,6 +67,7 @@
       },
       "pauseForwarding": "Приостановить проброс",
       "resumeForwarding": "Возобновить проброс",
+      "inUseBy": "Используется сервером {{server}}",
       "saveAsRule": "Сохранить как правило",
       "copyAddress": "Копировать localhost:{{port}}",
       "openUrl": "Открыть {{url}}",

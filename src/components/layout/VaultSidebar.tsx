@@ -5,7 +5,6 @@ import { useVaultStore } from "@/stores/vaultStore";
 import { useTeamStore } from "@/stores/teamStore";
 import { useTeamVaultStateStore } from "@/stores/teamVaultStateStore";
 import { onVaultSelect } from "@/services/teamDataManager";
-import LogoBadge from "./LogoBadge";
 import { useUIStore } from "@/stores/uiStore";
 import { useRipple } from "@/hooks/useRipple";
 import { SidebarAccountButton } from "./SidebarAccountButton";
@@ -77,11 +76,6 @@ export default function VaultSidebar() {
       className="flex flex-col shrink-0 items-center gap-2 overflow-hidden bg-transparent"
       style={{ width: "4rem" }}
     >
-      {/* App icon */}
-      <AppIconButton isActive={homeView} onClick={() => setHomeView(true)} />
-
-      <div className="w-7 h-px my-1 shrink-0" style={{ background: "var(--t-border)" }} />
-
       <div
         data-testid="vault-sidebar-scroll-area"
         className="flex flex-col items-center gap-2 min-h-0 overflow-y-auto overflow-x-hidden w-full scrollbar-none"
@@ -426,32 +420,6 @@ function ActivePip({ active }: { active: boolean }) {
         transition: "height 150ms ease",
       }}
     />
-  );
-}
-
-function AppIconButton({ isActive, onClick }: { isActive: boolean; onClick: () => void }) {
-  const { t } = useTranslation();
-  const { createRipple, rippleEls } = useRipple();
-  const [hovered, setHovered] = useState(false);
-  const borderRadius = isActive || hovered ? "0.75rem" : "1.375rem";
-  return (
-    <div
-      className="relative flex items-center justify-center w-full shrink-0"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      {(isActive || hovered) && <ActivePip active={isActive} />}
-      <button
-        onClick={onClick}
-        onMouseDown={createRipple}
-        title={t("layout.vaultSidebar.home")}
-        className="relative overflow-hidden"
-        style={{ background: "none", border: "none", padding: 0 }}
-      >
-        {rippleEls}
-        <LogoBadge size={10} active={isActive} borderRadius={borderRadius} />
-      </button>
-    </div>
   );
 }
 

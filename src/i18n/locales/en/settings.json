@@ -248,6 +248,8 @@
       "verboseLabel": "Verbose logging (this session)",
       "verboseSub": "Records extra detail to help diagnose issues. Resets to normal when you restart Handsome Voltius.",
       "verboseHint": "Verbose logging is on. To capture the problem:\n1. Reproduce the issue now\n2. Come back and create a bug report",
+      "showLogButton": "Show app log",
+      "showLogSub": "Opens the diagnostic log referenced by error notifications. The Logs page in the sidebar contains vault audit history instead.",
       "reportTitle": "Bug report",
       "createButton": "Create bug report",
       "creatingButton": "Collecting logs…",
@@ -257,6 +259,7 @@
       "includedBody": "Included:\n• App logs (what Handsome Voltius was doing, with sensitive values removed)\n• App version, operating system, and active plugins\nNOT included:\n• Passwords, vault contents, or private keys\n• Terminal output or anything you typed\nThe report is saved to your computer. Nothing is sent automatically — you choose where to share it.",
       "toastSaved": "Report saved — {{name}}",
       "toastError": "Couldn't create report: {{reason}}",
+      "toastLogError": "Couldn't open the app log: {{reason}}",
       "toastGenericError": "Something went wrong."
     },
     "about": {

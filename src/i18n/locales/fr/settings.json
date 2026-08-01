@@ -243,6 +243,8 @@
       "verboseLabel": "Journalisation détaillée (cette session)",
       "verboseSub": "Enregistre des détails supplémentaires pour aider à diagnostiquer les problèmes. Revient à la normale au redémarrage de Handsome Voltius.",
       "verboseHint": "La journalisation détaillée est activée. Pour capturer le problème :\n1. Reproduisez le problème maintenant\n2. Revenez ici et créez un rapport de bug",
+      "showLogButton": "Afficher le journal de l'application",
+      "showLogSub": "Ouvre le journal de diagnostic mentionné dans les notifications d'erreur. La page Journaux de la barre latérale contient l'historique d'audit du coffre-fort.",
       "reportTitle": "Rapport de bug",
       "createButton": "Créer un rapport de bug",
       "creatingButton": "Collecte des journaux…",
@@ -252,6 +254,7 @@
       "includedBody": "Inclus :\n• Journaux de l'application (ce que faisait Handsome Voltius, avec les valeurs sensibles retirées)\n• Version de l'application, système d'exploitation et extensions actives\nNON inclus :\n• Mots de passe, contenu du coffre-fort ou clés privées\n• Sortie du terminal ou tout ce que vous avez tapé\nLe rapport est enregistré sur votre ordinateur. Rien n'est envoyé automatiquement — vous choisissez où le partager.",
       "toastSaved": "Rapport enregistré — {{name}}",
       "toastError": "Impossible de créer le rapport : {{reason}}",
+      "toastLogError": "Impossible d'ouvrir le journal de l'application : {{reason}}",
       "toastGenericError": "Une erreur s'est produite."
     },
     "about": {

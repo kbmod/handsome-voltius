@@ -65,6 +65,7 @@
       },
       "pauseForwarding": "Pause forwarding",
       "resumeForwarding": "Resume forwarding",
+      "inUseBy": "In use by {{server}}",
       "saveAsRule": "Save as rule",
       "copyAddress": "Copy localhost:{{port}}",
       "openUrl": "Open {{url}}",

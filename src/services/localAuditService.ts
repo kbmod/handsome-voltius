@@ -11,7 +11,8 @@ type ClientAction =
   | "key.created" | "key.updated" | "key.deleted"
   | "snippet.created" | "snippet.updated" | "snippet.deleted"
   | "folder.created" | "folder.updated" | "folder.deleted"
-  | "port_forward.created" | "port_forward.updated" | "port_forward.deleted";
+  | "port_forward.created" | "port_forward.updated" | "port_forward.deleted"
+  | "port_forward.started" | "port_forward.active" | "port_forward.stopped" | "port_forward.failed";
 
 interface LocalAuditLog extends AuditLog {
   team_id: "local";

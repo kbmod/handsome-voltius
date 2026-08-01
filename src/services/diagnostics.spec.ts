@@ -6,7 +6,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: (...a: unknown[]) => invoke(...
 const setLoggerVerbose = vi.fn();
 vi.mock("@/lib/logger", () => ({ setLoggerVerbose: (...a: unknown[]) => setLoggerVerbose(...a) }));
 
-import { setVerboseLogging, createBugReport } from "./diagnostics";
+import { setVerboseLogging, createBugReport, revealAppLog } from "./diagnostics";
 
 beforeEach(() => {
   invoke.mockReset();
@@ -36,5 +36,11 @@ describe("diagnostics service", () => {
   it("createBugReport returns the path", async () => {
     invoke.mockResolvedValue("/logs/voltius-report-2026-07-04.zip");
     await expect(createBugReport()).resolves.toContain("voltius-report");
+  });
+
+  it("revealAppLog opens and returns the active log path", async () => {
+    invoke.mockResolvedValue("/logs/voltius.log");
+    await expect(revealAppLog()).resolves.toBe("/logs/voltius.log");
+    expect(invoke).toHaveBeenCalledWith("reveal_app_log");
   });
 });

@@ -13,6 +13,7 @@ import {
   openPfTunnel,
   closePfTunnel,
   resumeAutoPort,
+  type PfSessionState,
 } from "@/services/portForwardingTunnels";
 import { createPfRule, updatePfRule, deletePfRule } from "@/services/portForwardingRules";
 import { useDefaultVaultId, resolveVaultIdForSave } from "@/hooks/useWritableVaultIds";
@@ -25,13 +26,31 @@ interface PfStatePayload {
   suppressed_ports: number[];
 }
 
+export interface RuleTunnelOwner {
+  sessionId: string;
+  tunnel: ActiveTunnel;
+}
+
+export function getRuleTunnelOwners(
+  sessionStates: Map<string, PfSessionState>,
+): Map<string, RuleTunnelOwner> {
+  const owners = new Map<string, RuleTunnelOwner>();
+  for (const [sessionId, state] of sessionStates) {
+    for (const tunnel of state.tunnels) {
+      if (tunnel.origin.type === "rule" && !owners.has(tunnel.origin.rule_id)) {
+        owners.set(tunnel.origin.rule_id, { sessionId, tunnel });
+      }
+    }
+  }
+  return owners;
+}
+
 export function PortsPanel() {
   const { t } = useTranslation();
   const { sessions, activeSessionId } = useSessionStore();
   const loadRules = usePortForwardingStore((s) => s.loadRules);
   const rules = useAllPortForwardingRules();
-  const [tunnels, setTunnels] = useState<ActiveTunnel[]>([]);
-  const [suppressedPorts, setSuppressedPorts] = useState<number[]>([]);
+  const [sessionStates, setSessionStates] = useState<Map<string, PfSessionState>>(new Map());
   // Ports the user deleted from this panel — hidden even when suppressed
   const [hiddenPorts, setHiddenPorts] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState<Set<string>>(new Set());
@@ -117,31 +136,43 @@ export function PortsPanel() {
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
   const isSshSession = activeSession?.type === "ssh";
+  const sshSessionIds = sessions
+    .filter((session) => session.type === "ssh" && session.status === "connected")
+    .map((session) => session.id);
+  const sshSessionIdKey = sshSessionIds.join(",");
 
   useEffect(() => { loadRules(); }, []);
 
   useEffect(() => {
-    if (!activeSessionId || !isSshSession) {
-      setTunnels([]);
-      setSuppressedPorts([]);
-      setHiddenPorts(new Set());
-      return;
-    }
-
-    getPfState(activeSessionId)
-      .then((s) => { setTunnels(s.tunnels); setSuppressedPorts(s.suppressed_ports); })
+    let cancelled = false;
+    Promise.all(sshSessionIds.map(async (sessionId) => {
+      const state = await getPfState(sessionId);
+      return [sessionId, state] as const;
+    }))
+      .then((entries) => {
+        if (!cancelled) setSessionStates(new Map(entries));
+      })
       .catch(() => {});
 
     let cleanup: (() => void) | undefined;
     listen<PfStatePayload>("pf-state-changed", ({ payload }) => {
-      if (payload.session_id === activeSessionId) {
-        setTunnels(payload.tunnels);
-        setSuppressedPorts(payload.suppressed_ports);
-      }
+      if (!sshSessionIds.includes(payload.session_id)) return;
+      setSessionStates((previous) => new Map(previous).set(payload.session_id, {
+        tunnels: payload.tunnels,
+        suppressed_ports: payload.suppressed_ports,
+      }));
     }).then((u) => { cleanup = u; });
 
-    return () => { cleanup?.(); };
-  }, [activeSessionId, isSshSession]);
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sshSessionIdKey]);
+
+  useEffect(() => {
+    setHiddenPorts(new Set());
+  }, [activeSessionId]);
 
   function setBusyKey(key: string, on: boolean) {
     setBusy((prev) => {
@@ -173,19 +204,17 @@ export function PortsPanel() {
     finally { setBusyKey(rule.id, false); }
   }
 
-  async function handleRuleDisable(tunnelId: string, ruleId: string) {
-    if (!activeSessionId) return;
+  async function handleRuleDisable(ownerSessionId: string, tunnelId: string, ruleId: string) {
     setBusyKey(ruleId, true);
-    try { await closePfTunnel(activeSessionId, tunnelId); }
+    try { await closePfTunnel(ownerSessionId, tunnelId); }
     catch (e) { console.error("pf_tunnel_close failed:", e); }
     finally { setBusyKey(ruleId, false); }
   }
 
-  async function handleRuleDelete(rule: PortForwardingRule, activeTunnel?: ActiveTunnel) {
-    if (!activeSessionId) return;
+  async function handleRuleDelete(rule: PortForwardingRule, owner?: RuleTunnelOwner) {
     setBusyKey(`del-${rule.id}`, true);
     try {
-      if (activeTunnel) await closePfTunnel(activeSessionId, activeTunnel.id);
+      if (owner) await closePfTunnel(owner.sessionId, owner.tunnel.id);
       await deletePfRule(rule.id);
       await loadRules();
     } catch (e) { console.error("rule delete failed:", e); }
@@ -233,12 +262,13 @@ export function PortsPanel() {
     );
   }
 
-  // Build lookup: rule_id → active tunnel
-  const ruleToTunnel = new Map<string, ActiveTunnel>();
+  const currentState = activeSessionId ? sessionStates.get(activeSessionId) : undefined;
+  const tunnels = currentState?.tunnels ?? [];
+  const suppressedPorts = currentState?.suppressed_ports ?? [];
+  const ruleOwners = getRuleTunnelOwners(sessionStates);
   const unclaimedTunnels: ActiveTunnel[] = [];
   for (const t of tunnels) {
-    if (t.origin.type === "rule") ruleToTunnel.set(t.origin.rule_id, t);
-    else unclaimedTunnels.push(t);
+    if (t.origin.type !== "rule") unclaimedTunnels.push(t);
   }
 
   const rulePorts = new Set(rules.map((r) => r.remote_port));
@@ -267,7 +297,18 @@ export function PortsPanel() {
         </div>
       )}
       {rules.map((rule) => {
-        const tunnel = ruleToTunnel.get(rule.id);
+        const owner = ruleOwners.get(rule.id);
+        const tunnel = owner?.tunnel;
+        const ownerSession = owner
+          ? sessions.find((session) => session.id === owner.sessionId)
+          : undefined;
+        const ownerConnectionId = ownerSession?.connectionId;
+        const activeConnectionId = activeSession?.connectionId;
+        const ownedElsewhere = !!owner && (
+          ownerConnectionId && activeConnectionId
+            ? ownerConnectionId !== activeConnectionId
+            : owner.sessionId !== activeSessionId
+        );
         const isRunning = !!tunnel;
         const isError = tunnel && typeof tunnel.state === "object" && "error" in tunnel.state;
         const isWaiting = tunnel?.state === "waiting";
@@ -276,10 +317,13 @@ export function PortsPanel() {
           <PortRow
             key={rule.id}
             label={rule.name}
-            portInfo={formatRuleLabel(rule)}
-            isActive={isActive && !isError}
-            isWaiting={isWaiting}
-            isError={!!isError}
+            portInfo={ownedElsewhere
+              ? t("terminal.ports.inUseBy", { server: ownerSession?.connectionName ?? owner?.sessionId })
+              : formatRuleLabel(rule)}
+            isActive={!ownedElsewhere && isActive && !isError}
+            isWaiting={!ownedElsewhere && isWaiting}
+            isError={!ownedElsewhere && !!isError}
+            isInUse={ownedElsewhere}
             isBusy={busy.has(rule.id)}
             isDeleting={busy.has(`del-${rule.id}`)}
             badge={null}
@@ -288,8 +332,11 @@ export function PortsPanel() {
             httpUrl={isRunning && !isError && tunnel
               ? getLocalTunnelHttpUrl(rule.tunnel_type ?? "local", rule.remote_port, tunnel.local_port)
               : null}
-            onToggle={() => isRunning ? handleRuleDisable(tunnel!.id, rule.id) : handleRuleEnable(rule)}
-            onDelete={() => handleRuleDelete(rule, tunnel)}
+            onToggle={() => owner
+              ? handleRuleDisable(owner.sessionId, owner.tunnel.id, rule.id)
+              : handleRuleEnable(rule)}
+            toggleDisabled={ownedElsewhere}
+            onDelete={() => handleRuleDelete(rule, owner)}
             isRenaming={renamingRuleId === rule.id}
             defaultName={rule.name}
             onRenameCommit={(name) => commitRename(rule.id, name)}

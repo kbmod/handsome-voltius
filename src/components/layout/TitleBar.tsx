@@ -349,7 +349,7 @@ export default function TitleBar() {
             closeNewTab();
             setSftpPanelOpen(false);
             setActiveNav("hosts");
-            setHomeView(true);
+            setHomeView(false);
           }}
           className="flex items-center gap-2 h-8 shrink-0 transition-all"
           style={{

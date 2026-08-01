@@ -14,13 +14,13 @@ export function ConfirmModal({ title, message, confirmLabel, onConfirm, onCancel
   const { t } = useTranslation();
   return (
     <Modal onClose={onCancel} onEnter={onConfirm}>
-      <ModalCard className="p-6 flex flex-col gap-4 min-w-[21.333rem] max-w-[26.667rem]">
-        <div className="flex items-center gap-3">
+      <ModalCard className="p-5 flex flex-col gap-3 min-w-[19rem] max-w-[25rem]">
+        <div className="flex items-center gap-2.5">
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+            className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
             style={{ background: "color-mix(in srgb, var(--t-status-error) 15%, transparent)" }}
           >
-            <Icon icon="lucide:triangle-alert" width={16} className="text-(--t-status-error)" />
+            <Icon icon="lucide:triangle-alert" width={14} className="text-(--t-status-error)" />
           </div>
           <h2 className="text-sm font-semibold text-(--t-text-bright)">{title}</h2>
         </div>
@@ -28,13 +28,13 @@ export function ConfirmModal({ title, message, confirmLabel, onConfirm, onCancel
         <div className="flex gap-2 justify-end">
           <button
             onClick={onCancel}
-            className="btn btn-secondary px-4 py-2 rounded-lg text-sm font-medium"
+            className="btn btn-secondary px-3 py-1.5 rounded-md text-sm font-medium"
           >
             {t("common.action.cancel")}
           </button>
           <button
             onClick={onConfirm}
-            className="btn btn-danger px-4 py-2 rounded-lg text-sm font-medium"
+            className="btn btn-danger px-3 py-1.5 rounded-md text-sm font-medium"
           >
             {confirmLabel ?? t("common.action.confirm")}
           </button>
