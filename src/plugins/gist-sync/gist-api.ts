@@ -98,11 +98,24 @@ export async function getFile(pat: string, gistId: string, filename: string): Pr
   return file.content ?? "";
 }
 
+/** A device's encrypted blob, paired with the device it belongs to. */
+export interface DeviceBlob {
+  deviceId: string;
+  blob: string;
+}
+
+/**
+ * Fetch the requested devices' blobs.
+ *
+ * Devices with no file in the Gist are omitted, so the result is not
+ * positionally aligned with `deviceIds` — hence the explicit pairing. Callers
+ * need to know which device each blob came from to record what they merged.
+ */
 export async function getDeviceBlobs(
   pat: string,
   gistId: string,
   deviceIds: string[],
-): Promise<string[]> {
+): Promise<DeviceBlob[]> {
   // Fetch gist once, extract all requested device files
   const res = await appFetch(`${BASE}/gists/${gistId}`, {
     headers: headers(pat),
@@ -110,7 +123,7 @@ export async function getDeviceBlobs(
   await checkResponse(res, "getDeviceBlobs");
   const data: GistResponse = await res.json();
 
-  const blobs: string[] = [];
+  const blobs: DeviceBlob[] = [];
   for (const deviceId of deviceIds) {
     const filename = `device-${deviceId}.b64`;
     const file = data.files[filename];
@@ -121,7 +134,7 @@ export async function getDeviceBlobs(
       const rawRes = await appFetch(file.raw_url, { headers: headers(pat) });
       if (rawRes.ok) content = await rawRes.text();
     }
-    if (content) blobs.push(content);
+    if (content) blobs.push({ deviceId, blob: content });
   }
   return blobs;
 }

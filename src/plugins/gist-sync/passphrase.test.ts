@@ -24,7 +24,15 @@ vi.mock("./gist-api", () => ({
   GistApiError: class GistApiError extends Error {},
 }));
 
-import { init, push, verifyPassphrase, GistPassphraseError } from "./sync-engine";
+import {
+  init,
+  push,
+  pull,
+  verifyPassphrase,
+  changePassphrase,
+  GistPassphraseError,
+  GistCurrentPassphraseError,
+} from "./sync-engine";
 
 const MANIFEST = {
   schema: 1,
@@ -72,7 +80,7 @@ function makeApi(): PluginAPI {
 beforeEach(() => {
   vi.clearAllMocks();
   getManifest.mockResolvedValue(MANIFEST);
-  getDeviceBlobs.mockResolvedValue(["ZXhpc3RpbmctY2lwaGVydGV4dA=="]);
+  getDeviceBlobs.mockResolvedValue([{ deviceId: "other-device", blob: "ZXhpc3RpbmctY2lwaGVydGV4dA==" }]);
   init(makeApi());
 });
 
@@ -124,5 +132,113 @@ describe("verifyPassphrase", () => {
     stubInvoke({ decrypts: false });
     getDeviceBlobs.mockResolvedValue([]);
     await expect(verifyPassphrase("gist-1")).resolves.toBe("empty");
+  });
+});
+
+describe("changePassphrase", () => {
+  const RIGHT_KEY = "aa".repeat(32);
+  const WRONG_KEY = "bb".repeat(32);
+
+  /** Only the key derived from `secret` decrypts; keys are real hex so the
+   *  engine's hex→bytes conversion behaves as in production. */
+  function stubKeyed(secret: string) {
+    invoke.mockImplementation((cmd: string, args?: Record<string, unknown>) => {
+      if (cmd === "derive_gist_key") {
+        return Promise.resolve(args!.passphrase === secret ? RIGHT_KEY : WRONG_KEY);
+      }
+      if (cmd === "backup_decrypt") {
+        const key = args!.encKey as number[];
+        return key[0] === 0xaa
+          ? Promise.resolve({ files: {}, secrets: {} })
+          : Promise.reject(new Error("Decryption failed"));
+      }
+      return Promise.resolve(undefined);
+    });
+  }
+
+  test("rejects a wrong current passphrase without writing or re-keying", async () => {
+    // Holding the PAT must not be enough to re-encrypt a Gist and lock its
+    // owner out; knowledge of the current passphrase is the second factor.
+    stubKeyed("right-one");
+    const api = makeApi();
+    init(api);
+
+    await expect(changePassphrase("wrong-one", "new-one")).rejects.toBeInstanceOf(
+      GistCurrentPassphraseError,
+    );
+    expect(patchFiles).not.toHaveBeenCalled();
+    expect(api.vault.set).not.toHaveBeenCalledWith("passphrase", "new-one");
+  });
+
+  test("stores the new passphrase and re-encrypts when the current one checks out", async () => {
+    stubKeyed("right-one");
+    const api = makeApi();
+    init(api);
+
+    await changePassphrase("right-one", "new-one");
+
+    expect(api.vault.set).toHaveBeenCalledWith("passphrase", "new-one");
+    expect(patchFiles).toHaveBeenCalledTimes(1);
+  });
+
+  test("restores the previous passphrase if re-encryption fails", async () => {
+    stubKeyed("right-one");
+    const api = makeApi();
+    init(api);
+    patchFiles.mockRejectedValueOnce(new Error("network down"));
+
+    await expect(changePassphrase("right-one", "new-one")).rejects.toThrow("network down");
+    // makeApi()'s vault returns "secret" for the stored passphrase.
+    expect(api.vault.set).toHaveBeenLastCalledWith("passphrase", "secret");
+  });
+});
+
+describe("pull tolerance", () => {
+  const CHANGED = {
+    ...MANIFEST,
+    devices: [
+      { id: "stale-device", label: "Old", pushedAt: "2026-08-01T00:00:00.000Z" },
+      { id: "good-device", label: "New", pushedAt: "2026-08-01T00:00:00.000Z" },
+    ],
+  };
+
+  test("skips blobs it cannot read and merges the rest", async () => {
+    // One device left on an older passphrase must not stall syncing for
+    // everyone: importStates decrypts every blob it is handed, so an unreadable
+    // entry would abort the whole merge.
+    getManifest.mockResolvedValue(CHANGED);
+    getDeviceBlobs.mockResolvedValue([
+      { deviceId: "stale-device", blob: "c3RhbGU=" },
+      { deviceId: "good-device", blob: "Z29vZA==" },
+    ]);
+    invoke.mockImplementation((cmd: string, args?: Record<string, unknown>) => {
+      if (cmd === "derive_gist_key") return Promise.resolve("ab".repeat(32));
+      if (cmd === "backup_decrypt") {
+        const blob = args!.blob as number[];
+        const text = String.fromCharCode(...blob);
+        return text === "good"
+          ? Promise.resolve({ files: {}, secrets: {} })
+          : Promise.reject(new Error("Decryption failed"));
+      }
+      return Promise.resolve(undefined);
+    });
+
+    const api = makeApi();
+    init(api);
+
+    await expect(pull()).resolves.toBe(true);
+    expect(api.sync.importStates).toHaveBeenCalledWith(expect.any(String), ["Z29vZA=="]);
+  });
+
+  test("raises a passphrase error only when nothing decrypts", async () => {
+    getManifest.mockResolvedValue(CHANGED);
+    getDeviceBlobs.mockResolvedValue([
+      { deviceId: "stale-device", blob: "c3RhbGU=" },
+      { deviceId: "good-device", blob: "Z29vZA==" },
+    ]);
+    stubInvoke({ decrypts: false });
+    init(makeApi());
+
+    await expect(pull()).rejects.toBeInstanceOf(GistPassphraseError);
   });
 });

@@ -9,6 +9,7 @@ import {
   GistApiError,
   type GistManifest,
   type GistDevice,
+  type DeviceBlob,
 } from "./gist-api";
 import { generateSaltHex } from "./crypto";
 import { invoke } from "@tauri-apps/api/core";
@@ -172,10 +173,25 @@ export async function isConfigured(): Promise<boolean> {
   return !!(pat && gists.length > 0);
 }
 
+function deriveKey(secret: string, salt: string): Promise<string> {
+  return invoke<string>("derive_gist_key", { passphrase: secret, saltHex: salt });
+}
+
 async function getEncKey(salt: string): Promise<string> {
   const [passphrase, pat] = await Promise.all([getPassphrase(), getPat()]);
   const secret = passphrase ?? pat!;
-  return invoke<string>("derive_gist_key", { passphrase: secret, saltHex: salt });
+  return deriveKey(secret, salt);
+}
+
+/**
+ * The key a given passphrase would produce for this Gist. An empty passphrase
+ * means "no passphrase", which falls back to the PAT exactly as `getEncKey`
+ * does, so verification matches what sync would actually use.
+ */
+async function encKeyForPassphrase(salt: string, passphrase: string): Promise<string> {
+  const secret = passphrase.trim() || (await getPat());
+  if (!secret) throw new Error("Gist sync is not configured");
+  return deriveKey(secret, salt);
 }
 
 // ─── Passphrase verification ─────────────────────────────────────────────────
@@ -189,8 +205,8 @@ async function getEncKey(salt: string): Promise<string> {
 export class GistPassphraseError extends Error {
   constructor() {
     super(
-      "Sync passphrase does not match this Gist. Nothing was uploaded — enter the " +
-        "original passphrase, or re-encrypt the Gist to adopt the new one.",
+      "Sync passphrase does not match this Gist. Nothing was uploaded — check the " +
+        "passphrase, or use Change passphrase to re-encrypt with a new one.",
     );
     this.name = "GistPassphraseError";
   }
@@ -231,7 +247,7 @@ async function keyReadsGist(
   const blobs = await getDeviceBlobs(pat, gistId, deviceIds);
   if (blobs.length === 0) return null;
 
-  for (const blob of blobs) {
+  for (const { blob } of blobs) {
     if (await canDecrypt(encKey, blob)) return true;
   }
   return false;
@@ -252,6 +268,52 @@ export async function verifyPassphrase(
   const encKey = await getEncKey(manifest.salt);
   const verdict = await keyReadsGist(pat, gistId, manifest, encKey);
   return verdict === null ? "empty" : verdict ? "ok" : "mismatch";
+}
+
+/** Raised when the passphrase offered as the current one cannot read the Gist. */
+export class GistCurrentPassphraseError extends Error {
+  constructor() {
+    super("Current passphrase is incorrect — nothing was changed.");
+    this.name = "GistCurrentPassphraseError";
+  }
+}
+
+/**
+ * Rotate the sync passphrase and re-encrypt every export destination.
+ *
+ * Knowledge of the current passphrase is required and is proved by decrypting
+ * data already in the Gist. That keeps the passphrase a real second factor:
+ * holding the PAT alone grants access to ciphertext, but not the ability to
+ * re-encrypt a Gist and lock its owner out.
+ *
+ * The check runs against every destination before anything is written, and the
+ * previous passphrase is restored if re-encryption fails, so a partial rotation
+ * cannot leave the vault holding a passphrase that reads nothing.
+ */
+export async function changePassphrase(current: string, next: string): Promise<void> {
+  const [pat, exportIds] = await Promise.all([getPat(), getExportDestinationIds()]);
+  if (!pat) throw new Error("Gist sync is not configured");
+
+  for (const gistId of exportIds) {
+    const manifest = await getManifest(pat, gistId);
+    const currentKey = await encKeyForPassphrase(manifest.salt, current);
+    // `null` means the Gist holds nothing to verify against, which cannot
+    // disprove the passphrase — treat it as passing rather than blocking.
+    if ((await keyReadsGist(pat, gistId, manifest, currentKey)) === false) {
+      throw new GistCurrentPassphraseError();
+    }
+  }
+
+  const previous = await getPassphrase();
+  const trimmed = next.trim();
+  await (trimmed ? requireApi().vault.set("passphrase", trimmed) : requireApi().vault.delete("passphrase"));
+
+  try {
+    await push({ reencrypt: true });
+  } catch (e) {
+    await (previous ? requireApi().vault.set("passphrase", previous) : requireApi().vault.delete("passphrase"));
+    throw e;
+  }
 }
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
@@ -418,12 +480,27 @@ export async function pull(): Promise<boolean> {
   const blobs = await getDeviceBlobs(pat, importSourceId, changedDevices.map((d) => d.id));
   if (blobs.length === 0) return false;
 
-  // Report a wrong passphrase as such, rather than letting the import surface
-  // the backend's raw "Decryption failed" on the first blob it touches.
-  if (!(await canDecrypt(encKey, blobs[0]))) throw new GistPassphraseError();
+  // Import only what this key can actually read. A device left on an older
+  // passphrase — or a corrupted blob — must not block the rest: `importStates`
+  // decrypts every blob it is handed, so one bad entry would abort the whole
+  // merge and stall syncing entirely.
+  const readable: DeviceBlob[] = [];
+  for (const entry of blobs) {
+    if (await canDecrypt(encKey, entry.blob)) readable.push(entry);
+  }
 
-  await requireApi().sync.importStates(encKey, blobs);
-  for (const d of changedDevices) _lastSeenPushedAt[d.id] = d.pushedAt;
+  // Nothing decrypted at all, so this is a wrong passphrase rather than one
+  // device being out of step.
+  if (readable.length === 0) throw new GistPassphraseError();
+
+  await requireApi().sync.importStates(encKey, readable.map((e) => e.blob));
+
+  // Only devices whose blob was merged count as seen, so an unreadable one is
+  // retried rather than being skipped forever.
+  const merged = new Set(readable.map((e) => e.deviceId));
+  for (const d of changedDevices) {
+    if (merged.has(d.id)) _lastSeenPushedAt[d.id] = d.pushedAt;
+  }
   return true;
 }
 
