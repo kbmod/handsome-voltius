@@ -6,6 +6,7 @@ import MainPanel from "@/components/layout/MainPanel";
 import OmniSearch from "@/components/omni/OmniSearch";
 import RightPanel from "@/components/terminal/RightPanel";
 import { EmailVerificationBanner } from "@/components/notifications/EmailVerificationBanner";
+import { SettingsPullPrompt } from "@/components/sync/SettingsPullPrompt";
 import { useUIStore } from "@/stores/uiStore";
 
 export default function DesktopShell() {
@@ -25,6 +26,7 @@ export default function DesktopShell() {
     <>
       <TitleBar />
       <EmailVerificationBanner />
+      <SettingsPullPrompt />
       <div className="flex flex-1 overflow-hidden">
         {showFrame && <VaultSidebar />}
         <div

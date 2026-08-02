@@ -15,6 +15,7 @@ import { useKnownHostStore } from "@/stores/knownHostStore";
 import { usePluginRegistryStore } from "@/stores/pluginRegistryStore";
 import { getSyncState, onSyncStateChange, ENTITY_FILES, type BlobPayload } from "@/services/sync";
 import { applyRemoteSettings, refreshLocalSettingsSnapshot } from "@/services/syncPayload";
+import { useSyncPromptStore } from "@/stores/syncPromptStore";
 import { useThemeStore } from "@/stores/themeStore";
 import { mergeEntities, mergeSecrets } from "@/services/crdt";
 import type {
@@ -886,8 +887,12 @@ function createPluginAPI(manifest: PluginManifest): PluginAPI {
           // as a single settings.json bundle rather than a CRDT entity array,
           // so they need a bundle merge and a live apply of their own. The
           // merge is per-key last-write-wins, so folding each remote blob in
-          // turn converges regardless of device order.
-          await applyRemoteSettings(remote.files);
+          // turn converges regardless of device order. Unlike entities, these
+          // reconfigure the device itself, so the user is asked first.
+          await applyRemoteSettings(
+            remote.files,
+            useSyncPromptStore.getState().requestSettingsPull,
+          );
 
           const themeRaw = remote.files["theme.json"];
           if (themeRaw) {

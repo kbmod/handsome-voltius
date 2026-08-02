@@ -1,0 +1,16 @@
+{
+  "sync": {
+    "settingsPull": {
+      "title": "Apply synced settings?",
+      "message": "Another device changed settings that control how this device behaves. Hosts, keys, and snippets have already been merged.",
+      "apply": "Apply",
+      "keepLocal": "Keep local",
+      "section": {
+        "appSettings": "Application settings",
+        "shortcuts": "Keyboard shortcuts",
+        "uiPreferences": "Interface preferences",
+        "themes": "Terminal themes"
+      }
+    }
+  }
+}

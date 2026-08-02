@@ -1,0 +1,16 @@
+{
+  "sync": {
+    "settingsPull": {
+      "title": "Appliquer les réglages synchronisés ?",
+      "message": "Un autre appareil a modifié des réglages qui déterminent le comportement de cet appareil. Les hôtes, les clés et les extraits ont déjà été fusionnés.",
+      "apply": "Appliquer",
+      "keepLocal": "Conserver les réglages locaux",
+      "section": {
+        "appSettings": "Réglages de l'application",
+        "shortcuts": "Raccourcis clavier",
+        "uiPreferences": "Préférences d'interface",
+        "themes": "Thèmes du terminal"
+      }
+    }
+  }
+}

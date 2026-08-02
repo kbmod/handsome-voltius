@@ -12,7 +12,11 @@ vi.mock("@/services/user-data/registry", () => ({
   applyUserDataBundle: (...a: unknown[]) => applyUserDataBundle(...a),
 }));
 
-import { applyRemoteSettings, refreshLocalSettingsSnapshot } from "./syncPayload";
+import {
+  applyRemoteSettings,
+  refreshLocalSettingsSnapshot,
+  resetDeclinedSettingsPulls,
+} from "./syncPayload";
 
 const remoteBundle = {
   type: "voltius-user-data",
@@ -90,5 +94,62 @@ describe("refreshLocalSettingsSnapshot", () => {
       throw new Error("store unavailable");
     });
     await expect(refreshLocalSettingsSnapshot()).resolves.toBeUndefined();
+  });
+});
+
+describe("settings pull confirmation", () => {
+  const localBundle = JSON.stringify({ ...remoteBundle, exported_at: "2026-07-01T00:00:00.000Z" });
+
+  beforeEach(() => {
+    resetDeclinedSettingsPulls();
+    invoke.mockImplementation((cmd: string) =>
+      cmd === "settings_load" ? Promise.resolve(localBundle) : Promise.resolve(undefined),
+    );
+    mergeUserDataBundle.mockReturnValue({ merged: remoteBundle, updatedKeys: ["shortcuts"] });
+  });
+
+  test("asks before rewriting this device's settings", async () => {
+    const confirm = vi.fn(async () => true);
+
+    await expect(
+      applyRemoteSettings({ "settings.json": JSON.stringify(remoteBundle) }, confirm),
+    ).resolves.toBe(true);
+
+    expect(confirm).toHaveBeenCalledWith(["shortcuts"]);
+    expect(applyUserDataBundle).toHaveBeenCalled();
+  });
+
+  test("declining leaves local settings untouched", async () => {
+    const confirm = vi.fn(async () => false);
+
+    await expect(
+      applyRemoteSettings({ "settings.json": JSON.stringify(remoteBundle) }, confirm),
+    ).resolves.toBe(false);
+
+    expect(invoke).not.toHaveBeenCalledWith("settings_save", expect.anything());
+    expect(applyUserDataBundle).not.toHaveBeenCalled();
+  });
+
+  test("a declined bundle does not prompt again", async () => {
+    const confirm = vi.fn(async () => false);
+    const files = { "settings.json": JSON.stringify(remoteBundle) };
+
+    await applyRemoteSettings(files, confirm);
+    await applyRemoteSettings(files, confirm);
+    await applyRemoteSettings(files, confirm);
+
+    expect(confirm).toHaveBeenCalledTimes(1);
+  });
+
+  test("a first-ever pull with no local settings applies without asking", async () => {
+    const confirm = vi.fn(async () => false);
+    invoke.mockImplementation((cmd: string) =>
+      cmd === "settings_load" ? Promise.resolve(null) : Promise.resolve(undefined),
+    );
+
+    await expect(
+      applyRemoteSettings({ "settings.json": JSON.stringify(remoteBundle) }, confirm),
+    ).resolves.toBe(true);
+    expect(confirm).not.toHaveBeenCalled();
   });
 });
