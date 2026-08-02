@@ -282,7 +282,7 @@
     "sync": {
       "voltiusCloud": "Legacy Voltius Cloud",
       "active": {
-        "title": "Облачная синхронизация активна",
+        "title": "Синхронизация Gist активна",
         "syncing": "Синхронизация…",
         "error": "Ошибка: {{error}}",
         "lastSync": "Последняя синхронизация: {{time}}",

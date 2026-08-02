@@ -278,7 +278,7 @@
     "sync": {
       "voltiusCloud": "Legacy Voltius Cloud",
       "active": {
-        "title": "Synchronisation cloud active",
+        "title": "Synchronisation Gist active",
         "syncing": "Synchronisation en cours…",
         "error": "Erreur : {{error}}",
         "lastSync": "Dernière synchro : {{time}}",
