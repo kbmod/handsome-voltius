@@ -635,6 +635,11 @@ export function createSettingsPage(api: PluginAPI): React.FC {
 
     const configured = gists.length > 0;
 
+    // Every registered Gist is one sync proved gone — so there is nowhere left
+    // to back up to. Gists sync never contacted are absent from unreachableIds,
+    // which keeps this from crying wolf over one it simply has not probed.
+    const allGistsMissing = configured && gists.every((g) => unreachableIds.includes(g.id));
+
     // ─── Render ───────────────────────────────────────────────────────────────
 
     return (
@@ -732,6 +737,46 @@ export function createSettingsPage(api: PluginAPI): React.FC {
               </p>
             )}
           </div>
+
+          {/*
+            Every Gist gone means this device is the only copy left. That is the
+            one state where saying nothing is dangerous: sync looks configured,
+            the rows are still listed, and nothing hints that a reinstall or a
+            disk failure would now lose everything.
+          */}
+          {allGistsMissing && (
+            <div className="flex flex-col gap-2 px-3 py-2.5 rounded-lg border border-(--t-status-error) bg-[color-mix(in_srgb,var(--t-status-error)_8%,transparent)]">
+              <div className="flex items-start gap-2">
+                <Icon icon="lucide:triangle-alert" width={14} className="shrink-0 mt-0.5 text-(--t-status-error)" />
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-xs font-semibold text-(--t-status-error)">
+                    {gists.length === 1
+                      ? "Your only sync gist no longer exists"
+                      : "None of your sync gists still exist"}
+                  </p>
+                  <p className="text-xs text-(--t-text-muted)">
+                    Nothing is being backed up, and this device now holds the only copy of your
+                    hosts, keys, and settings. Create a new gist to start backing up again.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 flex-wrap pl-6">
+                <Btn onClick={handleCreateGist} disabled={saving || detecting}>
+                  {saving && !showLinkInput ? (
+                    <span className="flex items-center gap-1.5">
+                      <Icon icon="lucide:loader-circle" width={13} className="animate-spin" />
+                      Creating…
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5">
+                      <Icon icon="lucide:plus" width={13} />
+                      Create replacement gist
+                    </span>
+                  )}
+                </Btn>
+              </div>
+            </div>
+          )}
 
           {gists.length > 0 ? (
             <div className="flex flex-col gap-1.5">

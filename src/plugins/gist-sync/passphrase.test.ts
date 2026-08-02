@@ -347,6 +347,30 @@ describe("a gist deleted by someone else", () => {
     expect(getUnreachableGistIds()).toContain("gone-source");
   });
 
+  test("removing a dead gist clears its warning", async () => {
+    // A stale entry would make re-linking the same id look dead on sight,
+    // before any sync had tried it.
+    stubInvoke({ decrypts: true });
+    const api = makeApi();
+    api.storage.get = vi.fn(async (k: string) => {
+      if (k === "registeredGists") return [{ id: "removed-me", addedAt: "" }];
+      if (k === "exportDestinationIds") return ["removed-me"];
+      if (k === "importSourceId") return "removed-me";
+      if (k === "deviceId") return "this-device";
+      return null;
+    }) as never;
+    init(api);
+    getManifest.mockRejectedValue(new ApiError(404, "Not Found"));
+
+    await expect(push()).rejects.toThrow("Not Found");
+    expect(getUnreachableGistIds()).toContain("removed-me");
+
+    deleteGistById.mockRejectedValue(new ApiError(404, "Not Found"));
+    await deleteGist("ghp_test", "removed-me");
+
+    expect(getUnreachableGistIds()).not.toContain("removed-me");
+  });
+
   test("a gist that comes back drops its warning", async () => {
     stubInvoke({ decrypts: true });
     const api = makeApi();

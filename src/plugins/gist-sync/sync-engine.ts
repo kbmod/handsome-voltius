@@ -413,6 +413,10 @@ export async function unlinkGist(gistId: string): Promise<void> {
     await requireApi().storage.set("importSourceId", remaining[0]?.id ?? null);
   await setExportDestinations(exportIds.filter((id) => id !== gistId));
 
+  // An unregistered Gist has no row to warn on, and a stale entry would make a
+  // later re-link look dead before anything had been tried.
+  markGistReachability([gistId], []);
+
   const nowConfigured = await isConfigured();
   if (_gistConfigured !== nowConfigured) {
     _gistConfigured = nowConfigured;
