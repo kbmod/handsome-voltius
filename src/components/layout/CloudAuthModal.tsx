@@ -5,7 +5,7 @@ import { Modal } from "@/components/shared/Modal";
 import { useUIStore, type CloudAuthMode } from "@/stores/uiStore";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { getAccountMode, linkToCloud, setMasterPassword, signInToCloud } from "@/services/account";
-import { startRealtimeSync, syncOnLogin, syncOnLoginReplace } from "@/services/sync";
+import { startRealtimeSync } from "@/services/sync";
 
 const DEFAULT_SERVER = "https://api.voltius.app";
 
@@ -61,10 +61,8 @@ export default function CloudAuthModal() {
       if (isRegister) {
         if (isLocalNoPassword) await setMasterPassword(password);
         await linkToCloud(email, normalizedUrl);
-        syncOnLogin().catch(() => {});
       } else {
         await signInToCloud(email, password, normalizedUrl);
-        syncOnLoginReplace().catch(() => {});
       }
       startRealtimeSync();
       await reloadSubscription().catch(() => {});

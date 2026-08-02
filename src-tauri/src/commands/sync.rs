@@ -241,6 +241,7 @@ pub const ENTITY_FILES: &[&str] = &[
     "snippets.json",
     "snippet_folders.json",
     "port_forwarding_rules.json",
+    "known_hosts.json",
 ];
 
 /// Decrypt a remote blob and return its payload without writing anything to disk.
@@ -275,18 +276,28 @@ pub fn state_export_raw(state: tauri::State<SecretsStore>) -> Result<BlobPayload
 /// their per-secret clocks; the store is replaced with them so deletions
 /// (tombstones present in `secret_clocks` but absent from `secrets`) take effect.
 #[tauri::command]
-pub fn state_import(
-    state: tauri::State<SecretsStore>,
+pub async fn state_import(
+    state: tauri::State<'_, SecretsStore>,
+    known_hosts: tauri::State<'_, std::sync::Arc<crate::known_hosts::KnownHostsStore>>,
     files: HashMap<String, String>,
     secrets: HashMap<String, String>,
     secret_clocks: Option<HashMap<String, String>>,
 ) -> Result<(), String> {
     let dir = config_dir();
+    let mut known_hosts_written = false;
     for (filename, content) in &files {
         if ENTITY_FILES.contains(&filename.as_str()) {
             fs::write(dir.join(filename), content)
                 .map_err(|e| format!("Failed to write {filename}: {e}"))?;
+            if filename == "known_hosts.json" {
+                known_hosts_written = true;
+            }
         }
+    }
+    // The known-hosts store caches entries in memory and rewrites the whole
+    // file on every mutation, so it has to pick up the merged file now.
+    if known_hosts_written {
+        known_hosts.reload().await;
     }
     state.replace_all(secrets, secret_clocks.unwrap_or_default())?;
     Ok(())

@@ -9,7 +9,12 @@ import { useNotificationStore } from "@/stores/notificationStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useSnippetStore } from "@/stores/snippetStore";
 import { useFolderStore } from "@/stores/folderStore";
+import { useSnippetFolderStore } from "@/stores/snippetFolderStore";
+import { usePortForwardingStore } from "@/stores/portForwardingStore";
+import { useKnownHostStore } from "@/stores/knownHostStore";
+import { usePluginRegistryStore } from "@/stores/pluginRegistryStore";
 import { getSyncState, onSyncStateChange, ENTITY_FILES, type BlobPayload } from "@/services/sync";
+import { applyRemoteSettings, refreshLocalSettingsSnapshot } from "@/services/syncPayload";
 import { useThemeStore } from "@/stores/themeStore";
 import { mergeEntities, mergeSecrets } from "@/services/crdt";
 import type {
@@ -40,8 +45,10 @@ import type {
 const _exposedApis = new Map<string, unknown>();
 
 // ─── Login-sync readiness gate ────────────────────────────────────────────
-// Resolves immediately for local/offline users; SplashScreen holds it pending
-// while syncOnLogin / syncOnLoginReplace runs so plugins don't race the merge.
+// Held pending while a login-time merge runs, so plugins don't race it. No
+// caller sets it pending now that personal sync is Gist sync — the sync plugin
+// is itself the thing that would have been waited on — but `waitForLoginSync`
+// stays in the plugin API and resolves immediately.
 
 let _loginSyncResolve: (() => void) | null = null;
 let _loginSyncReady: Promise<void> = Promise.resolve();
@@ -240,12 +247,22 @@ function registerKeybinding(commandId: string, raw: string, execute: () => void)
 
 // ─── Store reload map ─────────────────────────────────────────────────────
 
+/**
+ * Stores refreshed after a sync merge. This must cover every `ENTITY_FILES`
+ * entry, otherwise a pull writes merged data to disk that the running app never
+ * shows — and the next local mutation saves the stale in-memory copy back over
+ * it.
+ */
 const RELOADABLE_STORES: Record<string, () => Promise<void>> = {
   connections: () => useConnectionStore.getState().loadConnections(),
   identities: () => useIdentityStore.getState().loadIdentities(),
   keys: () => useKeyStore.getState().loadKeys(),
   snippets: () => useSnippetStore.getState().loadSnippets(),
   folders: () => useFolderStore.getState().loadFolders(),
+  snippetFolders: () => useSnippetFolderStore.getState().loadFolders(),
+  portForwardingRules: () => usePortForwardingStore.getState().loadRules(),
+  knownHosts: () => useKnownHostStore.getState().loadKnownHosts(),
+  pluginRegistry: () => usePluginRegistryStore.getState().load(),
 };
 
 // ─── Settings schema validation ───────────────────────────────────────────
@@ -807,6 +824,10 @@ function createPluginAPI(manifest: PluginManifest): PluginAPI {
 
       async exportState(encKey, deviceId) {
         requirePerm(manifest, "sync:write");
+        // backup_export reads settings.json off disk, so persist current
+        // settings, shortcuts, and UI preferences before it runs — otherwise
+        // the uploaded bundle is whatever was last written.
+        await refreshLocalSettingsSnapshot();
         const encKeyBytes = Array.from(new Uint8Array(encKey.match(/.{2}/g)!.map((b) => parseInt(b, 16))));
         const blob: number[] = await invoke("backup_export", {
           encKey: encKeyBytes,
@@ -860,6 +881,13 @@ function createPluginAPI(manifest: PluginManifest): PluginAPI {
           mergedSecrets = secretMerge.secrets;
           mergedSecretClocks = secretMerge.clocks;
           mergedFiles = newFiles;
+
+          // Application settings, keyboard shortcuts, and UI preferences travel
+          // as a single settings.json bundle rather than a CRDT entity array,
+          // so they need a bundle merge and a live apply of their own. The
+          // merge is per-key last-write-wins, so folding each remote blob in
+          // turn converges regardless of device order.
+          await applyRemoteSettings(remote.files);
 
           const themeRaw = remote.files["theme.json"];
           if (themeRaw) {

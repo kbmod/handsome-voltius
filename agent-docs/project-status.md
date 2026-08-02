@@ -41,6 +41,12 @@ The core product requirements are:
 - Session and workspace restore can be disabled together from Settings >
   Hosts > Startup. When disabled, the app starts in Vaults without reopening
   terminal tabs or split layouts.
+- Personal data sync is encrypted GitHub Gist sync and nothing else. The paid
+  Voltius Cloud personal blob sync was removed rather than left as a second
+  path, so no sync behavior depends on a subscription.
+- The optional Legacy Voltius Cloud team/multiplayer code remains in the tree
+  but is dormant: it only ever activated in server mode, and no personal sync
+  goes through it.
 - Releases are not being published while the project is in progress.
 - Generated `.deb` files and other build artifacts must not be committed or
   pushed.
@@ -94,7 +100,8 @@ Relevant pushed commits:
   to load.
 - Retained the optional upstream account integration under the explicit
   **Legacy Voltius Cloud** label. Its API, terms, privacy, and billing links
-  remain only where that external service functionally requires them.
+  remain only where that external service functionally requires them. Its
+  personal blob sync has since been removed — see **Sync path** below.
 - Preserved the upstream license, copyright notices, and attribution.
 
 ### Desktop shell and navigation
@@ -285,6 +292,43 @@ saved rule may be owned by only one host at a time.
   real tunnel status, and renders non-owning sessions as **In use by
   \<SERVER\>** with no usable toggle instead of a status that cannot change.
 
+### Sync path — paid sync removed, Gist sync promoted
+
+The Pro-gated Voltius Cloud personal blob sync was removed and every app-wide
+sync entry point now drives encrypted GitHub Gist sync.
+
+- `services/sync.ts` lost the personal blob engine: `push`, `pullAndMerge`,
+  `listDevices`, the cloud `syncNow`, both login-sync flows, and the vault-key
+  blob crypto. `syncNow`, `push`, `scheduleSync`, `getSyncState`, and
+  `onSyncStateChange` delegate to the Gist engine, and the `isPro` gates are
+  gone.
+- 38 store mutation triggers across seven stores no longer check
+  `isServerMode()`. Previously a personal install never synced on change at
+  all; they now schedule a debounced Gist sync, which is a no-op until Gist
+  sync is configured.
+- The JWT helpers, `fetchWithAuth`, and the team SSE stream stay for the
+  dormant Legacy Voltius Cloud team code.
+
+Payload gaps found while promoting Gist sync, each of which was silent data
+loss once Gist became the only path:
+
+- `known_hosts.json` was pushed by `backup_export` but absent from
+  `ENTITY_FILES`, so `state_import` discarded it and known hosts never
+  restored. It is a CRDT entity already, so it was added to both the
+  TypeScript and Rust lists, with a test asserting the two lists stay
+  identical.
+- The Rust `KnownHostsStore` caches entries and rewrites the whole file on
+  every mutation, so it gained `reload()`, called from `state_import`.
+  Otherwise the next mutation would overwrite the merged file.
+- Application settings, keyboard shortcuts, and UI preferences travel as a
+  single `settings.json` bundle. The cloud path applied it; the Gist path had
+  no equivalent. `services/syncPayload.ts` now applies it on Gist pull.
+- Gist `exportState` refreshes the settings snapshot before building the blob,
+  so a push cannot upload stale settings.
+- `RELOADABLE_STORES` was missing snippet folders, port-forwarding rules,
+  known hosts, and the plugin registry, so those stores never refreshed after
+  a pull.
+
 ### Verification completed for the current source
 
 Latest automated result:
@@ -439,7 +483,30 @@ Acceptance requirements:
 - no data is lost when syncing between a fresh profile and the existing
   profile.
 
-### 3. Final regression and cleanup
+The known-hosts, settings, and shortcuts halves of this list were previously
+impossible to satisfy — those files were pushed but dropped on pull. That is
+fixed in code and covered by tests, but the two-profile round-trip itself has
+not been run and is still the gate for this item.
+
+Note while testing: the encryption key is derived from the sync passphrase, or
+from the GitHub PAT when no passphrase is set. Two profiles that disagree about
+whether a passphrase exists will derive different keys and fail to decrypt each
+other's blobs, which is expected rather than a defect.
+
+### 3. Remove the Legacy Voltius Cloud sign-in, account, and billing UI
+
+The paid personal sync is gone from the engine, but its surfaces remain:
+
+- `CloudAuthModal` still offers cloud register/sign-in;
+- `AccountSection` still shows plan and billing state;
+- `SyncDropdown` and `SyncSection` still present "Voltius Sync" and "Gist Sync"
+  as two separate methods when they are now the same single path;
+- `SplashScreen` still starts the team stream in server mode.
+
+Collapse these to a single sync surface backed by Gist sync and drop the
+billing/plan UI. Team/multiplayer code stays in the tree but dormant.
+
+### 4. Final regression and cleanup
 
 - Repeat the main local shell, SSH, tabs, splits, rename, shortcuts, exit,
   reconnect, workspace restore, theme, and SFTP tests.
@@ -451,7 +518,7 @@ Acceptance requirements:
 - Update this status document and README if behavior changed.
 - Commit and push the final verified source checkpoint.
 
-### 4. Deferred work
+### 5. Deferred work
 
 These are intentionally outside the current personal Debian milestone:
 

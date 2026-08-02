@@ -51,7 +51,7 @@ async function writeManifest(immediate: boolean): Promise<void> {
   if (sig === lastSignature) return;
   lastSignature = sig;
   await invoke("live_sessions_save", { state: JSON.stringify(manifest) }).catch(() => {});
-  if (immediate) syncNow(true).catch(() => {});
+  if (immediate) syncNow().catch(() => {});
   else scheduleSync();
 }
 

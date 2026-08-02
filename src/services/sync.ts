@@ -1,44 +1,25 @@
 import { invoke } from "@tauri-apps/api/core";
 import i18n from "@/i18n";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
-import { getVaultKey, unlockVaultIfNeeded } from "@/services/vault";
-import { useThemeStore } from "@/stores/themeStore";
-import { buildUserDataBundle, mergeUserDataBundle, applyUserDataBundle } from "@/services/user-data/registry";
-import type { UserDataBundle } from "@/services/user-data/formats";
-import { useConnectionStore } from "@/stores/connectionStore";
-import { useIdentityStore } from "@/stores/identityStore";
-import { useKeyStore } from "@/stores/keyStore";
-import { usePluginRegistryStore } from "@/stores/pluginRegistryStore";
-import { useFolderStore } from "@/stores/folderStore";
 import { useTeamStore } from "@/stores/teamStore";
-import { useSnippetStore } from "@/stores/snippetStore";
-import { useSnippetFolderStore } from "@/stores/snippetFolderStore";
-import { usePortForwardingStore } from "@/stores/portForwardingStore";
-import { mergeEntities, mergeSecrets, secretsDiffer, type TimestampedEntity } from "@/services/crdt";
-import { useVaultKeysStore } from "@/stores/vaultKeysStore";
-import { buildDecryptKeyCandidates } from "@/services/vaultKeyCandidates";
-import { getMyX25519Keypair } from "@/services/multiplayerService";
-import { initTeamVaultKey } from "@/services/teamVaultSync";
-import { onTeamLogin } from "@/services/teamDataManager";
 import { handleMembershipChangedEvent } from "@/services/teamMembershipEvents";
-import * as teamService from "@/services/teamService";
 import { appFetch } from "@/services/http";
 import { SseDataLineParser } from "@/services/realtimeSseEvents";
 import { connectNativeSse } from "@/services/nativeSseStream";
-import { useCrossDeviceSessionsStore } from "@/stores/crossDeviceSessionsStore";
 import { parseUsingEvent } from "@/services/presenceEvent";
+import {
+  getGistSyncState,
+  onGistSyncStateChange,
+  isConfigured as isGistConfigured,
+  syncNow as gistSyncNow,
+  push as gistPush,
+} from "@/plugins/gist-sync/sync-engine";
 
 export interface BlobPayload {
   files: Record<string, string>;
   secrets: Record<string, string>;
   /** Per-secret last-write timestamps; a key here but not in `secrets` is a deletion tombstone. */
   secret_clocks?: Record<string, string>;
-}
-
-interface DeviceInfo {
-  device_id: string;
-  metadata: Record<string, unknown>;
-  updated_at: string;
 }
 
 /** Must mirror ENTITY_FILES in src-tauri/src/commands/sync.rs. */
@@ -50,76 +31,47 @@ export const ENTITY_FILES = [
   "snippets.json",
   "snippet_folders.json",
   "port_forwarding_rules.json",
+  "known_hosts.json",
 ] as const;
 
 export type SyncStatus = "idle" | "syncing" | "success" | "error" | "offline";
 
 // ─── Sync state (module-level, not a store) ──────────────────────────────────
 
-let _status: SyncStatus = "idle";
-let _lastSync: Date | null = null;
-let _error: string | null = null;
+/**
+ * Whether a Legacy Voltius Cloud realtime stream is currently attached. This is
+ * only about the optional team/multiplayer stream — personal data sync no
+ * longer goes through the paid service at all.
+ */
 let _cloudActive = false;
-let _blobSizeBytes: number | null = null;
 const _listeners = new Set<() => void>();
 
+/**
+ * App-wide sync state.
+ *
+ * Personal sync is encrypted GitHub Gist sync, so the status, timestamp,
+ * error, and blob size all come from that engine. `cloudActive` remains a
+ * separate signal for the optional team stream.
+ */
 export function getSyncState() {
-  return { status: _status, lastSync: _lastSync, error: _error, cloudActive: _cloudActive, blobSizeBytes: _blobSizeBytes };
+  const gist = getGistSyncState();
+  return {
+    status: gist.status,
+    lastSync: gist.lastSync,
+    error: gist.error,
+    cloudActive: _cloudActive,
+    blobSizeBytes: gist.blobSizeBytes,
+    configured: gist.configured,
+  };
 }
 
 export function onSyncStateChange(fn: () => void): () => void {
   _listeners.add(fn);
-  return () => { _listeners.delete(fn); };
-}
-
-function setState(status: SyncStatus, error?: string) {
-  _status = status;
-  _error = error ?? null;
-  if (status === "success") _lastSync = new Date();
-  _listeners.forEach((fn) => fn());
-}
-
-async function applyRemoteTheme(remotePayload: BlobPayload): Promise<void> {
-  try {
-    const remoteRaw = remotePayload.files["theme.json"];
-    if (!remoteRaw) return;
-    const remote = JSON.parse(remoteRaw) as { updatedAt?: string };
-    if (!remote.updatedAt) return;
-    const localRaw = await invoke<string | null>("theme_load");
-    if (localRaw) {
-      const local = JSON.parse(localRaw) as { updatedAt?: string };
-      if (local.updatedAt && local.updatedAt >= remote.updatedAt) return;
-    }
-    await invoke("theme_save", { state: remoteRaw });
-    await useThemeStore.getState().loadFromDisk();
-  } catch {}
-}
-
-async function applyRemoteSettings(remotePayload: BlobPayload): Promise<void> {
-  try {
-    const remoteRaw = remotePayload.files["settings.json"];
-    if (!remoteRaw) return;
-    const remote = JSON.parse(remoteRaw) as UserDataBundle;
-    if (remote.type !== "voltius-user-data") return;
-    const localRaw = await invoke<string | null>("settings_load");
-    const local = localRaw ? (JSON.parse(localRaw) as UserDataBundle) : null;
-    const { merged, updatedKeys } = mergeUserDataBundle(local, remote);
-    if (updatedKeys.length === 0) return;
-    await invoke("settings_save", { state: JSON.stringify(merged) });
-    await applyUserDataBundle(merged, updatedKeys);
-  } catch {}
-}
-
-function applyRemoteLiveSessions(remoteDeviceId: string, remotePayload: BlobPayload): void {
-  try {
-    const raw = remotePayload.files["live_sessions.json"];
-    if (!raw) return;
-    const doc = JSON.parse(raw) as { deviceId?: string };
-    // The manifest names its publisher; a blob restored onto a different
-    // device could carry a stale foreign manifest — only trust a match.
-    if (doc?.deviceId !== remoteDeviceId) return;
-    useCrossDeviceSessionsStore.getState().ingestManifest(doc);
-  } catch {}
+  const offGist = onGistSyncStateChange(fn);
+  return () => {
+    _listeners.delete(fn);
+    offGist();
+  };
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -199,15 +151,6 @@ function isJwtExpiredOrExpiring(jwt: string): boolean {
   }
 }
 
-function isPaymentRequired(error: unknown): boolean {
-  return error instanceof Error && (error.message.includes("402") || error.message.includes("Payment Required"));
-}
-
-async function loadTeamsForCurrentUser(): Promise<boolean> {
-  await useTeamStore.getState().loadTeams().catch(() => {});
-  return useTeamStore.getState().teams.length > 0;
-}
-
 /** fetch() wrapper that proactively refreshes the JWT before expiry and backs off on 429. */
 export async function fetchWithAuth(url: string, init: RequestInit): Promise<Response> {
   let jwt = await getJwt();
@@ -262,476 +205,50 @@ async function getDeviceId(): Promise<string> {
   return id;
 }
 
-async function getEncKey(): Promise<number[]> {
-  const key = getVaultKey();
-  if (!key) throw new Error(i18n.t("common.error.vaultLocked"));
-  return key;
-}
-
-/** Thrown when a sync blob can't be decrypted with any vault key the session holds. */
-class BlobDecryptError extends Error {
-  constructor() {
-    super("Sync blob could not be decrypted with any available vault key");
-    this.name = "BlobDecryptError";
-  }
-}
-
-/**
- * Decrypt a sync blob, trying every vault key the session holds (active vault key,
- * then kek, then dek). Recovers blobs written by devices on the *other* key during
- * the kek/dek split. Throws BlobDecryptError only if no key works.
- *
- * Coverage is limited to the keys actually present: getVaultKey() always, plus kek
- * and dek when vaultKeysStore is populated (set by interactive login and — once it
- * adopts dek — autoLogin). A bare autoLogin session before that holds only one key.
- *
- * Only an AEAD/wrong-key failure ("Decryption failed …") advances to the next key.
- * A structural error (bad length, malformed blob, or corrupt JSON after a successful
- * decrypt) is re-thrown immediately — that is real corruption, not a key mismatch,
- * and trying other keys would only mask it.
- */
-async function decryptBlobWithFallback(blobBytes: number[]): Promise<BlobPayload> {
-  const { kek, dek } = useVaultKeysStore.getState();
-  const candidates = buildDecryptKeyCandidates(getVaultKey(), kek, dek);
-  for (const encKey of candidates) {
-    try {
-      return await invoke<BlobPayload>("backup_decrypt", { encKey, blob: blobBytes });
-    } catch (e) {
-      // Wrong key for this blob — try the next candidate. Any other failure is
-      // structural corruption; re-throw so it isn't silently swallowed.
-      if (String(e).includes("Decryption failed")) continue;
-      throw e;
-    }
-  }
-  throw new BlobDecryptError();
-}
-
-// ─── Encoding helpers (chunked to avoid blocking the main thread) ─────────────
-
-function bytesToBase64(bytes: number[]): string {
-  const CHUNK = 8192;
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.slice(i, i + CHUNK));
-  }
-  return btoa(binary);
-}
-
-function base64ToBytes(b64: string): number[] {
-  const binary = atob(b64);
-  const out = new Array<number>(binary.length);
-  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
-  return out;
-}
-
-// ─── Team ID helpers ─────────────────────────────────────────────────────────
-
-
 // ─── Core sync operations ────────────────────────────────────────────────────
 
-/** Export local data and upload to server. */
+/**
+ * Run a full personal sync cycle.
+ *
+ * Personal sync is encrypted GitHub Gist sync. The paid Voltius Cloud blob
+ * endpoints are no longer used, so this is a thin wrapper that keeps the
+ * app-wide entry point stable for callers.
+ */
+export async function syncNow(options: { showProgress?: boolean } = {}): Promise<void> {
+  await gistSyncNow({ showProgress: options.showProgress ?? false });
+}
+
+/**
+ * Flush local state upstream immediately, without first pulling.
+ *
+ * Used by flows that are about to tear down or re-key the session and need the
+ * current state persisted first. A no-op when Gist sync is not configured.
+ */
 export async function push(): Promise<void> {
-  const encKey = await getEncKey();
-  const [serverUrl, deviceId, accountId] = await Promise.all([
-    getServerUrl(),
-    getDeviceId(),
-    invoke<string | null>("keychain_get", { key: "account_id" }),
-  ]);
-
-  if (!serverUrl || !accountId) throw new Error(i18n.t("common.error.notConnectedToServer"));
-
-  await unlockVaultIfNeeded();
-
-  // Ensure settings.json is current before backup_export reads it.
-  try {
-    const bundle = buildUserDataBundle();
-    await invoke("settings_save", { state: JSON.stringify(bundle) });
-  } catch {}
-
-  const blob: number[] = await invoke("backup_export", {
-    encKey,
-    accountId,
-    deviceId,
-  });
-
-  const res = await fetchWithAuth(`${serverUrl}/v1/sync/blob`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      device_id: deviceId,
-      blob: bytesToBase64(blob),
-      metadata: { device_id: deviceId, synced_at: new Date().toISOString() },
-    }),
-  });
-
-  if (!res.ok) throw new Error(i18n.t("common.error.serverError", { status: res.status }));
-
-  _blobSizeBytes = blob.length;
+  if (!(await isGistConfigured())) return;
+  await gistPush();
 }
 
-/** List all devices that have uploaded a blob for this account. */
-async function listDevices(): Promise<DeviceInfo[]> {
-  const serverUrl = await getServerUrl();
-  if (!serverUrl) return [];
-  const res = await fetchWithAuth(`${serverUrl}/v1/sync/devices`, { method: "GET" });
-  if (!res.ok) return [];
-  const { devices } = await res.json();
-  return devices ?? [];
-}
-
-/** Reload all in-memory stores from disk after a merge. */
-async function reloadAllStores(): Promise<void> {
-  await Promise.all([
-    useConnectionStore.getState().loadConnections(),
-    useIdentityStore.getState().loadIdentities(),
-    useKeyStore.getState().loadKeys(),
-    usePluginRegistryStore.getState().load(),
-    useFolderStore.getState().loadFolders(),
-    useTeamStore.getState().loadTeams(),
-    useSnippetStore.getState().loadSnippets(),
-    useSnippetFolderStore.getState().loadFolders(),
-    usePortForwardingStore.getState().loadRules(),
-  ]);
-}
-
-async function completeTeamLoginSetup(): Promise<void> {
-  // Register public key unconditionally — needed even for users with no linked vaults
-  // so that when they're added to a team their key is already on the server.
-  try {
-    const { publicKey } = await getMyX25519Keypair();
-    await teamService.updatePublicKey(publicKey);
-  } catch { /* best-effort */ }
-
-  // Owners/managers: re-distribute key to ALL current members (idempotent).
-  const teamIds = useTeamStore.getState().teams.map((t) => t.id);
-  for (const teamId of teamIds) {
-    try {
-      await useTeamStore.getState().loadRoles(teamId).catch(() => {});
-      const { teams, rolesByTeam } = useTeamStore.getState();
-      const myTeam = teams.find((t) => t.id === teamId);
-      const teamRoles = rolesByTeam[teamId] ?? [];
-      const isPrivileged = (myTeam?.role_ids ?? []).some((rid) => {
-        const r = teamRoles.find((role) => role.id === rid);
-        return r?.is_builtin && (r.name === "owner" || r.name === "manager");
-      });
-      if (isPrivileged) {
-        const members = await teamService.listMembers(teamId);
-        await initTeamVaultKey(teamId, members);
-      }
-    } catch { /* best-effort */ }
-  }
-
-  // Migrate stale keychain entries from the old implementation (one-time).
-  const migrated = localStorage.getItem("voltius.team_key_migration_v1");
-  if (!migrated) {
-    const { invoke: inv } = await import("@tauri-apps/api/core");
-    const teams = useTeamStore.getState().teams;
-    await Promise.allSettled(
-      teams.map((t) => inv("keychain_delete", { key: `team_vault_key_${t.id}` }).catch(() => {})),
-    );
-    localStorage.setItem("voltius.team_key_migration_v1", "1");
-  }
-
-  await onTeamLogin();
-}
-
-/**
- * Fetch a remote device's blob, decrypt it, CRDT-merge with local state, and write to disk.
- * Returns true if remote had data newer than local (i.e. local state actually changed).
- * Errors for individual devices are swallowed so one offline device doesn't abort the sync.
- */
-async function pullAndMerge(remoteDeviceId: string): Promise<boolean> {
-  const serverUrl = await getServerUrl();
-  if (!serverUrl) return false;
-
-  const res = await fetchWithAuth(
-    `${serverUrl}/v1/sync/blob?device_id=${encodeURIComponent(remoteDeviceId)}`,
-    { method: "GET" },
-  );
-  if (res.status === 404) return false; // remote device has no blob yet
-  if (!res.ok) return false; // skip unreachable devices
-
-  const { blob: blobB64 } = await res.json();
-  const blobBytes = base64ToBytes(blobB64);
-
-  const remotePayload = await decryptBlobWithFallback(blobBytes);
-
-  await applyRemoteTheme(remotePayload);
-  await applyRemoteSettings(remotePayload);
-  applyRemoteLiveSessions(remoteDeviceId, remotePayload);
-
-  const localPayload = await invoke<BlobPayload>("state_export_raw");
-
-  const parse = (payload: BlobPayload, file: string): TimestampedEntity[] => {
-    try { return JSON.parse(payload.files[file] ?? "[]"); }
-    catch { return []; }
-  };
-
-  const mergedFiles: Record<string, string> = {};
-  let anyChange = false;
-  for (const file of ENTITY_FILES) {
-    const local = parse(localPayload, file);
-    const remote = parse(remotePayload, file);
-    const merged = mergeEntities(local, remote);
-    mergedFiles[file] = JSON.stringify(merged);
-    // Detect change: different count, or any entity with a newer clock from remote
-    if (merged.length !== local.length) {
-      anyChange = true;
-    } else {
-      const localById = new Map(local.map((e) => [e.id, e]));
-      for (const m of merged) {
-        const l = localById.get(m.id);
-        if (!l || m.updated_at > l.updated_at) { anyChange = true; break; }
-      }
-    }
-  }
-
-  const localSecrets = localPayload.secrets ?? {};
-  const secretMerge = mergeSecrets(
-    localSecrets,
-    localPayload.secret_clocks ?? {},
-    remotePayload.secrets ?? {},
-    remotePayload.secret_clocks ?? {},
-  );
-  if (!anyChange && secretsDiffer(localSecrets, secretMerge.secrets)) anyChange = true;
-
-  if (!anyChange) return false; // remote had nothing new — skip write
-
-  await invoke("state_import", {
-    files: mergedFiles,
-    secrets: secretMerge.secrets,
-    secretClocks: secretMerge.clocks,
-  });
-  return true;
-}
-
-/**
- * Full sync: merge from all remote devices, then push if needed.
- *
- * @param forcePush  true when called from a local mutation (scheduleSync) — always
- *                   uploads the local blob so other devices see the change.
- *                   false (default) when called from SSE — only pushes if remote
- *                   data actually changed local state, preventing infinite loops.
- */
-export async function syncNow(forcePush = false): Promise<void> {
-  if (_status === "syncing") return;
-
-  // Personal blob sync is a Pro feature — free-tier accounts have no blob quota.
-  if (!useSubscriptionStore.getState().isPro) return;
-
-  setState("syncing");
-
-  const start = Date.now();
-  const minDisplay = 600;
-
-  try {
-    await unlockVaultIfNeeded();
-
-    // Refresh team membership first so getSyncableTeamIds() sees current state
-    // and the sidebar immediately reflects joins/removals (no blob change needed).
-    await loadTeamsForCurrentUser();
-
-    const [devices, localDeviceId] = await Promise.all([listDevices(), getDeviceId()]);
-
-    // Pull and merge each remote device sequentially (each merge feeds the next).
-    // Per-device errors are non-fatal: skip corrupted/mismatched blobs rather than
-    // surfacing a confusing "decryption failed" to the user.
-    let anyPersonalChanged = false;
-    let decryptFailures = 0;
-    for (const device of devices) {
-      if (device.device_id === localDeviceId) continue;
-      try {
-        const changed = await pullAndMerge(device.device_id);
-        if (changed) anyPersonalChanged = true;
-      } catch (e) {
-        if (e instanceof BlobDecryptError) {
-          decryptFailures++;
-          console.debug(`[sync] undecryptable blob from device ${device.device_id}`);
-        } else {
-          console.debug(`[sync] non-decrypt error for device ${device.device_id}:`, e);
-        }
-        // Skip this device (unreadable or unreachable) and continue.
-      }
-    }
-    if (decryptFailures > 0) {
-      console.debug(`[sync] ${decryptFailures} device blob(s) could not be decrypted with any key`);
-    }
-
-    if (anyPersonalChanged) {
-      await reloadAllStores();
-    }
-
-    // Only push personal blob if forced (local mutation) or remote had new data.
-    // Skipping push when nothing changed breaks the push→SSE→pull→push→… loop.
-    if (forcePush || anyPersonalChanged) {
-      await push();
-    }
-
-    const elapsed = Date.now() - start;
-    if (elapsed < minDisplay) await new Promise((r) => setTimeout(r, minDisplay - elapsed));
-    setState("success");
-  } catch (e) {
-    const elapsed = Date.now() - start;
-    if (elapsed < minDisplay) await new Promise((r) => setTimeout(r, minDisplay - elapsed));
-    if (isPaymentRequired(e) && await loadTeamsForCurrentUser()) {
-      await completeTeamLoginSetup();
-      setState("success");
-      return;
-    }
-    const msg = e instanceof Error ? e.message : String(e);
-    setState(navigator.onLine === false ? "offline" : "error", msg);
-    throw e;
-  }
-}
-
-/**
- * Sign-in sync for EXISTING cloud accounts.
- *
- * Unlike syncOnLogin (which merges local + remote), this function starts from
- * an empty accumulator and merges ONLY remote device blobs together.
- * Local disk state is NEVER read — guaranteed no local contamination.
- *
- * Use this when switching from any local account into an existing cloud account.
- * For new cloud accounts (linkToCloud), use syncOnLogin instead.
- */
-export async function syncOnLoginReplace(): Promise<void> {
-  try {
-    await unlockVaultIfNeeded();
-
-    if (!useSubscriptionStore.getState().isPro && await loadTeamsForCurrentUser()) {
-      await completeTeamLoginSetup();
-      setState("success");
-      return;
-    }
-
-    const serverUrl = await getServerUrl();
-    if (!serverUrl) throw new Error(i18n.t("common.error.notConnectedToServer"));
-
-    const devices = await listDevices();
-
-    // Accumulate remote state starting from empty — local disk never touched
-    let mergedFiles: Record<string, string> = Object.fromEntries(
-      ENTITY_FILES.map((f) => [f, "[]"]),
-    );
-    let mergedSecrets: Record<string, string> = {};
-    let mergedSecretClocks: Record<string, string> = {};
-
-    let decryptFailures = 0;
-    for (const device of devices) {
-      try {
-        const res = await fetchWithAuth(
-          `${serverUrl}/v1/sync/blob?device_id=${encodeURIComponent(device.device_id)}`,
-          { method: "GET" },
-        );
-        if (res.status === 404 || !res.ok) continue;
-
-        const { blob: blobB64 } = await res.json();
-        const blobBytes = base64ToBytes(blobB64);
-        const remotePayload = await decryptBlobWithFallback(blobBytes);
-
-        await applyRemoteTheme(remotePayload);
-        await applyRemoteSettings(remotePayload);
-        applyRemoteLiveSessions(device.device_id, remotePayload);
-
-        const newFiles: Record<string, string> = {};
-        for (const file of ENTITY_FILES) {
-          const parse = (s: string): TimestampedEntity[] => { try { return JSON.parse(s); } catch { return []; } };
-          newFiles[file] = JSON.stringify(
-            mergeEntities(parse(mergedFiles[file]), parse(remotePayload.files[file] ?? "[]")),
-          );
-        }
-        // Per-secret LWW merge: freshest write across devices wins (issue #35).
-        const secretMerge = mergeSecrets(
-          mergedSecrets,
-          mergedSecretClocks,
-          remotePayload.secrets ?? {},
-          remotePayload.secret_clocks ?? {},
-        );
-        mergedSecrets = secretMerge.secrets;
-        mergedSecretClocks = secretMerge.clocks;
-        mergedFiles = newFiles;
-      } catch (e) {
-        if (e instanceof BlobDecryptError) {
-          decryptFailures++;
-          console.debug(`[sync] undecryptable blob from device ${device.device_id}`);
-        } else {
-          console.debug(`[sync] non-decrypt error for device ${device.device_id}:`, e);
-        }
-        // Skip unreadable blobs — don't abort the whole replace-sync.
-      }
-    }
-    if (decryptFailures > 0) {
-      console.debug(`[sync] login pull: ${decryptFailures} device blob(s) could not be decrypted with any key`);
-    }
-
-    await invoke("state_import", { files: mergedFiles, secrets: mergedSecrets, secretClocks: mergedSecretClocks });
-    await reloadAllStores();
-    await push();
-    await completeTeamLoginSetup();
-
-    setState("success");
-  } catch (e) {
-    if (isPaymentRequired(e) && await loadTeamsForCurrentUser()) {
-      await completeTeamLoginSetup();
-      setState("success");
-      return;
-    }
-    const msg = e instanceof Error ? e.message : String(e);
-    setState("error", msg);
-  }
-}
-
-/** Pull on login to restore data from server, then push local state. */
-export async function syncOnLogin(): Promise<void> {
-  try {
-    await unlockVaultIfNeeded();
-
-    if (!useSubscriptionStore.getState().isPro && await loadTeamsForCurrentUser()) {
-      await completeTeamLoginSetup();
-      setState("success");
-      return;
-    }
-
-    // Pull ALL devices including own — skipping self would prevent recovery
-    // after a local wipe (single-user: own blob is the only source of truth).
-    // CRDT merge is idempotent so pulling own blob on normal login is safe.
-    const devices = await listDevices();
-
-    for (const device of devices) {
-      try {
-        await pullAndMerge(device.device_id);
-      } catch {
-        // Skip unreadable blobs (corrupted, wrong key, etc.) — don't abort login sync.
-      }
-    }
-
-    await reloadAllStores();
-    await push();
-    await completeTeamLoginSetup();
-
-    setState("success");
-  } catch (e) {
-    if (isPaymentRequired(e) && await loadTeamsForCurrentUser()) {
-      await completeTeamLoginSetup();
-      setState("success");
-      return;
-    }
-    const msg = e instanceof Error ? e.message : String(e);
-    setState("error", msg);
-  }
-}
 
 // ─── Debounced sync on mutations ──────────────────────────────────────────────
 
 let _syncTimer: ReturnType<typeof setTimeout> | null = null;
 
-/** Schedule a sync 2 s after the last mutation (debounced). */
+/**
+ * Schedule a sync 2 s after the last mutation (debounced).
+ *
+ * Callers are free to invoke this on every local mutation: it is a no-op until
+ * Gist sync is actually configured, so an install with no sync set up never
+ * does any work.
+ */
 export function scheduleSync() {
-  if (!useSubscriptionStore.getState().isPro) return;
   if (_syncTimer) clearTimeout(_syncTimer);
   _syncTimer = setTimeout(() => {
     _syncTimer = null;
-    syncNow(true).catch(() => {}); // forcePush: local mutation must be uploaded
+    void (async () => {
+      if (!(await isGistConfigured())) return;
+      await syncNow();
+    })().catch(() => {});
   }, 2000);
 }
 

@@ -2,7 +2,6 @@ import { create } from "zustand";
 import type { SshKey, SshKeyFormData } from "@/types";
 import * as api from "@/services/keys";
 import { scheduleSync } from "@/services/sync";
-import { isServerMode } from "@/services/account";
 import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { useHistoryStore } from "@/stores/historyStore";
 import { useTeamStore } from "@/stores/teamStore";
@@ -111,7 +110,7 @@ export const useKeyStore = create<KeyStore>((set, get) => ({
     const keys = await api.listKeys();
     set({ keys });
     const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isTypeSynced("key")) scheduleSync(); });
+    if (prefs.isTypeSynced("key")) scheduleSync();
     reportAuditMutation("key", "created", { id: key.id, name: key.name ?? "unnamed", vault_id: key.vault_id }, { key_type: key.key_type });
     let recreatedId: string | null = null;
     useHistoryStore.getState().push({
@@ -216,7 +215,7 @@ export const useKeyStore = create<KeyStore>((set, get) => ({
       return { keys, teamKeys: nextTeamKeys };
     });
     const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isObjectSynced(id, "key")) scheduleSync(); });
+    if (prefs.isObjectSynced(id, "key")) scheduleSync();
     if (prev) reportAuditMutation("key", "updated", { id, name: data.name ?? prev.name ?? "unnamed", vault_id: data.vault_id ?? prev.vault_id }, { key_type: data.key_type ?? prev.key_type });
     if (prev) {
       const prevData: SshKeyFormData = {
@@ -251,7 +250,7 @@ export const useKeyStore = create<KeyStore>((set, get) => ({
     const keys = await api.listKeys();
     set({ keys });
     const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isObjectSynced(id, "key")) scheduleSync(); });
+    if (prefs.isObjectSynced(id, "key")) scheduleSync();
   },
 
   pinKeyForTeam: async (id, pinned) => {
@@ -306,7 +305,7 @@ export const useKeyStore = create<KeyStore>((set, get) => ({
     const keys = await api.listKeys();
     set({ keys });
     const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isObjectSynced(id, "key")) scheduleSync(); });
+    if (prefs.isObjectSynced(id, "key")) scheduleSync();
     if (prev) reportAuditMutation("key", "deleted", { id: prev.id, name: prev.name ?? "unnamed", vault_id: prev.vault_id }, { key_type: prev.key_type });
     if (prev) {
       const prevData: SshKeyFormData = {

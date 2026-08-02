@@ -2,7 +2,6 @@ import { create } from "zustand";
 import type { Folder, FolderFormData } from "@/types";
 import * as api from "@/services/folders";
 import { scheduleSync } from "@/services/sync";
-import { isServerMode } from "@/services/account";
 import { reportAuditMutation } from "@/services/auditMutations";
 import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { useHistoryStore } from "@/stores/historyStore";
@@ -125,7 +124,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
     const folder = await api.saveFolder(data);
     const folders = await api.listFolders();
     set({ folders });
-    isServerMode().then((s) => { if (s && useSyncPrefsStore.getState().isTypeSynced("folder")) scheduleSync(); });
+    if (useSyncPrefsStore.getState().isTypeSynced("folder")) scheduleSync();
     reportAuditMutation("folder", "created", { id: folder.id, name: folder.name, vault_id: folder.vault_id }, { object_type: folder.object_type });
     let recreatedId: string | null = null;
     useHistoryStore.getState().push({
@@ -229,7 +228,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       }
       return { folders, teamFolders: nextTeamFolders };
     });
-    isServerMode().then((s) => { if (s && useSyncPrefsStore.getState().isObjectSynced(id, "folder")) scheduleSync(); });
+    if (useSyncPrefsStore.getState().isObjectSynced(id, "folder")) scheduleSync();
     if (prev) reportAuditMutation("folder", "updated", { id, name: data.name ?? prev.name, vault_id: data.vault_id ?? prev.vault_id }, { object_type: data.object_type ?? prev.object_type });
     if (prev) {
       const prevData: FolderFormData = {
@@ -281,7 +280,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
     await api.deleteFolder(id);
     const folders = await api.listFolders();
     set({ folders });
-    isServerMode().then((s) => { if (s && useSyncPrefsStore.getState().isObjectSynced(id, "folder")) scheduleSync(); });
+    if (useSyncPrefsStore.getState().isObjectSynced(id, "folder")) scheduleSync();
     if (prev) reportAuditMutation("folder", "deleted", { id: prev.id, name: prev.name, vault_id: prev.vault_id }, { object_type: prev.object_type });
     if (prev) {
       const prevData: FolderFormData = {
@@ -350,7 +349,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
 
     if (personalIds.length > 0) {
       await api.moveObjectsToFolder(personalIds, objectType, folderId);
-      isServerMode().then((s) => { if (s && useSyncPrefsStore.getState().isTypeSynced("folder")) scheduleSync(); });
+      if (useSyncPrefsStore.getState().isTypeSynced("folder")) scheduleSync();
     }
 
     for (const [teamId, ids] of teamIdsByTeam) {
@@ -451,7 +450,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
     });
     const folders = await api.listFolders();
     set({ folders });
-    isServerMode().then((s) => { if (s && useSyncPrefsStore.getState().isObjectSynced(id, "folder")) scheduleSync(); });
+    if (useSyncPrefsStore.getState().isObjectSynced(id, "folder")) scheduleSync();
     useHistoryStore.getState().push({
       label: `Moved folder "${folder.name}"`,
       undo: async () => { await useFolderStore.getState().moveFolder(id, prevParentId); },
@@ -477,7 +476,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       pinned: nextPinned,
     });
     set((s) => ({ folders: s.folders.map((f) => f.id === id ? { ...f, pinned: nextPinned } : f) }));
-    isServerMode().then((s) => { if (s && useSyncPrefsStore.getState().isObjectSynced(id, "folder")) scheduleSync(); });
+    if (useSyncPrefsStore.getState().isObjectSynced(id, "folder")) scheduleSync();
   },
 
   pinFolderForTeam: async (id, pinned) => {

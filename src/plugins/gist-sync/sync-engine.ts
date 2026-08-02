@@ -63,7 +63,7 @@ function setGistState(status: SyncStatus, error?: string) {
 
 // ─── Internal state ───────────────────────────────────────────────────────────
 
-let _api: PluginAPI;
+let _api: PluginAPI | undefined;
 let _pollInterval: ReturnType<typeof setInterval> | null = null;
 let _consecutiveFailures = 0;
 let _failureBannerId: { dismiss(): void } | null = null;
@@ -78,30 +78,52 @@ export function init(api: PluginAPI) {
   }).catch(() => {});
 }
 
+/**
+ * True once the plugin has registered and handed us its API. Core code drives
+ * this engine as the app's only sync path, so it must be able to ask whether
+ * the engine is usable rather than throwing on an undefined plugin API.
+ */
+export function isReady(): boolean {
+  return _api !== undefined;
+}
+
+/**
+ * The plugin API for operations that cannot proceed without it. Callers that
+ * can degrade gracefully should check `isReady()` or use the null-returning
+ * config helpers instead.
+ */
+function requireApi(): PluginAPI {
+  if (!_api) throw new Error("Gist sync is not initialised");
+  return _api;
+}
+
 // ─── Config helpers ───────────────────────────────────────────────────────────
 
 async function getPat(): Promise<string | null> {
+  if (!_api) return null;
   return _api.vault.get("pat");
 }
 
 async function getPassphrase(): Promise<string | null> {
+  if (!_api) return null;
   return _api.vault.get("passphrase");
 }
 
 /** Returns all registered gists, migrating from legacy single-gistId storage if needed. */
 export async function getRegisteredGists(): Promise<GistRegistration[]> {
-  const gists = await _api.storage.get<GistRegistration[]>("registeredGists");
+  if (!_api) return [];
+  const gists = await requireApi().storage.get<GistRegistration[]>("registeredGists");
   if (gists !== null) return gists;
 
   // Migrate from legacy single gistId
-  const legacyId = await _api.storage.get<string>("gistId");
+  const legacyId = await requireApi().storage.get<string>("gistId");
   if (legacyId) {
     const entry: GistRegistration = { id: legacyId, addedAt: new Date().toISOString() };
     await Promise.all([
-      _api.storage.set("registeredGists", [entry]),
-      _api.storage.set("importSourceId", legacyId),
-      _api.storage.set("exportDestinationIds", [legacyId]),
-      _api.storage.delete("gistId"),
+      requireApi().storage.set("registeredGists", [entry]),
+      requireApi().storage.set("importSourceId", legacyId),
+      requireApi().storage.set("exportDestinationIds", [legacyId]),
+      requireApi().storage.delete("gistId"),
     ]);
     return [entry];
   }
@@ -109,36 +131,36 @@ export async function getRegisteredGists(): Promise<GistRegistration[]> {
 }
 
 async function saveRegisteredGists(gists: GistRegistration[]): Promise<void> {
-  await _api.storage.set("registeredGists", gists);
+  await requireApi().storage.set("registeredGists", gists);
 }
 
 export async function getImportSourceId(): Promise<string | null> {
-  return _api.storage.get<string>("importSourceId");
+  return requireApi().storage.get<string>("importSourceId");
 }
 
 export async function getExportDestinationIds(): Promise<string[]> {
-  return (await _api.storage.get<string[]>("exportDestinationIds")) ?? [];
+  return (await requireApi().storage.get<string[]>("exportDestinationIds")) ?? [];
 }
 
 export async function setImportSource(gistId: string): Promise<void> {
-  await _api.storage.set("importSourceId", gistId);
+  await requireApi().storage.set("importSourceId", gistId);
 }
 
 export async function setExportDestinations(gistIds: string[]): Promise<void> {
-  await _api.storage.set("exportDestinationIds", gistIds);
+  await requireApi().storage.set("exportDestinationIds", gistIds);
 }
 
 export async function getDeviceId(): Promise<string> {
-  let id = await _api.storage.get<string>("deviceId");
+  let id = await requireApi().storage.get<string>("deviceId");
   if (!id) {
     id = crypto.randomUUID();
-    await _api.storage.set("deviceId", id);
+    await requireApi().storage.set("deviceId", id);
   }
   return id;
 }
 
 async function getDeviceLabel(): Promise<string> {
-  const stored = await _api.storage.get<string>("deviceLabel");
+  const stored = await requireApi().storage.get<string>("deviceLabel");
   if (stored) return stored;
   const ua = navigator.userAgent;
   const match = ua.match(/\(([^)]+)\)/);
@@ -173,7 +195,7 @@ export async function setupNewGist(pat: string): Promise<{ id: string; url: stri
 
   // Push initial state
   const encKey = await getEncKey(salt);
-  const blob = await _api.sync.exportState(encKey, deviceId);
+  const blob = await requireApi().sync.exportState(encKey, deviceId);
   await patchFiles(pat, id, {
     [`device-${deviceId}.b64`]: { filename: `device-${deviceId}.b64`, content: blob },
   });
@@ -215,7 +237,7 @@ export async function unlinkGist(gistId: string): Promise<void> {
     getExportDestinationIds(),
   ]);
   if (importSourceId === gistId)
-    await _api.storage.set("importSourceId", remaining[0]?.id ?? null);
+    await requireApi().storage.set("importSourceId", remaining[0]?.id ?? null);
   await setExportDestinations(exportIds.filter((id) => id !== gistId));
 
   const nowConfigured = await isConfigured();
@@ -258,7 +280,7 @@ export async function push(): Promise<void> {
     exportIds.map(async (gistId) => {
       const manifest = await getManifest(pat, gistId);
       const encKey = await getEncKey(manifest.salt);
-      const blob = await _api.sync.exportState(encKey, deviceId);
+      const blob = await requireApi().sync.exportState(encKey, deviceId);
 
       // Track size from any one export (content is the same, only key differs)
       if (firstBlobSize === null) firstBlobSize = Math.round(blob.length * 3 / 4);
@@ -301,7 +323,7 @@ export async function pull(): Promise<boolean> {
   const blobs = await getDeviceBlobs(pat, importSourceId, changedDevices.map((d) => d.id));
   if (blobs.length === 0) return false;
 
-  await _api.sync.importStates(encKey, blobs);
+  await requireApi().sync.importStates(encKey, blobs);
   for (const d of changedDevices) _lastSeenPushedAt[d.id] = d.pushedAt;
   return true;
 }
@@ -314,9 +336,9 @@ export async function syncNow(opts: { showProgress?: boolean } = {}): Promise<vo
 
   setGistState("syncing");
 
-  let progress: ReturnType<typeof _api.notifications.progress> | null = null;
+  let progress: ReturnType<PluginAPI["notifications"]["progress"]> | null = null;
   if (opts.showProgress)
-    progress = _api.notifications.progress("Syncing via GitHub Gist…", { indeterminate: true });
+    progress = requireApi().notifications.progress("Syncing via GitHub Gist…", { indeterminate: true });
 
   try {
     await pull();
@@ -325,8 +347,8 @@ export async function syncNow(opts: { showProgress?: boolean } = {}): Promise<vo
     if (_failureBannerId) { _failureBannerId.dismiss(); _failureBannerId = null; }
     if (progress) progress.finish("Gist sync complete");
     else if (opts.showProgress)
-      _api.notifications.toast("Gist sync complete", { severity: "success" });
-    await _api.storage.set("lastSync", new Date().toISOString());
+      requireApi().notifications.toast("Gist sync complete", { severity: "success" });
+    await requireApi().storage.set("lastSync", new Date().toISOString());
     setGistState("success");
   } catch (err) {
     if (progress) progress.error("Gist sync failed");
@@ -341,7 +363,7 @@ function _onSyncError(err: unknown) {
       stopPoll();
       setGistState("error", "GitHub PAT is invalid or expired");
       if (!_failureBannerId)
-        _failureBannerId = _api.notifications.banner(
+        _failureBannerId = requireApi().notifications.banner(
           "Gist Sync: GitHub PAT is invalid or expired",
           { severity: "error" },
         );
@@ -351,7 +373,7 @@ function _onSyncError(err: unknown) {
       stopPoll();
       setGistState("error", "Gist not found — re-configure in Settings");
       if (!_failureBannerId)
-        _failureBannerId = _api.notifications.banner(
+        _failureBannerId = requireApi().notifications.banner(
           "Gist Sync: Gist not found — re-configure in Settings",
           { severity: "error" },
         );
@@ -362,12 +384,12 @@ function _onSyncError(err: unknown) {
   const msg = err instanceof Error ? err.message : String(err);
   setGistState(isOffline ? "offline" : "error", isOffline ? undefined : msg);
   if (_consecutiveFailures >= 3 && !_failureBannerId)
-    _failureBannerId = _api.notifications.banner(
+    _failureBannerId = requireApi().notifications.banner(
       `Gist Sync: repeated failures — ${msg}`,
       { severity: "warning" },
     );
   else if (_consecutiveFailures < 3)
-    _api.notifications.toast("Gist sync skipped — offline?", { severity: "warning" });
+    requireApi().notifications.toast("Gist sync skipped — offline?", { severity: "warning" });
 }
 
 // ─── Poll loop ────────────────────────────────────────────────────────────────

@@ -4,7 +4,6 @@ import type { SnippetPendingInject } from "@/services/snippetRunCore";
 import { normalizeSnippetSteps } from "@/services/snippetSteps";
 import * as api from "@/services/snippets";
 import { scheduleSync } from "@/services/sync";
-import { isServerMode } from "@/services/account";
 import { reportAuditMutation } from "@/services/auditMutations";
 import { useHistoryStore } from "@/stores/historyStore";
 import { useTeamStore } from "@/stores/teamStore";
@@ -132,7 +131,7 @@ export const useSnippetStore = create<SnippetStore>((set, get) => ({
     const snippet = await api.createSnippet(data);
     const snippets = await api.listSnippets();
     set({ snippets });
-    isServerMode().then((s) => { if (s) scheduleSync(); });
+    scheduleSync();
     reportAuditMutation("snippet", "created", { id: snippet.id, name: snippet.name, vault_id: snippet.vault_id });
     let recreatedId: string | null = null;
     useHistoryStore.getState().push({
@@ -243,7 +242,7 @@ export const useSnippetStore = create<SnippetStore>((set, get) => ({
       }
       return { snippets };
     });
-    isServerMode().then((s) => { if (s) scheduleSync(); });
+    scheduleSync();
     if (prev) reportAuditMutation("snippet", "updated", { id, name: data.name ?? prev.name, vault_id: data.vault_id ?? prev.vault_id });
     if (prev) {
       const prevData: SnippetFormData = {
@@ -297,7 +296,7 @@ export const useSnippetStore = create<SnippetStore>((set, get) => ({
     await api.deleteSnippet(id);
     const snippets = await api.listSnippets();
     set({ snippets });
-    isServerMode().then((s) => { if (s) scheduleSync(); });
+    scheduleSync();
     if (prev) reportAuditMutation("snippet", "deleted", { id: prev.id, name: prev.name, vault_id: prev.vault_id });
     if (prev) {
       const prevData: SnippetFormData = {
@@ -338,7 +337,7 @@ export const useSnippetStore = create<SnippetStore>((set, get) => ({
       only_for_distros: snippet.only_for_distros, vault_id: snippet.vault_id,
     });
     set((s) => ({ snippets: (s.snippets as Snippet[]).map((sn) => sn.id === id ? { ...sn, favorite: nextFavorite } : sn) }));
-    isServerMode().then((s) => { if (s) scheduleSync(); });
+    scheduleSync();
   },
 
   pinSnippetForTeam: async (id, pinned) => {

@@ -2,7 +2,6 @@ import { create } from "zustand";
 import type { Folder, FolderFormData } from "@/types";
 import * as api from "@/services/snippets";
 import { scheduleSync } from "@/services/sync";
-import { isServerMode } from "@/services/account";
 import { removeTeamVaultObject, saveTeamVaultObject } from "@/services/teamObjectPersistence";
 import { classifyVaultTransition, migrateVaultObject } from "@/services/teamVaultMigration";
 import { useTeamStore } from "@/stores/teamStore";
@@ -99,7 +98,7 @@ export const useSnippetFolderStore = create<SnippetFolderStore>((set, get) => ({
     const folder = await api.createSnippetFolder(data);
     const folders = await api.listSnippetFolders();
     set({ folders });
-    isServerMode().then((s) => { if (s) scheduleSync(); });
+    scheduleSync();
     return folder;
   },
 
@@ -177,7 +176,7 @@ export const useSnippetFolderStore = create<SnippetFolderStore>((set, get) => ({
       }
       return { folders, teamSnippetFolders: nextTeamSnippetFolders };
     });
-    isServerMode().then((s) => { if (s) scheduleSync(); });
+    scheduleSync();
   },
 
   deleteFolder: async (id) => {
@@ -197,7 +196,7 @@ export const useSnippetFolderStore = create<SnippetFolderStore>((set, get) => ({
     await api.deleteSnippetFolder(id);
     const folders = await api.listSnippetFolders();
     set({ folders });
-    isServerMode().then((s) => { if (s) scheduleSync(); });
+    scheduleSync();
   },
 
   moveFolder: async (id, parentFolderId) => {
@@ -230,7 +229,7 @@ export const useSnippetFolderStore = create<SnippetFolderStore>((set, get) => ({
     });
     const folders = await api.listSnippetFolders();
     set({ folders });
-    isServerMode().then((s) => { if (s) scheduleSync(); });
+    scheduleSync();
   },
 
   pinSnippetFolder: async (id, pinned) => {
@@ -250,7 +249,7 @@ export const useSnippetFolderStore = create<SnippetFolderStore>((set, get) => ({
       pinned: nextPinned,
     });
     set((s) => ({ folders: s.folders.map((f) => f.id === id ? { ...f, pinned: nextPinned } : f) }));
-    isServerMode().then((s) => { if (s) scheduleSync(); });
+    scheduleSync();
   },
 
   pinSnippetFolderForTeam: async (id, pinned) => {

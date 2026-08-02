@@ -2,7 +2,6 @@ import { create } from "zustand";
 import type { Identity, IdentityFormData } from "@/types";
 import * as api from "@/services/identities";
 import { scheduleSync } from "@/services/sync";
-import { isServerMode } from "@/services/account";
 import { useSyncPrefsStore } from "@/stores/syncPrefsStore";
 import { useHistoryStore } from "@/stores/historyStore";
 import { useTeamStore } from "@/stores/teamStore";
@@ -112,7 +111,7 @@ export const useIdentityStore = create<IdentityStore>((set, get) => ({
     const identities = await api.listIdentities();
     set({ identities });
     const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isTypeSynced("identity")) scheduleSync(); });
+    if (prefs.isTypeSynced("identity")) scheduleSync();
     reportAuditMutation("identity", "created", { id: identity.id, name: identity.name ?? identity.username, vault_id: identity.vault_id });
     let recreatedId: string | null = null;
     useHistoryStore.getState().push({
@@ -218,7 +217,7 @@ export const useIdentityStore = create<IdentityStore>((set, get) => ({
       return { identities, teamIdentities: nextTeamIdentities };
     });
     const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isObjectSynced(id, "identity")) scheduleSync(); });
+    if (prefs.isObjectSynced(id, "identity")) scheduleSync();
     if (prev) reportAuditMutation("identity", "updated", { id, name: data.name ?? prev.name ?? prev.username, vault_id: data.vault_id ?? prev.vault_id });
     if (prev) {
       const prevData: IdentityFormData = {
@@ -252,7 +251,7 @@ export const useIdentityStore = create<IdentityStore>((set, get) => ({
     const identities = await api.listIdentities();
     set({ identities });
     const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isObjectSynced(id, "identity")) scheduleSync(); });
+    if (prefs.isObjectSynced(id, "identity")) scheduleSync();
   },
 
   pinIdentityForTeam: async (id, pinned) => {
@@ -307,7 +306,7 @@ export const useIdentityStore = create<IdentityStore>((set, get) => ({
     const identities = await api.listIdentities();
     set({ identities });
     const prefs = useSyncPrefsStore.getState();
-    isServerMode().then((s) => { if (s && prefs.isObjectSynced(id, "identity")) scheduleSync(); });
+    if (prefs.isObjectSynced(id, "identity")) scheduleSync();
     if (prev) reportAuditMutation("identity", "deleted", { id: prev.id, name: prev.name ?? prev.username, vault_id: prev.vault_id });
     if (prev) {
       const prevData: IdentityFormData = {

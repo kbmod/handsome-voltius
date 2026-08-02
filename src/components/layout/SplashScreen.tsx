@@ -10,8 +10,8 @@ import { useSnippetFolderStore } from "@/stores/snippetFolderStore";
 import { usePortForwardingStore } from "@/stores/portForwardingStore";
 import { autoLogin, consumeForceLockFlag, isServerMode } from "@/services/account";
 import { saveCurrentAccount } from "@/services/savedAccounts";
-import { syncOnLogin, syncOnLoginReplace, startRealtimeSync } from "@/services/sync";
-import { loadPlugin, setLoginSyncPending, resolveLoginSync } from "@/plugins/runtime";
+import { startRealtimeSync } from "@/services/sync";
+import { loadPlugin } from "@/plugins/runtime";
 import { BUNDLED_PLUGINS } from "@/plugins/bundled";
 import { loadInstalledPlugins } from "@/stores/marketplaceStore";
 import { usePluginRegistryStore } from "@/stores/pluginRegistryStore";
@@ -108,15 +108,10 @@ export default function SplashScreen({ onReady }: Props) {
     useSubscriptionStore.getState().load().catch(() => {});
     isServerMode().then((server) => {
       if (!server) return;
-      const useReplace = sessionStorage.getItem("voltius.replace-sync-on-login") === "1";
-      if (useReplace) sessionStorage.removeItem("voltius.replace-sync-on-login");
-      // Gate plugins behind this promise so they see post-merge data.
-      // vault_reset (logout) wipes the config dir including plugin storage,
-      // so plugins must not run their initial sync before server data lands.
-      setLoginSyncPending();
-      (useReplace ? syncOnLoginReplace() : syncOnLogin())
-        .catch(() => {})
-        .finally(() => resolveLoginSync());
+      sessionStorage.removeItem("voltius.replace-sync-on-login");
+      // Personal data sync is encrypted Gist sync, which the plugin drives on
+      // its own once registered. Only the optional Legacy Voltius Cloud team
+      // stream is started here.
       startRealtimeSync();
     });
     useThemeStore.getState().loadFromDisk().catch(() => {});

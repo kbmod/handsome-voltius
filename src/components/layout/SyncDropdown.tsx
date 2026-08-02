@@ -314,7 +314,7 @@ export function SyncDropdown({ anchorRef, open, onClose, gistPluginEnabled, acco
         label={t("layout.sync.voltiusSync")}
         methodIcon="lucide:cloud"
         variant={voltiusVariant}
-        onSyncNow={() => syncNow(true).catch(() => {})}
+        onSyncNow={() => syncNow({ showProgress: true }).catch(() => {})}
       />
 
       <div style={{ height: 1, background: "var(--t-border)" }} />

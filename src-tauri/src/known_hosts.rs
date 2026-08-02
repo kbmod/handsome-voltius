@@ -184,6 +184,16 @@ impl KnownHostsStore {
         save_known_hosts(&entries).ok();
     }
 
+    /// Re-read entries from disk, discarding the in-memory copy.
+    ///
+    /// Sync writes `known_hosts.json` directly after a CRDT merge. Without this
+    /// the cached entries would stay stale and the next mutation would save
+    /// them straight back over the merged file, silently undoing the pull.
+    pub async fn reload(&self) {
+        let mut entries = self.entries.lock().await;
+        *entries = load_known_hosts();
+    }
+
     /// List all non-deleted entries.
     pub async fn list(&self) -> Vec<KnownHost> {
         self.entries
