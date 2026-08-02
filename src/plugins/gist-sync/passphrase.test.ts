@@ -38,6 +38,8 @@ import {
   verifyPassphrase,
   changePassphrase,
   deleteGist,
+  linkExistingGist,
+  parseGistId,
   getUnreachableGistIds,
   GistPassphraseError,
   GistCurrentPassphraseError,
@@ -249,6 +251,59 @@ describe("pull tolerance", () => {
     init(makeApi());
 
     await expect(pull()).rejects.toBeInstanceOf(GistPassphraseError);
+  });
+});
+
+describe("linking a gist by URL", () => {
+  // The field offers "ID or URL", but a URL was passed to GitHub verbatim and
+  // came back 404 — so only the ID half of the promise ever worked.
+  const ID = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6";
+
+  test.each([
+    ["bare id", ID],
+    ["id with surrounding space", `  ${ID}  `],
+    ["anonymous gist url", `https://gist.github.com/${ID}`],
+    ["user-scoped url", `https://gist.github.com/octocat/${ID}`],
+    ["url with trailing slash", `https://gist.github.com/octocat/${ID}/`],
+    ["revisions url", `https://gist.github.com/octocat/${ID}/revisions`],
+    ["url with file anchor", `https://gist.github.com/octocat/${ID}#file-voltius-json`],
+    ["url with query string", `https://gist.github.com/octocat/${ID}?foo=bar`],
+    ["api url", `https://api.github.com/gists/${ID}`],
+    ["url without a scheme", `gist.github.com/octocat/${ID}`],
+  ])("finds the id in a %s", (_label, input) => {
+    expect(parseGistId(input)).toBe(ID);
+  });
+
+  test("a 20-character legacy id is still recognised", () => {
+    const legacy = "a1b2c3d4e5f6a7b8c9d0";
+    expect(parseGistId(`https://gist.github.com/octocat/${legacy}`)).toBe(legacy);
+  });
+
+  test("input with no id in it is rejected rather than sent", () => {
+    expect(parseGistId("https://github.com/octocat")).toBeNull();
+    expect(parseGistId("not a gist")).toBeNull();
+    expect(parseGistId("   ")).toBeNull();
+  });
+
+  test("linkExistingGist registers the id parsed out of a URL", async () => {
+    const api = makeApi();
+    api.storage.get = vi.fn(async () => null) as never;
+    init(api);
+
+    await linkExistingGist("ghp_test", `https://gist.github.com/octocat/${ID}`);
+
+    expect(getManifest).toHaveBeenCalledWith("ghp_test", ID);
+    expect(api.storage.set).toHaveBeenCalledWith(
+      "registeredGists",
+      [expect.objectContaining({ id: ID })],
+    );
+  });
+
+  test("unparseable input never reaches the API", async () => {
+    init(makeApi());
+
+    await expect(linkExistingGist("ghp_test", "not a gist")).rejects.toThrow(/Gist ID or URL/);
+    expect(getManifest).not.toHaveBeenCalled();
   });
 });
 

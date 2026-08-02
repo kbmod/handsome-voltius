@@ -8,6 +8,7 @@ import {
   setupNewGist,
   linkExistingGist,
   unlinkGist,
+  parseGistId,
   deleteGist,
   removeDevice,
   syncNow,
@@ -481,13 +482,17 @@ export function createSettingsPage(api: PluginAPI): React.FC {
       if (!linkInput.trim()) return;
       const currentPat = await api.vault.get("pat");
       if (!currentPat) { setError("Enter your GitHub PAT first."); return; }
+      // Compare against the parsed id, not the raw field: pasting a URL used to
+      // never match the import source, so its manifest was silently not loaded.
+      const gistId = parseGistId(linkInput);
+      if (!gistId) { setError("That does not look like a Gist ID or URL."); return; }
       setSaving(true); setError(null);
       try {
-        await linkExistingGist(currentPat, linkInput.trim());
+        await linkExistingGist(currentPat, gistId);
         const { importId } = await refreshGistState().then((s) => ({ importId: s.importId }));
         setShowLinkInput(false); setLinkInput("");
         api.notifications.toast("Gist linked", { severity: "success" });
-        if (importId === linkInput.trim()) await loadManifestForSource(linkInput.trim(), currentPat);
+        if (importId === gistId) await loadManifestForSource(gistId, currentPat);
         syncNow().catch(() => {});
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
@@ -890,7 +895,7 @@ export function createSettingsPage(api: PluginAPI): React.FC {
                 value={linkInput}
                 onChange={(e) => setLinkInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLinkGist()}
-                placeholder="Gist ID or URL (e.g. a1b2c3d4e5f6…)"
+                placeholder="Gist ID or URL (e.g. gist.github.com/you/a1b2c3d4…)"
                 className="form-input flex-1 px-3 py-2 rounded-lg text-sm outline-hidden bg-(--t-bg-input) border border-(--t-border) text-(--t-text-primary)"
                 onFocus={(e) => (e.currentTarget.style.borderColor = "var(--t-accent)")}
                 onBlur={(e) => (e.currentTarget.style.borderColor = "var(--t-border)")}

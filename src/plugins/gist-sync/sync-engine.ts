@@ -386,7 +386,35 @@ export async function setupNewGist(pat: string): Promise<{ id: string; url: stri
   return { id, url };
 }
 
-export async function linkExistingGist(pat: string, gistId: string): Promise<void> {
+/**
+ * The Gist id inside whatever the user pasted.
+ *
+ * The field invites an ID *or* a URL, so a URL must not be handed to the API
+ * verbatim — that requests a Gist named `https:` and comes back 404, blaming
+ * the user for pasting exactly what was asked for. Every gist.github.com form
+ * carries the id as its last hex path segment, so take that and ignore the
+ * account name, `/revisions`, `#file-…` anchors, and query strings around it.
+ *
+ * Returns null when nothing in the input looks like an id, so the caller can
+ * say so rather than sending a doomed request.
+ */
+export function parseGistId(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  const path = trimmed.split(/[?#]/)[0];
+  const segments = path.split("/").filter(Boolean);
+  for (let i = segments.length - 1; i >= 0; i--) {
+    // Gist ids are hex; 32 today, 20 on older Gists.
+    if (/^[0-9a-f]{20,32}$/i.test(segments[i])) return segments[i];
+  }
+  return null;
+}
+
+export async function linkExistingGist(pat: string, input: string): Promise<void> {
+  const gistId = parseGistId(input);
+  if (!gistId) throw new Error("That does not look like a Gist ID or URL.");
+
   await getManifest(pat, gistId); // validate accessible
   const existing = await getRegisteredGists();
   if (existing.find((g) => g.id === gistId)) return; // already registered
