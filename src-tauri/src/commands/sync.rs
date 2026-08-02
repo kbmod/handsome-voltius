@@ -60,12 +60,23 @@ pub fn encrypt_payload(
 const BLOB_VERSION: u32 = 2;
 const NONCE_LEN: usize = 24;
 
+/// Plaintext prefix of a blob.
+///
+/// Only its *length* is load-bearing: `decrypt_blob` reads the 4-byte length to
+/// find the nonce and never parses these fields. Everything that matters —
+/// files, secrets, and their clocks — is inside the AEAD ciphertext.
+///
+/// The fields are optional so both the current minimal header and older headers
+/// (which carried `account_id`, `device_id`, and `created_at`) parse.
 #[derive(Serialize, Deserialize)]
 struct BlobHeader {
     version: u32,
-    account_id: String,
-    device_id: String,
-    created_at: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    account_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    device_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    created_at: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -117,11 +128,25 @@ pub fn backup_export(
         return Err("enc_key must be 32 bytes".to_string());
     }
 
+    // Carry nothing but the format version in the clear. The account id, device
+    // id, and creation time this header used to hold were never read back —
+    // `decrypt_blob` only needs the header's length — so they were plaintext
+    // metadata sitting next to the ciphertext for no purpose.
+    //
+    // This is tidiness rather than a confidentiality fix: a sync Gist already
+    // exposes each device id in `manifest.json` and in the `device-<id>.b64`
+    // filename, and the push time as `pushedAt`, all of which have to stay
+    // readable for sync to work at all.
+    //
+    // The parameters stay in the command signature because the frontend still
+    // passes them and Tauri maps arguments by name; they are simply no longer
+    // written into the blob.
+    let _ = (&account_id, &device_id);
     let header = BlobHeader {
         version: BLOB_VERSION,
-        account_id,
-        device_id,
-        created_at: chrono::Utc::now().to_rfc3339(),
+        account_id: None,
+        device_id: None,
+        created_at: None,
     };
     let header_json = serde_json::to_vec(&header).map_err(|e| e.to_string())?;
 
@@ -225,7 +250,8 @@ pub fn backup_import(
     state.replace_all(payload.secrets, payload.secret_clocks)?;
 
     Ok(ImportResult {
-        account_id: header.account_id,
+        // Blobs written by this fork carry no account id; only legacy blobs do.
+        account_id: header.account_id.unwrap_or_default(),
     })
 }
 
@@ -383,5 +409,48 @@ fn android_device_name() -> Option<String> {
         Some(model)
     } else {
         Some(format!("{manufacturer} {model}"))
+    }
+}
+
+#[cfg(test)]
+mod blob_header_tests {
+    use super::*;
+
+    /// The plaintext prefix must carry no device or account metadata. Only its
+    /// length is load-bearing — `decrypt_blob` uses it to locate the nonce and
+    /// never reads the fields.
+    #[test]
+    fn exported_header_carries_only_the_format_version() {
+        let header = BlobHeader {
+            version: BLOB_VERSION,
+            account_id: None,
+            device_id: None,
+            created_at: None,
+        };
+        let json = serde_json::to_string(&header).unwrap();
+        assert_eq!(json, format!(r#"{{"version":{BLOB_VERSION}}}"#));
+    }
+
+    /// Older blobs still decrypt: their richer header parses, and the length
+    /// prefix keeps locating the nonce regardless of what the header holds.
+    #[test]
+    fn legacy_header_still_parses() {
+        let legacy = r#"{"version":2,"account_id":"gist-sync","device_id":"abc","created_at":"2026-08-02T01:14:34Z"}"#;
+        let header: BlobHeader = serde_json::from_slice(legacy.as_bytes()).unwrap();
+        assert_eq!(header.version, 2);
+        assert_eq!(header.account_id.as_deref(), Some("gist-sync"));
+        assert_eq!(header.device_id.as_deref(), Some("abc"));
+    }
+
+    /// A blob written with the minimal header round-trips through decryption.
+    #[test]
+    fn minimal_header_blob_round_trips() {
+        let key = vec![7u8; 32];
+        let mut files = HashMap::new();
+        files.insert("connections.json".to_string(), "[]".to_string());
+        let blob = encrypt_payload(key.clone(), files, HashMap::new()).unwrap();
+
+        let payload = decrypt_blob(&key, &blob).unwrap();
+        assert_eq!(payload.files.get("connections.json").unwrap(), "[]");
     }
 }
