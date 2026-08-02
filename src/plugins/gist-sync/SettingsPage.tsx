@@ -20,6 +20,7 @@ import {
   type GistRegistration,
 } from "./sync-engine";
 import { getManifest, listVoltiusGists, GistApiError, type GistDevice, type GistManifest } from "./gist-api";
+import { ChangePassphraseModal } from "./ChangePassphraseModal";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -304,6 +305,7 @@ export function createSettingsPage(api: PluginAPI): React.FC {
     // Credentials
     const [pat, setPat] = useState("");
     const [passphrase, setPassphrase] = useState("");
+    const [showChangePassphrase, setShowChangePassphrase] = useState(false);
 
     // Gists
     const [gists, setGists] = useState<GistRegistration[]>([]);
@@ -643,20 +645,42 @@ export function createSettingsPage(api: PluginAPI): React.FC {
               </>
             }
           />
-          <SecretInput
-            label="Sync Passphrase"
-            labelSuffix={
-              <>
-                <span className="font-normal text-(--t-text-dim)">— optional</span>
+          {gists.length === 0 ? (
+            <SecretInput
+              label="Sync Passphrase"
+              labelSuffix={
+                <>
+                  <span className="font-normal text-(--t-text-dim)">— optional</span>
+                  <InfoTooltip text="Without a passphrase, data is encrypted using your PAT as the key. If your PAT is compromised, your synced data (including SSH private keys) is also exposed." />
+                </>
+              }
+              value={passphrase}
+              onChange={setPassphrase}
+              placeholder="Leave empty to use PAT-derived encryption…"
+              saveState={passphraseSave.saveState}
+              hint="Adds an independent encryption layer. Recommended if syncing SSH private keys."
+            />
+          ) : (
+            // Once a Gist exists the passphrase is what its data is encrypted
+            // with, so it cannot be edited freely: typing a new value here used
+            // to be saved silently and then fail every sync. Rotating it is an
+            // explicit, verified operation.
+            <div className="flex flex-col gap-1">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-(--t-text-muted)">
+                Sync Passphrase
                 <InfoTooltip text="Without a passphrase, data is encrypted using your PAT as the key. If your PAT is compromised, your synced data (including SSH private keys) is also exposed." />
-              </>
-            }
-            value={passphrase}
-            onChange={setPassphrase}
-            placeholder="Leave empty to use PAT-derived encryption…"
-            saveState={passphraseSave.saveState}
-            hint="Adds an independent encryption layer. Recommended if syncing SSH private keys."
-          />
+              </label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 px-3 py-2 rounded-lg text-sm bg-(--t-bg-input) border border-(--t-border) text-(--t-text-dim)">
+                  {passphrase ? "••••••••••••" : "Not set — encrypted with your PAT"}
+                </div>
+                <Btn onClick={() => setShowChangePassphrase(true)}>Change…</Btn>
+              </div>
+              <p className="text-xs text-(--t-text-dim)">
+                Changing this re-encrypts your Gists and requires the current passphrase.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Registered Gists */}
@@ -885,6 +909,13 @@ export function createSettingsPage(api: PluginAPI): React.FC {
               })}
             </div>
           </div>
+        )}
+
+        {showChangePassphrase && (
+          <ChangePassphraseModal
+            onClose={() => setShowChangePassphrase(false)}
+            onChanged={setPassphrase}
+          />
         )}
       </div>
     );
