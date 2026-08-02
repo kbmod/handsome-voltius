@@ -235,7 +235,17 @@ export async function push(): Promise<void> {
 let _syncTimer: ReturnType<typeof setTimeout> | null = null;
 
 /**
- * Schedule a sync 2 s after the last mutation (debounced).
+ * How long to wait after the last local mutation before syncing.
+ *
+ * Deliberately long: an accidental edit that is undone within the window never
+ * reaches the Gist at all, so it cannot be pulled back down on the next
+ * session. Quitting still flushes immediately via the sync engine's
+ * before-quit hook, so a pending change is not lost by closing the app.
+ */
+export const SYNC_DEBOUNCE_MS = 30_000;
+
+/**
+ * Schedule a sync once the mutation burst has settled (debounced).
  *
  * Callers are free to invoke this on every local mutation: it is a no-op until
  * Gist sync is actually configured, so an install with no sync set up never
@@ -249,7 +259,7 @@ export function scheduleSync() {
       if (!(await isGistConfigured())) return;
       await syncNow();
     })().catch(() => {});
-  }, 2000);
+  }, SYNC_DEBOUNCE_MS);
 }
 
 // ─── Real-time SSE sync ───────────────────────────────────────────────────────

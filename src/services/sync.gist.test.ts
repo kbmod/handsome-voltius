@@ -25,7 +25,7 @@ vi.mock("@/plugins/gist-sync/sync-engine", () => ({
   push: (...a: unknown[]) => gistPush(...a),
 }));
 
-import { getSyncState, syncNow, push, scheduleSync } from "./sync";
+import { getSyncState, syncNow, push, scheduleSync, SYNC_DEBOUNCE_MS } from "./sync";
 
 beforeEach(() => {
   gistSyncNow.mockReset().mockResolvedValue(undefined);
@@ -98,7 +98,7 @@ describe("scheduleSync", () => {
     scheduleSync();
     expect(gistSyncNow).not.toHaveBeenCalled();
 
-    await vi.advanceTimersByTimeAsync(2000);
+    await vi.advanceTimersByTimeAsync(SYNC_DEBOUNCE_MS);
     expect(gistSyncNow).toHaveBeenCalledTimes(1);
   });
 
@@ -107,8 +107,28 @@ describe("scheduleSync", () => {
     vi.useFakeTimers();
 
     scheduleSync();
-    await vi.advanceTimersByTimeAsync(2000);
+    await vi.advanceTimersByTimeAsync(SYNC_DEBOUNCE_MS);
 
     expect(gistSyncNow).not.toHaveBeenCalled();
+  });
+});
+
+describe("sync debounce window", () => {
+  test("waits long enough for an accidental change to be undone first", async () => {
+    // A short window pushed a mistaken edit before the user could undo it, and
+    // the next session pulled it back down. Quitting still flushes immediately
+    // via the engine's before-quit hook, so waiting costs no data.
+    expect(SYNC_DEBOUNCE_MS).toBeGreaterThanOrEqual(30_000);
+  });
+
+  test("no sync happens before the window elapses", async () => {
+    vi.useFakeTimers();
+    scheduleSync();
+
+    await vi.advanceTimersByTimeAsync(SYNC_DEBOUNCE_MS - 1000);
+    expect(gistSyncNow).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(gistSyncNow).toHaveBeenCalledTimes(1);
   });
 });
