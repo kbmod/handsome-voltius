@@ -20,6 +20,8 @@
       "or": "ou",
       "cloudAccount": "Compte cloud",
       "cloudAccountSub": "Synchronisez sur tous vos appareils — connectez-vous ou créez un compte",
+      "restoreFromGist": "Restaurer depuis un Gist GitHub",
+      "restoreFromGistSub": "Configurez la synchronisation Gist chiffrée et récupérez vos données",
       "back": "Retour",
       "signupPrompt": "Créez un compte pour synchroniser sur tous vos appareils",
       "signinPrompt": "Connectez-vous pour restaurer vos données synchronisées",

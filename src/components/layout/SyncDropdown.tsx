@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Icon } from "@iconify/react";
 import i18n from "@/i18n";
 import { useClickOutside } from "@/hooks/useClickOutside";
-import { getSyncState, onSyncStateChange, syncNow, type SyncStatus } from "@/services/sync";
+import { type SyncStatus } from "@/services/sync";
 import {
   getGistSyncState,
   onGistSyncStateChange,
@@ -13,8 +13,6 @@ import {
 import { useVaultContents } from "@/hooks/useVaultContents";
 import { ContentCounts } from "@/components/shared/ContentCounts";
 import { useUIStore } from "@/stores/uiStore";
-import { useSubscriptionStore } from "@/stores/subscriptionStore";
-import { openPortal } from "@/utils/billing";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -56,10 +54,7 @@ function statusLabel(status: SyncStatus, lastSync: Date | null): string {
 
 type SectionVariant =
   | { kind: "active"; status: SyncStatus; lastSync: Date | null; error: string | null; blobSizeBytes: number | null }
-  | { kind: "misconfigured"; onConfigure: () => void }
-  | { kind: "disabled"; onEnable: () => void }
-  | { kind: "locked"; onSignIn: () => void }
-  | { kind: "needs_upgrade"; onUpgrade: () => void };
+  | { kind: "misconfigured"; onConfigure: () => void };
 
 function SyncSection({
   label,
@@ -122,52 +117,8 @@ function SyncSection({
       </div>
 
       {/* State body */}
-      {variant.kind === "locked" && (
-        <button
-          onClick={variant.onSignIn}
-          className="w-full flex items-center gap-1.5 text-left"
-          style={{ color: "var(--t-accent)" }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = "0.75")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = "1")}
-        >
-          <Icon icon="lucide:log-in" width={11} />
-          <span className="text-xs">{t("layout.sync.signInForSync")}</span>
-          <Icon icon="lucide:arrow-right" width={10} className="ml-auto" />
-        </button>
-      )}
 
-      {variant.kind === "needs_upgrade" && (
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-xs" style={{ color: "var(--t-text-dim)" }}>{t("layout.sync.requiresPro")}</span>
-          <button
-            onClick={variant.onUpgrade}
-            className="text-[10px] font-medium transition-opacity"
-            style={{ color: "var(--t-accent)" }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = "0.75")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = "1")}
-          >
-            {t("layout.sync.upgradeArrow")}
-          </button>
-        </div>
-      )}
 
-      {variant.kind === "disabled" && (
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5" style={{ color: "var(--t-text-dim)" }}>
-            <Icon icon="lucide:puzzle" width={11} />
-            <span className="text-xs">{t("layout.sync.pluginDisabled")}</span>
-          </div>
-          <button
-            onClick={variant.onEnable}
-            className="text-[10px] font-medium transition-opacity"
-            style={{ color: "var(--t-accent)" }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = "0.75")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = "1")}
-          >
-            {t("layout.sync.enableArrow")}
-          </button>
-        </div>
-      )}
 
       {variant.kind === "misconfigured" && (
         <div className="flex items-center justify-between gap-2">
@@ -241,38 +192,22 @@ interface SyncDropdownProps {
   anchorRef: React.RefObject<HTMLButtonElement | null>;
   open: boolean;
   onClose: () => void;
-  cloudActive: boolean;
-  gistPluginEnabled: boolean;
-  accountMode: string | null;
 }
 
-export function SyncDropdown({ anchorRef, open, onClose, gistPluginEnabled, accountMode }: SyncDropdownProps) {
+export function SyncDropdown({ anchorRef, open, onClose }: SyncDropdownProps) {
   const { t } = useTranslation();
   const openSettings = useUIStore((s) => s.openSettings);
-  const openCloudAuth = useUIStore((s) => s.openCloudAuth);
-  const isPro = useSubscriptionStore((s) => s.isPro);
   const panelRef = useRef<HTMLDivElement>(null);
   useClickOutside(panelRef, onClose, open);
-
-  const [voltiusState, setVoltiusState] = useState(getSyncState);
-  useEffect(() => onSyncStateChange(() => setVoltiusState(getSyncState())), []);
 
   const [gistState, setGistState] = useState<GistSyncState>(getGistSyncState);
   useEffect(() => onGistSyncStateChange(() => setGistState(getGistSyncState())), []);
 
   if (!open) return null;
 
-  const isLoggedIn = accountMode === "server";
-
-  const voltiusVariant: SectionVariant = !isLoggedIn
-    ? { kind: "locked", onSignIn: () => { onClose(); openCloudAuth("signin"); } }
-    : !isPro
-    ? { kind: "needs_upgrade", onUpgrade: () => { onClose(); openPortal(); } }
-    : { kind: "active", status: voltiusState.status, lastSync: voltiusState.lastSync, error: voltiusState.error, blobSizeBytes: voltiusState.blobSizeBytes };
-
-  const gistVariant: SectionVariant = !gistPluginEnabled
-    ? { kind: "disabled", onEnable: () => { onClose(); openSettings("plugins"); } }
-    : !gistState.configured
+  // One sync method, one state: set up or not. Whether the gist plugin's
+  // enabled flag is set is irrelevant — the app drives the engine itself.
+  const gistVariant: SectionVariant = !gistState.configured
     ? { kind: "misconfigured", onConfigure: () => { onClose(); openSettings("plugins", "plugin-gist-sync:gist-sync-settings"); } }
     : { kind: "active", status: gistState.status, lastSync: gistState.lastSync, error: gistState.error, blobSizeBytes: gistState.blobSizeBytes };
 
@@ -309,22 +244,12 @@ export function SyncDropdown({ anchorRef, open, onClose, gistPluginEnabled, acco
         </button>
       </div>
 
-      {/* Voltius Sync section */}
-      <SyncSection
-        label={t("layout.sync.voltiusSync")}
-        methodIcon="lucide:cloud"
-        variant={voltiusVariant}
-        onSyncNow={() => syncNow({ showProgress: true }).catch(() => {})}
-      />
-
-      <div style={{ height: 1, background: "var(--t-border)" }} />
-
-      {/* Gist E2EE section */}
+      {/* Encrypted Gist sync — the only personal sync method */}
       <SyncSection
         label={t("layout.sync.gistE2ee")}
         methodIcon="mdi:github"
         variant={gistVariant}
-        onSyncNow={() => gistSyncNow({ showProgress: false }).catch(() => {})}
+        onSyncNow={() => gistSyncNow({ showProgress: true }).catch(() => {})}
       />
 
       {/* Entity counts */}

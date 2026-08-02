@@ -40,12 +40,17 @@ describe("gist-sync register cleanup", () => {
     expect(offBeforeQuit).toHaveBeenCalledTimes(1);
   });
 
-  test("disabled plugin registers no quit handler", async () => {
-    const { api, onBeforeQuit } = makeApi(false);
+  test("wires the quit handler regardless of the plugin's active flag", async () => {
+    // Sync is the application's own behaviour now: core schedules a Gist sync
+    // on every local mutation whether or not this plugin is flagged active.
+    // Gating the quit-time flush on that flag left a configured install
+    // pushing on change but never flushing on exit.
+    const { api, onBeforeQuit, offBeforeQuit } = makeApi(false);
     const cleanup = register(api);
     await flush();
 
-    expect(onBeforeQuit).not.toHaveBeenCalled();
+    expect(onBeforeQuit).toHaveBeenCalledTimes(1);
     if (typeof cleanup === "function") cleanup();
+    expect(offBeforeQuit).toHaveBeenCalledTimes(1);
   });
 });

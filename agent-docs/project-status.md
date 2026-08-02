@@ -329,6 +329,28 @@ loss once Gist became the only path:
   known hosts, and the plugin registry, so those stores never refreshed after
   a pull.
 
+### Single sync surface
+
+Installed-app review of the previous package found the sync UI still describing
+the old two-engine world. Corrected:
+
+- `selectEffectiveSyncStatus` no longer ANDs Gist configuration with the gist
+  plugin's enabled flag. That flag defaults to false, so a configured, actively
+  syncing install reported "not configured" and drew a struck-through
+  `cloud-off` icon in the title bar. Sync status is now simply the engine's.
+- The sync dropdown shows one method instead of "Voltius Sync" plus "Gist
+  E2EE", and its locked, needs-upgrade, and plugin-disabled states are gone.
+  It is either configured or it is not.
+- Settings > Sync leads with encrypted Gist sync, including live status and
+  Sync now, and no longer shows the Voltius Cloud block or its upgrade prompt.
+- The gist plugin is `defaultEnabled: true`, and its poll loop and quit-time
+  flush are gated on being configured rather than on the active flag. Sync is
+  driven by the app itself, so the previous gating left a configured install
+  pushing on change but never pulling.
+- First-launch setup offers **Restore from GitHub Gist**, which creates the
+  local account and hands off straight to the Gist form. Previously the only
+  route was to choose local-only and then find the plugin's page in Settings.
+
 ### Verification completed for the current source
 
 Latest automated result:
@@ -485,8 +507,12 @@ Acceptance requirements:
 
 The known-hosts, settings, and shortcuts halves of this list were previously
 impossible to satisfy — those files were pushed but dropped on pull. That is
-fixed in code and covered by tests, but the two-profile round-trip itself has
-not been run and is still the gate for this item.
+fixed in code and covered by tests.
+
+A Gist pull onto a separate Debian VM has been verified working. The remaining
+gate is the rest of the acceptance list: ciphertext-only contents, wrong-
+passphrase rejection, deletion propagation, and no data loss syncing between a
+fresh and an existing profile.
 
 Note while testing: the encryption key is derived from the sync passphrase, or
 from the GitHub PAT when no passphrase is set. Two profiles that disagree about
@@ -495,16 +521,15 @@ other's blobs, which is expected rather than a defect.
 
 ### 3. Remove the Legacy Voltius Cloud sign-in, account, and billing UI
 
-The paid personal sync is gone from the engine, but its surfaces remain:
+The sync surfaces have been collapsed to one method (see **Single sync surface**
+above). What remains of this item:
 
 - `CloudAuthModal` still offers cloud register/sign-in;
 - `AccountSection` still shows plan and billing state;
-- `SyncDropdown` and `SyncSection` still present "Voltius Sync" and "Gist Sync"
-  as two separate methods when they are now the same single path;
-- `SplashScreen` still starts the team stream in server mode.
+- `SplashScreen` still starts the team stream in server mode;
+- the setup screen still offers **Legacy Voltius Cloud** as a third option.
 
-Collapse these to a single sync surface backed by Gist sync and drop the
-billing/plan UI. Team/multiplayer code stays in the tree but dormant.
+Team/multiplayer code stays in the tree but dormant.
 
 ### 4. Final regression and cleanup
 

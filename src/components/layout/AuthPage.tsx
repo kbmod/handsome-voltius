@@ -8,6 +8,7 @@ import {
   login,
 } from "@/services/account";
 import { useNotificationStore } from "@/stores/notificationStore";
+import { requestGistSetup } from "@/services/gistSetupHandoff";
 
 
 type View = "home" | "cloud";
@@ -111,6 +112,25 @@ export default function AuthPage({ isLocked, onReady }: Props) {
           <span className="text-xs text-(--t-text-dim)">{t("layout.auth.or")}</span>
           <div className="flex-1 h-px bg-(--t-border)" />
         </div>
+
+        <ActionButton
+          icon="mdi:github"
+          label={t("layout.auth.restoreFromGist")}
+          sub={t("layout.auth.restoreFromGistSub")}
+          loading={loading}
+          onClick={() =>
+            wrap(async () => {
+              // The Gist setup form writes the PAT into the vault, so a local
+              // account has to exist first. Creating it here means the user
+              // reaches the Gist form directly instead of having to discover
+              // it in Settings after choosing local-only.
+              await createLocalAccountNoPassword();
+              requestGistSetup();
+            })
+          }
+        />
+
+        <div className="mt-2" />
 
         <ActionButton
           icon="lucide:cloud"

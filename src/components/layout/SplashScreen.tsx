@@ -12,6 +12,8 @@ import { autoLogin, consumeForceLockFlag, isServerMode } from "@/services/accoun
 import { saveCurrentAccount } from "@/services/savedAccounts";
 import { startRealtimeSync } from "@/services/sync";
 import { loadPlugin } from "@/plugins/runtime";
+import { useUIStore } from "@/stores/uiStore";
+import { consumeGistSetupRequest } from "@/services/gistSetupHandoff";
 import { BUNDLED_PLUGINS } from "@/plugins/bundled";
 import { loadInstalledPlugins } from "@/stores/marketplaceStore";
 import { usePluginRegistryStore } from "@/stores/pluginRegistryStore";
@@ -133,6 +135,13 @@ export default function SplashScreen({ onReady }: Props) {
     setExiting(true);
     await delay(400);
     onReady();
+
+    // Setup offered "Restore from GitHub Gist", which could only create the
+    // local account. Now that the gist plugin has registered its settings
+    // page, take the user straight to the Gist form.
+    if (consumeGistSetupRequest()) {
+      useUIStore.getState().openSettings("plugins", "plugin-gist-sync:gist-sync-settings");
+    }
   };
 
   const handleAuthReady = async () => {

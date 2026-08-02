@@ -1,17 +1,41 @@
-import { selectEffectiveSyncStatus } from "./syncStatus.ts";
-import { test } from "vitest";
+import { describe, expect, test } from "vitest";
+import { selectEffectiveSyncStatus } from "./syncStatus";
 
-test("syncStatus", async () => {
-function eq<T>(a: T, e: T, m: string) { if (JSON.stringify(a) !== JSON.stringify(e)) { console.error(`FAIL ${m}: expected ${JSON.stringify(e)}, got ${JSON.stringify(a)}`); throw new Error(m); } console.log(`PASS ${m}`); }
+const gist = {
+  status: "error" as const,
+  lastSync: null,
+  error: "boom",
+  configured: true,
+};
 
-const V = { status: "success" as const, lastSync: null, error: null };
-const G = { status: "error" as const, lastSync: null, error: "boom", configured: true };
+describe("selectEffectiveSyncStatus", () => {
+  test("surfaces the Gist engine's own state", () => {
+    expect(selectEffectiveSyncStatus({ gist })).toEqual({
+      configured: true,
+      status: "error",
+      lastSync: null,
+      error: "boom",
+    });
+  });
 
-// Pro server account → Voltius engine wins regardless of gist.
-eq(selectEffectiveSyncStatus({ voltius: V, gist: G, accountMode: "server", isPro: true, gistPluginEnabled: true }).status, "success", "server+pro shows voltius");
-// No server account but gist configured → gist engine.
-eq(selectEffectiveSyncStatus({ voltius: V, gist: G, accountMode: "local", isPro: false, gistPluginEnabled: true }).status, "error", "gist-only shows gist");
-eq(selectEffectiveSyncStatus({ voltius: V, gist: G, accountMode: "local", isPro: false, gistPluginEnabled: true }).configured, true, "gist configured");
-// Nothing configured → not configured, falls back to voltius state.
-eq(selectEffectiveSyncStatus({ voltius: V, gist: { ...G, configured: false }, accountMode: "local", isPro: false, gistPluginEnabled: false }).configured, false, "nothing configured");
+  test("reports not configured only when the engine has no Gist set up", () => {
+    expect(selectEffectiveSyncStatus({ gist: { ...gist, configured: false } }).configured).toBe(
+      false,
+    );
+  });
+
+  test("a configured install stays configured regardless of plugin enablement", () => {
+    // Regression: the indicator used to AND this with the gist plugin's
+    // enabled flag, so a configured, actively syncing install rendered a
+    // struck-through cloud icon and "not configured".
+    const lastSync = new Date("2026-08-01T12:00:00.000Z");
+    const synced = { status: "success" as const, lastSync, error: null, configured: true };
+
+    expect(selectEffectiveSyncStatus({ gist: synced })).toEqual({
+      configured: true,
+      status: "success",
+      lastSync,
+      error: null,
+    });
+  });
 });

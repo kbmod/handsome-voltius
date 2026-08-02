@@ -20,6 +20,8 @@
       "or": "or",
       "cloudAccount": "Legacy Voltius Cloud",
       "cloudAccountSub": "Optional upstream cloud service; Gist sync does not require it",
+      "restoreFromGist": "Restore from GitHub Gist",
+      "restoreFromGistSub": "Set up encrypted Gist sync now and pull your existing data",
       "back": "Back",
       "signupPrompt": "Create an account to sync across devices",
       "signinPrompt": "Sign in to restore your synced data",

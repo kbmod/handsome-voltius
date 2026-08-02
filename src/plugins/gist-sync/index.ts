@@ -28,7 +28,12 @@ export const manifest: PluginManifest = {
     "notifications",
     "settings-page",
   ],
-  defaultEnabled: false,
+  // Gist sync is the application's only personal sync path, not an optional
+  // extra: the app itself calls into this engine on every local mutation. It
+  // stays a plugin for packaging reasons only, so it must be enabled by
+  // default — otherwise a configured install syncs while its own UI reports
+  // the sync method as disabled.
+  defaultEnabled: true,
 };
 
 // ─── Register ─────────────────────────────────────────────────────────────────
@@ -44,25 +49,25 @@ export const register: PluginRegisterFn = (api: PluginAPI) => {
     component: createSettingsPage(api),
   });
 
-  // Functional hooks only when the plugin is enabled
-  let offBeforeQuit: (() => void) | null = null;
-  if (api.isActive()) {
-    (async () => {
-      if (!(await isConfigured())) return;
-      await syncNow();
-      const interval = (await api.storage.get<number>("pollIntervalSeconds")) ?? 60;
-      startPoll(interval);
-    })();
+  // Being configured is the only gate. The app drives this engine directly on
+  // local mutations regardless of the plugin's active flag, so gating the poll
+  // loop and the quit-time flush on that flag would leave a configured install
+  // pushing on change but never pulling.
+  (async () => {
+    if (!(await isConfigured())) return;
+    await syncNow();
+    const interval = (await api.storage.get<number>("pollIntervalSeconds")) ?? 60;
+    startPoll(interval);
+  })();
 
-    offBeforeQuit = api.lifecycle.onBeforeQuit(async () => {
-      if (await isConfigured()) await push().catch(() => {});
-    });
-  }
+  const offBeforeQuit = api.lifecycle.onBeforeQuit(async () => {
+    if (await isConfigured()) await push().catch(() => {});
+  });
 
   return () => {
     stopPoll();
-    // Drop the quit-time push handler too, otherwise a disabled plugin would
+    // Drop the quit-time push handler too, otherwise an unloaded plugin would
     // still sync on app exit.
-    offBeforeQuit?.();
+    offBeforeQuit();
   };
 };

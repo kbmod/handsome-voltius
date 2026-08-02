@@ -6,7 +6,7 @@ import { useUIStore } from "@/stores/uiStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { useThemeStore } from "@/stores/themeStore";
 import { getConnectionIcon, getConnectionIconColor } from "@/utils/icons";
-import { getSyncState, onSyncStateChange, type SyncStatus } from "@/services/sync";
+import { type SyncStatus } from "@/services/sync";
 import { selectEffectiveSyncStatus } from "@/services/syncStatus";
 import { getGistSyncState, onGistSyncStateChange } from "@/plugins/gist-sync/sync-engine";
 import { useRipple } from "@/hooks/useRipple";
@@ -15,7 +15,6 @@ import { ShareMenu } from "@/components/terminal/ShareMenu";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { usePfToastBridge } from "@/hooks/usePfToastBridge";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
-import { usePluginRegistryStore } from "@/stores/pluginRegistryStore";
 import { SyncDropdown } from "@/components/layout/SyncDropdown";
 import { useDragStore } from "@/stores/dragStore";
 import { findLeaf, firstLeaf, getPaneSessionIds, useLayoutStore } from "@/stores/layoutStore";
@@ -66,22 +65,17 @@ export default function TitleBar() {
 
   usePfToastBridge();
 
-  const [syncState, setSyncState] = useState(getSyncState);
-  useEffect(() => { return onSyncStateChange(() => setSyncState(getSyncState())); }, []);
-
   const [gistSyncState, setGistSyncState] = useState(getGistSyncState);
   useEffect(() => { return onGistSyncStateChange(() => setGistSyncState(getGistSyncState())); }, []);
 
-  const gistPluginEnabled = usePluginRegistryStore((s) => s.isEnabled("plugin-gist-sync", false));
   const accountMode = useSubscriptionStore((s) => s.accountMode);
-  const isPro = useSubscriptionStore((s) => s.isPro);
 
   const {
     configured: effectiveConfigured,
     status: effectiveSyncStatus,
     lastSync: effectiveLastSync,
     error: effectiveError,
-  } = selectEffectiveSyncStatus({ voltius: syncState, gist: gistSyncState, accountMode, isPro, gistPluginEnabled });
+  } = selectEffectiveSyncStatus({ gist: gistSyncState });
 
   const [syncDropdownOpen, setSyncDropdownOpen] = useState(false);
   const syncButtonRef = useRef<HTMLButtonElement>(null);
@@ -594,9 +588,6 @@ export default function TitleBar() {
         anchorRef={syncButtonRef}
         open={syncDropdownOpen}
         onClose={() => setSyncDropdownOpen(false)}
-        cloudActive={syncState.cloudActive}
-        gistPluginEnabled={gistPluginEnabled}
-        accountMode={accountMode}
       />
 
       {/* Watching / Ended badge — guest in a multiplayer session */}

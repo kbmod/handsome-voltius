@@ -1,6 +1,6 @@
-/** Pure selection of the "effective" sync status from the Voltius (server) and
- *  Gist sync engines + plan/plugin state. No React/stores — node-testable. Shared
- *  by the desktop TitleBar and the mobile header so the two can't drift. */
+/** Pure selection of the "effective" sync status from the Gist sync engine.
+ *  No React/stores — node-testable. Shared by the desktop TitleBar and the
+ *  mobile header so the two can't drift. */
 import type { SyncStatus } from "./sync";
 
 interface SyncStateLike {
@@ -10,31 +10,30 @@ interface SyncStateLike {
 }
 
 export interface EffectiveSync {
-  /** Either sync engine is set up. */
+  /** Gist sync is set up: a PAT plus at least one registered Gist. */
   configured: boolean;
-  /** True when the Voltius (server) engine is the one being surfaced. */
-  showVoltius: boolean;
   status: SyncStatus;
   lastSync: Date | null;
   error: string | null;
 }
 
+/**
+ * Personal sync is encrypted GitHub Gist sync and nothing else, so the surfaced
+ * status is simply the engine's own.
+ *
+ * This deliberately does not consult the gist plugin's enabled flag. Sync is
+ * driven by the app itself now, so an install can be syncing perfectly well
+ * while that flag is false — keying the indicator off it reported "not
+ * configured" (and a struck-through cloud icon) on a working install.
+ */
 export function selectEffectiveSyncStatus(i: {
-  voltius: SyncStateLike;
   gist: SyncStateLike & { configured: boolean };
-  accountMode: string | null;
-  isPro: boolean;
-  gistPluginEnabled: boolean;
 }): EffectiveSync {
-  const voltiusConfigured = i.accountMode === "server" && i.isPro;
-  const gistConfigured = i.gistPluginEnabled && i.gist.configured;
-  const showVoltius = voltiusConfigured || !gistConfigured;
   return {
-    configured: voltiusConfigured || gistConfigured,
-    showVoltius,
-    status: showVoltius ? i.voltius.status : i.gist.status,
-    lastSync: showVoltius ? i.voltius.lastSync : i.gist.lastSync,
-    error: showVoltius ? i.voltius.error : i.gist.error,
+    configured: i.gist.configured,
+    status: i.gist.status,
+    lastSync: i.gist.lastSync,
+    error: i.gist.error,
   };
 }
 
