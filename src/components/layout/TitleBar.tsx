@@ -16,6 +16,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { usePfToastBridge } from "@/hooks/usePfToastBridge";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { SyncDropdown } from "@/components/layout/SyncDropdown";
+import { shouldStartWindowDrag } from "@/components/layout/titleBarDrag";
 import { useDragStore } from "@/stores/dragStore";
 import { findLeaf, firstLeaf, getPaneSessionIds, useLayoutStore } from "@/stores/layoutStore";
 import { shouldSuppressDragClick } from "@/components/panes/usePaneDragController";
@@ -253,8 +254,7 @@ export default function TitleBar() {
   };
 
   const handleDragRegionMouseDown = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (!target.closest('button, a, input, [role="button"]')) {
+    if (shouldStartWindowDrag(e.target as HTMLElement, e.button)) {
       appWindow.startDragging();
     }
   };
@@ -623,7 +623,7 @@ export default function TitleBar() {
 
       {/* Share button — only in terminal view for non-multiplayer sessions */}
       {showTerminal && !isActiveSessionMultiplayer && (
-        <div className="flex items-center px-1 shrink-0">
+        <div className="flex items-center px-1 shrink-0" data-no-drag>
           <button
             ref={shareButtonRef}
             onClick={() => setShareDropdownOpen((o) => !o)}
@@ -678,7 +678,7 @@ export default function TitleBar() {
 
       {/* Right panel toggle — only in terminal view */}
       {showTerminal && (
-        <div className="flex items-center px-2 shrink-0">
+        <div className="flex items-center px-2 shrink-0" data-no-drag>
           <button
             onClick={() => toggleRightPanel()}
             className="p-1.5 rounded-md transition-all"
@@ -699,7 +699,7 @@ export default function TitleBar() {
       <NotificationBell />
 
       {/* Window controls */}
-      <div className="flex items-center gap-0.5 px-2 shrink-0">
+      <div className="flex items-center gap-0.5 px-2 shrink-0" data-no-drag>
         <TitleBarBtn onClick={() => appWindow.minimize()} title={t("layout.titleBar.minimize")}>
           <Icon icon="lucide:minus" width={16} />
         </TitleBarBtn>
