@@ -17,6 +17,8 @@ import {
   getExportDestinationIds,
   setImportSource,
   setExportDestinations,
+  getUnreachableGistIds,
+  onGistSyncStateChange,
   type GistRegistration,
 } from "./sync-engine";
 import { getManifest, listVoltiusGists, GistApiError, type GistDevice, type GistManifest } from "./gist-api";
@@ -172,6 +174,7 @@ function RolePill({
 
 function GistRow({
   gist,
+  isMissing,
   isImportSource,
   isExportDest,
   isConfirmingDelete,
@@ -185,6 +188,7 @@ function GistRow({
   onDeleteCancel,
 }: {
   gist: GistRegistration;
+  isMissing: boolean;
   isImportSource: boolean;
   isExportDest: boolean;
   isConfirmingDelete: boolean;
@@ -211,7 +215,12 @@ function GistRow({
     return (
       <div className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border border-(--t-status-error) bg-[color-mix(in_srgb,var(--t-status-error)_6%,transparent)]">
         <span className="text-xs text-(--t-status-error)">
-          Permanently delete <span className="font-mono">{shortId}</span> from GitHub?
+          {/* Already gone from GitHub, so promising to delete it there would misdescribe what happens. */}
+          {isMissing ? (
+            <>Remove <span className="font-mono">{shortId}</span>? It no longer exists on GitHub.</>
+          ) : (
+            <>Permanently delete <span className="font-mono">{shortId}</span> from GitHub?</>
+          )}
         </span>
         <div className="flex gap-1.5 shrink-0">
           <Btn variant="secondary" small onClick={onDeleteCancel} disabled={isDeleting}>
@@ -221,9 +230,9 @@ function GistRow({
             {isDeleting ? (
               <span className="flex items-center gap-1">
                 <Icon icon="lucide:loader-circle" width={11} className="animate-spin" />
-                Deleting…
+                {isMissing ? "Removing…" : "Deleting…"}
               </span>
-            ) : "Delete"}
+            ) : isMissing ? "Remove" : "Delete"}
           </Btn>
         </div>
       </div>
@@ -231,11 +240,29 @@ function GistRow({
   }
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-(--t-border) bg-(--t-bg-base) hover:border-(--t-border-hover) group transition-colors">
+    <div
+      className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-(--t-bg-base) hover:border-(--t-border-hover) group transition-colors"
+      style={{
+        borderColor: isMissing ? "var(--t-status-error)" : "var(--t-border)",
+      }}
+    >
       {/* Gist ID + link */}
       <div className="flex items-center gap-1.5 flex-1 min-w-0">
         <Icon icon="mdi:github" width={13} className="shrink-0 text-(--t-text-dim)" />
         <span className="text-sm font-mono text-(--t-text-primary)">{shortId}</span>
+        {isMissing && (
+          <span
+            className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium shrink-0"
+            style={{
+              color: "var(--t-status-error)",
+              background: "color-mix(in srgb, var(--t-status-error) 12%, transparent)",
+            }}
+            title="This gist no longer exists on GitHub. Remove it to stop sync failing on it."
+          >
+            <Icon icon="lucide:circle-alert" width={10} />
+            No longer exists
+          </span>
+        )}
         <a
           href={url}
           target="_blank"
@@ -267,8 +294,8 @@ function GistRow({
         />
       </div>
 
-      {/* Actions — visible on hover */}
-      <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Actions — always visible: removing a dead gist must be discoverable */}
+      <div className="flex gap-1 shrink-0">
         <button
           type="button"
           onClick={handleCopyLink}
@@ -280,7 +307,7 @@ function GistRow({
         <button
           type="button"
           onClick={onUnlink}
-          title="Unlink (keep gist on GitHub)"
+          title="Remove from Handsome Voltius (keeps the gist on GitHub)"
           className="p-1 rounded-sm text-(--t-text-dim) hover:text-(--t-text-muted) hover:bg-(--t-bg-hover) transition-colors cursor-pointer"
         >
           <Icon icon="lucide:unlink" width={13} />
@@ -288,7 +315,7 @@ function GistRow({
         <button
           type="button"
           onClick={onDeleteRequest}
-          title="Delete gist from GitHub"
+          title={isMissing ? "Remove this gist — it no longer exists on GitHub" : "Delete gist from GitHub"}
           className="p-1 rounded-sm text-(--t-text-dim) hover:text-(--t-status-error) hover:bg-[color-mix(in_srgb,var(--t-status-error)_8%,transparent)] transition-colors cursor-pointer"
         >
           <Icon icon="lucide:trash-2" width={13} />
@@ -306,6 +333,9 @@ export function createSettingsPage(api: PluginAPI): React.FC {
     const [pat, setPat] = useState("");
     const [passphrase, setPassphrase] = useState("");
     const [showChangePassphrase, setShowChangePassphrase] = useState(false);
+    // Gists that sync found no longer exist, so the row can say so and offer
+    // removal instead of leaving the user to guess why sync keeps failing.
+    const [unreachableIds, setUnreachableIds] = useState<string[]>(getUnreachableGistIds);
 
     // Gists
     const [gists, setGists] = useState<GistRegistration[]>([]);
@@ -333,6 +363,13 @@ export function createSettingsPage(api: PluginAPI): React.FC {
     const [sourceManifest, setSourceManifest] = useState<GistManifest | null>(null);
 
     const loadedRef = useRef(false);
+
+    // Sync discovers a deleted gist, so track engine state rather than probing
+    // GitHub from the settings page.
+    useEffect(
+      () => onGistSyncStateChange(() => setUnreachableIds(getUnreachableGistIds())),
+      [],
+    );
 
     // ─── Autosave ──────────────────────────────────────────────────────────────
 
@@ -702,6 +739,7 @@ export function createSettingsPage(api: PluginAPI): React.FC {
                 <GistRow
                   key={gist.id}
                   gist={gist}
+                  isMissing={unreachableIds.includes(gist.id)}
                   isImportSource={importSourceId === gist.id}
                   isExportDest={exportDestIds.includes(gist.id)}
                   isLastExport={exportDestIds.length === 1 && exportDestIds[0] === gist.id}

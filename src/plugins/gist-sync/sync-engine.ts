@@ -70,6 +70,41 @@ let _consecutiveFailures = 0;
 let _failureBannerId: { dismiss(): void } | null = null;
 // deviceId → last known pushedAt (change detection for pull)
 const _lastSeenPushedAt: Record<string, string> = {};
+/**
+ * Registered Gists that were found to no longer exist.
+ *
+ * Surfaced so the settings page can name them and offer removal. They are not
+ * unlinked automatically: GitHub answers 404 both for a deleted Gist and for
+ * one the token can no longer see, and silently discarding a user's
+ * configuration over a scope change would be worse than leaving it visible.
+ */
+let _unreachableGistIds: string[] = [];
+
+export function getUnreachableGistIds(): string[] {
+  return _unreachableGistIds;
+}
+
+/**
+ * Record what a sync attempt learned about which Gists still exist.
+ *
+ * Only Gists the attempt actually settled are re-judged. Push and pull touch
+ * different sets — export destinations versus the import source — so judging
+ * anything else would let a successful push erase a dead import source that
+ * pull had just found, and the warning would vanish while sync stayed broken.
+ * Inconclusive failures (a timeout, a 500) belong in neither list: they are no
+ * evidence either way, and treating them as proof of existence would clear a
+ * warning that is still true.
+ */
+function markGistReachability(reachable: string[], missing: string[]): void {
+  const next = _unreachableGistIds.filter((id) => !reachable.includes(id));
+  for (const id of missing) if (!next.includes(id)) next.push(id);
+
+  const changed =
+    next.length !== _unreachableGistIds.length || next.some((id, i) => id !== _unreachableGistIds[i]);
+  if (!changed) return;
+  _unreachableGistIds = next;
+  _gistListeners.forEach((fn) => fn());
+}
 
 export function init(api: PluginAPI) {
   _api = api;
@@ -386,7 +421,14 @@ export async function unlinkGist(gistId: string): Promise<void> {
 }
 
 export async function deleteGist(pat: string, gistId: string): Promise<void> {
-  await deleteGistById(pat, gistId);
+  try {
+    await deleteGistById(pat, gistId);
+  } catch (e) {
+    // A Gist someone else already deleted answers 404. The intent — stop using
+    // it — is still satisfiable, and refusing here used to strand the entry:
+    // Delete failed because the Gist was gone, so it could never be removed.
+    if (!(e instanceof GistApiError) || e.status !== 404) throw e;
+  }
   await unlinkGist(gistId);
 }
 
@@ -422,7 +464,7 @@ export async function push(options: { reencrypt?: boolean } = {}): Promise<void>
 
   let firstBlobSize: number | null = null;
 
-  await Promise.all(
+  const results = await Promise.allSettled(
     exportIds.map(async (gistId) => {
       const manifest = await getManifest(pat, gistId);
       const encKey = await getEncKey(manifest.salt);
@@ -457,15 +499,76 @@ export async function push(options: { reencrypt?: boolean } = {}): Promise<void>
     }),
   );
 
+  // One dead destination must not stop the live ones. A Gist deleted by
+  // another user answers 404 forever, and failing the whole push on it left
+  // sync permanently broken with no way to make progress.
+  const failures = results.flatMap((r, i) =>
+    r.status === "rejected" ? [{ gistId: exportIds[i], reason: r.reason as unknown }] : [],
+  );
+
+  // Record what this attempt proved before deciding whether it failed: with a
+  // single destination the push does throw, and that 404 is exactly the fact
+  // the settings page needs to explain why.
+  markGistReachability(
+    exportIds.filter((id) => !failures.some((f) => f.gistId === id)),
+    failures
+      .filter((f) => f.reason instanceof GistApiError && f.reason.status === 404)
+      .map((f) => f.gistId),
+  );
+
+  if (failures.length === exportIds.length) throw failures[0].reason;
+
   if (firstBlobSize !== null) _gistBlobSizeBytes = firstBlobSize;
   _lastSeenPushedAt[deviceId] = now;
 }
 
 // ─── Pull — reads from import source only ────────────────────────────────────
 
+/**
+ * The Gist to read from, moving off one that no longer exists.
+ *
+ * When another user deletes the shared Gist, this device keeps it as its import
+ * source and every sync fails on it — including the pushes that would otherwise
+ * have succeeded. Linking a replacement did not help, because the import source
+ * only auto-populates when unset. Repoint to a registered Gist that is actually
+ * reachable, so adding the new one is enough to recover.
+ *
+ * Only the pointer moves; nothing is unlinked or deleted, and the unreachable
+ * id is reported so the settings page can offer to remove it.
+ */
+async function resolveImportSource(pat: string, current: string): Promise<string | null> {
+  try {
+    await getManifest(pat, current);
+    markGistReachability([current], []);
+    return current;
+  } catch (e) {
+    if (!(e instanceof GistApiError) || e.status !== 404) throw e;
+  }
+
+  const candidates = (await getRegisteredGists()).map((g) => g.id).filter((id) => id !== current);
+  for (const candidate of candidates) {
+    try {
+      await getManifest(pat, candidate);
+    } catch {
+      continue;
+    }
+    await setImportSource(candidate);
+    markGistReachability([current, candidate], [current]);
+    return candidate;
+  }
+
+  // Nothing else to read from — report the missing Gist rather than pretending
+  // the pull simply had nothing to do.
+  markGistReachability([current], [current]);
+  throw new GistApiError(404, `Sync Gist ${current} no longer exists`);
+}
+
 export async function pull(): Promise<boolean> {
-  const [pat, importSourceId] = await Promise.all([getPat(), getImportSourceId()]);
-  if (!pat || !importSourceId) return false;
+  const [pat, initialSourceId] = await Promise.all([getPat(), getImportSourceId()]);
+  if (!pat || !initialSourceId) return false;
+
+  const importSourceId = await resolveImportSource(pat, initialSourceId);
+  if (!importSourceId) return false;
 
   const deviceId = await getDeviceId();
   const manifest = await getManifest(pat, importSourceId);

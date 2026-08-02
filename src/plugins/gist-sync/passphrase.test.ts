@@ -14,22 +14,31 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: (...a: unknown[]) => invoke(...
 const getManifest = vi.fn();
 const getDeviceBlobs = vi.fn();
 const patchFiles = vi.fn();
+const deleteGistById = vi.fn();
 vi.mock("./gist-api", () => ({
   createGist: vi.fn(),
   getManifest: (...a: unknown[]) => getManifest(...a),
   getDeviceBlobs: (...a: unknown[]) => getDeviceBlobs(...a),
   patchFiles: (...a: unknown[]) => patchFiles(...a),
   deleteDeviceFile: vi.fn(),
-  deleteGistById: vi.fn(),
-  GistApiError: class GistApiError extends Error {},
+  deleteGistById: (...a: unknown[]) => deleteGistById(...a),
+  GistApiError: class GistApiError extends Error {
+    constructor(public status: number, message: string) {
+      super(message);
+      this.name = "GistApiError";
+    }
+  },
 }));
 
+import { GistApiError } from "./gist-api";
 import {
   init,
   push,
   pull,
   verifyPassphrase,
   changePassphrase,
+  deleteGist,
+  getUnreachableGistIds,
   GistPassphraseError,
   GistCurrentPassphraseError,
 } from "./sync-engine";
@@ -240,5 +249,123 @@ describe("pull tolerance", () => {
     init(makeApi());
 
     await expect(pull()).rejects.toBeInstanceOf(GistPassphraseError);
+  });
+});
+
+describe("a gist deleted by someone else", () => {
+  // Must be the mock's class, so the engine's `instanceof` checks match.
+  const ApiError = GistApiError as unknown as new (s: number, m: string) => Error;
+
+  test("delete still removes it locally when GitHub says it is already gone", async () => {
+    // The only obvious action on a dead gist was Delete, which failed on 404
+    // and never unlinked — stranding the entry with no way to remove it.
+    const api = makeApi();
+    init(api);
+    deleteGistById.mockRejectedValue(new ApiError(404, "Not Found"));
+
+    await deleteGist("ghp_test", "gist-1");
+
+    expect(api.storage.set).toHaveBeenCalledWith("registeredGists", []);
+  });
+
+  test("a non-404 delete failure still propagates", async () => {
+    init(makeApi());
+    deleteGistById.mockRejectedValue(new ApiError(500, "Server Error"));
+
+    await expect(deleteGist("ghp_test", "gist-1")).rejects.toThrow("Server Error");
+  });
+
+  test("one dead export destination does not block a live one", async () => {
+    stubInvoke({ decrypts: true });
+    const api = makeApi();
+    api.storage.get = vi.fn(async (k: string) => {
+      if (k === "registeredGists") return [{ id: "dead", addedAt: "" }, { id: "live", addedAt: "" }];
+      if (k === "exportDestinationIds") return ["dead", "live"];
+      if (k === "importSourceId") return "live";
+      if (k === "deviceId") return "this-device";
+      return null;
+    }) as never;
+    init(api);
+    getManifest.mockImplementation(async (_pat: string, id: string) => {
+      if (id === "dead") throw new ApiError(404, "Not Found");
+      return MANIFEST;
+    });
+
+    await push();
+
+    expect(patchFiles).toHaveBeenCalledTimes(1);
+    expect(getUnreachableGistIds()).toContain("dead");
+  });
+
+  test("pull moves off an import source that no longer exists", async () => {
+    // Linking a replacement used to change nothing, because the import source
+    // only auto-populates when unset — so sync kept failing on the dead gist.
+    stubInvoke({ decrypts: true });
+    const api = makeApi();
+    api.storage.get = vi.fn(async (k: string) => {
+      if (k === "registeredGists") return [{ id: "dead", addedAt: "" }, { id: "fresh", addedAt: "" }];
+      if (k === "exportDestinationIds") return ["fresh"];
+      if (k === "importSourceId") return "dead";
+      if (k === "deviceId") return "this-device";
+      return null;
+    }) as never;
+    init(api);
+    getManifest.mockImplementation(async (_pat: string, id: string) => {
+      if (id === "dead") throw new ApiError(404, "Not Found");
+      return MANIFEST;
+    });
+
+    await pull();
+
+    expect(api.storage.set).toHaveBeenCalledWith("importSourceId", "fresh");
+    expect(getUnreachableGistIds()).toContain("dead");
+  });
+
+  test("a later successful push keeps the warning about a dead import source", async () => {
+    // Push and pull touch different gists, so push must only re-judge its own
+    // export destinations — otherwise it clears the dead import source pull
+    // just found and the warning disappears while sync is still broken.
+    stubInvoke({ decrypts: true });
+    const api = makeApi();
+    api.storage.get = vi.fn(async (k: string) => {
+      if (k === "registeredGists") return [{ id: "gone-source", addedAt: "" }, { id: "live-dest", addedAt: "" }];
+      if (k === "exportDestinationIds") return ["live-dest"];
+      if (k === "importSourceId") return "gone-source";
+      if (k === "deviceId") return "this-device";
+      return null;
+    }) as never;
+    init(api);
+    getManifest.mockImplementation(async (_pat: string, id: string) => {
+      if (id === "gone-source") throw new ApiError(404, "Not Found");
+      return MANIFEST;
+    });
+
+    await pull();
+    await push();
+
+    expect(patchFiles).toHaveBeenCalledTimes(1);
+    expect(getUnreachableGistIds()).toContain("gone-source");
+  });
+
+  test("a gist that comes back drops its warning", async () => {
+    stubInvoke({ decrypts: true });
+    const api = makeApi();
+    api.storage.get = vi.fn(async (k: string) => {
+      if (k === "registeredGists") return [{ id: "flaky", addedAt: "" }];
+      if (k === "exportDestinationIds") return ["flaky"];
+      if (k === "importSourceId") return "flaky";
+      if (k === "deviceId") return "this-device";
+      return null;
+    }) as never;
+    init(api);
+    getManifest.mockRejectedValueOnce(new ApiError(404, "Not Found"));
+
+    await expect(push()).rejects.toThrow("Not Found");
+    expect(getUnreachableGistIds()).toContain("flaky");
+
+    getManifest.mockResolvedValue(MANIFEST);
+    await push();
+
+    expect(getUnreachableGistIds()).not.toContain("flaky");
   });
 });
