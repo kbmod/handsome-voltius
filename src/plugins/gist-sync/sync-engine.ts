@@ -178,6 +178,82 @@ async function getEncKey(salt: string): Promise<string> {
   return invoke<string>("derive_gist_key", { passphrase: secret, saltHex: salt });
 }
 
+// ─── Passphrase verification ─────────────────────────────────────────────────
+
+/**
+ * The configured passphrase cannot read what is already in the Gist.
+ *
+ * Uploading anyway would overwrite this device's blob with ciphertext no other
+ * device can decrypt, so a push that raises this must not have written.
+ */
+export class GistPassphraseError extends Error {
+  constructor() {
+    super(
+      "Sync passphrase does not match this Gist. Nothing was uploaded — enter the " +
+        "original passphrase, or re-encrypt the Gist to adopt the new one.",
+    );
+    this.name = "GistPassphraseError";
+  }
+}
+
+function hexToBytes(hex: string): number[] {
+  return Array.from(new Uint8Array(hex.match(/.{2}/g)!.map((b) => parseInt(b, 16))));
+}
+
+async function canDecrypt(encKeyHex: string, blobB64: string): Promise<boolean> {
+  try {
+    const blob = Array.from(Uint8Array.from(atob(blobB64), (c) => c.charCodeAt(0)));
+    await invoke("backup_decrypt", { encKey: hexToBytes(encKeyHex), blob });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether `encKey` can read any blob already in this Gist.
+ *
+ * `null` means "nothing to check against" — an empty Gist accepts any
+ * passphrase because there is no existing ciphertext to contradict it.
+ *
+ * The blobs are XChaCha20-Poly1305 AEAD, so a successful decrypt authenticates
+ * the key; no separate verifier token has to be stored in the manifest.
+ */
+async function keyReadsGist(
+  pat: string,
+  gistId: string,
+  manifest: GistManifest,
+  encKey: string,
+): Promise<boolean | null> {
+  const deviceIds = manifest.devices.map((d) => d.id);
+  if (deviceIds.length === 0) return null;
+
+  const blobs = await getDeviceBlobs(pat, gistId, deviceIds);
+  if (blobs.length === 0) return null;
+
+  for (const blob of blobs) {
+    if (await canDecrypt(encKey, blob)) return true;
+  }
+  return false;
+}
+
+/**
+ * Check the configured passphrase against a registered Gist without syncing.
+ *
+ * Returns "ok" when it decrypts existing data, "empty" when the Gist has no
+ * blobs to verify against, and "mismatch" when the data is unreadable.
+ */
+export async function verifyPassphrase(
+  gistId: string,
+): Promise<"ok" | "empty" | "mismatch"> {
+  const pat = await getPat();
+  if (!pat) throw new Error("Gist sync is not configured");
+  const manifest = await getManifest(pat, gistId);
+  const encKey = await getEncKey(manifest.salt);
+  const verdict = await keyReadsGist(pat, gistId, manifest, encKey);
+  return verdict === null ? "empty" : verdict ? "ok" : "mismatch";
+}
+
 // ─── Setup ────────────────────────────────────────────────────────────────────
 
 export async function setupNewGist(pat: string): Promise<{ id: string; url: string }> {
@@ -266,7 +342,15 @@ export async function removeDevice(pat: string, gistId: string, deviceId: string
 
 // ─── Push — writes to all export destinations ─────────────────────────────────
 
-export async function push(): Promise<void> {
+/**
+ * Upload local state to every export destination.
+ *
+ * With `reencrypt`, an unreadable Gist is adopted rather than refused: local
+ * state becomes the source of truth and is re-uploaded under the current
+ * passphrase. Only use that for a deliberate passphrase change — other devices'
+ * blobs stay behind encrypted under the old key until they push again.
+ */
+export async function push(options: { reencrypt?: boolean } = {}): Promise<void> {
   const [pat, exportIds] = await Promise.all([getPat(), getExportDestinationIds()]);
   if (!pat || exportIds.length === 0) return;
 
@@ -280,6 +364,17 @@ export async function push(): Promise<void> {
     exportIds.map(async (gistId) => {
       const manifest = await getManifest(pat, gistId);
       const encKey = await getEncKey(manifest.salt);
+
+      // Refuse to overwrite readable data with ciphertext derived from a
+      // passphrase that cannot read it. Without this a wrong passphrase was
+      // silently accepted: pull short-circuits when no remote device changed,
+      // so nothing ever attempted a decrypt, and the push reported success
+      // while leaving the Gist unreadable to every other device.
+      if (!options.reencrypt) {
+        const readable = await keyReadsGist(pat, gistId, manifest, encKey);
+        if (readable === false) throw new GistPassphraseError();
+      }
+
       const blob = await requireApi().sync.exportState(encKey, deviceId);
 
       // Track size from any one export (content is the same, only key differs)
@@ -323,6 +418,10 @@ export async function pull(): Promise<boolean> {
   const blobs = await getDeviceBlobs(pat, importSourceId, changedDevices.map((d) => d.id));
   if (blobs.length === 0) return false;
 
+  // Report a wrong passphrase as such, rather than letting the import surface
+  // the backend's raw "Decryption failed" on the first blob it touches.
+  if (!(await canDecrypt(encKey, blobs[0]))) throw new GistPassphraseError();
+
   await requireApi().sync.importStates(encKey, blobs);
   for (const d of changedDevices) _lastSeenPushedAt[d.id] = d.pushedAt;
   return true;
@@ -358,6 +457,17 @@ export async function syncNow(opts: { showProgress?: boolean } = {}): Promise<vo
 
 function _onSyncError(err: unknown) {
   _consecutiveFailures++;
+  // A wrong passphrase is a configuration problem, not a transient failure:
+  // retrying cannot fix it, and calling it "offline?" would be misleading.
+  if (err instanceof GistPassphraseError) {
+    stopPoll();
+    setGistState("error", err.message);
+    if (!_failureBannerId)
+      _failureBannerId = requireApi().notifications.banner(`Gist Sync: ${err.message}`, {
+        severity: "error",
+      });
+    return;
+  }
   if (err instanceof GistApiError) {
     if (err.status === 401) {
       stopPoll();
