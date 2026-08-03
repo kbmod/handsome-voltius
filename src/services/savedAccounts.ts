@@ -129,9 +129,6 @@ export async function switchToAccount(account: SavedAccount): Promise<void> {
     await keychainDelete("refresh_token");
   }
 
-  // Tell SplashScreen to use replace-mode sync after reload so the old
-  // account's local state is never merged into the new account's cloud data.
-  sessionStorage.setItem("voltius.replace-sync-on-login", "1");
   // Clear persisted team roles so the new account doesn't briefly see the old account's teams.
   localStorage.removeItem("voltius-teams");
   window.location.reload();

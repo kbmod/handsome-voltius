@@ -16,13 +16,11 @@ interface ShareMenuProps {
   activeSessionId: string;
   connectionName: string;
   connectionVaultId?: string;
-  isLoggedIn: boolean;
   tier: "free" | "pro" | "teams" | "business";
-  onSignIn: () => void;
   onUpgrade: () => void;
 }
 
-export function ShareMenu({ anchorRef, open, onClose, activeSessionId, connectionName, connectionVaultId, isLoggedIn, tier, onSignIn, onUpgrade }: ShareMenuProps) {
+export function ShareMenu({ anchorRef, open, onClose, activeSessionId, connectionName, connectionVaultId, tier, onUpgrade }: ShareMenuProps) {
   const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -194,32 +192,7 @@ export function ShareMenu({ anchorRef, open, onClose, activeSessionId, connectio
       }}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {!isLoggedIn ? (
-        /* ── Unauthenticated view ── */
-        <div className="px-4 py-4 flex flex-col items-center text-center gap-3">
-          <div className="flex items-center justify-center size-9 rounded-full" style={{ background: "color-mix(in srgb, var(--t-accent) 12%, transparent)" }}>
-            <Icon icon="lucide:radio" width={16} style={{ color: "var(--t-accent)" }} />
-          </div>
-          <div>
-            <p className="text-xs font-semibold mb-1" style={{ color: "var(--t-text-primary)" }}>
-              {t("terminal.share.signInToShare")}
-            </p>
-            <p className="text-[11px] leading-relaxed" style={{ color: "var(--t-text-secondary)" }}>
-              {t("terminal.share.signInDescription")}
-            </p>
-          </div>
-          <button
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-opacity"
-            style={{ background: "var(--t-accent)", color: "var(--t-accent-fg)", opacity: 1 }}
-            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
-            onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-            onClick={onSignIn}
-          >
-            <Icon icon="lucide:log-in" width={12} />
-            {t("terminal.share.signInButton")}
-          </button>
-        </div>
-      ) : tier === "free" && teamsLoading ? (
+      {tier === "free" && teamsLoading ? (
         /* ── Loading — defer upgrade wall decision until teams are known ── */
         <div className="px-4 py-6 flex items-center justify-center">
           <Icon icon="lucide:loader-circle" width={16} className="animate-spin" style={{ color: "var(--t-text-dim)" }} />

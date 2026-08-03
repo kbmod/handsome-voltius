@@ -113,45 +113,6 @@
           "4h": "4 hours"
         }
       },
-      "email": "Email",
-      "editEmail": {
-        "title": "Change email",
-        "currentLabel": "Current:",
-        "newPlaceholder": "New email address",
-        "passwordPlaceholder": "Current master password",
-        "errorInvalidEmail": "Invalid email address",
-        "errorSameEmail": "New email must differ from the current one",
-        "errorPasswordRequired": "Password is required to confirm the change",
-        "updatedPrefix": "Email updated to ",
-        "updatedSuffix": ". Check your inbox for a verification link.",
-        "pausedNote": "Until verified, paid features will be paused.",
-        "done": "Done",
-        "saving": "Saving…",
-        "save": "Save",
-        "toastVerification": "Verification email sent to {{email}}."
-      },
-      "displayName": {
-        "title": "Display name",
-        "cannotBeEmpty": "Cannot be empty",
-        "saving": "Saving…",
-        "save": "Save"
-      },
-      "changeMasterPassword": {
-        "label": "Change master password",
-        "sub": "Update your password without re-encrypting your vault",
-        "title": "Change master password",
-        "currentPlaceholder": "Current password",
-        "newPlaceholder": "New password (min 8 chars)",
-        "confirmPlaceholder": "Confirm new password",
-        "errorCurrentRequired": "Current password is required",
-        "errorMinLength": "New password must be at least 8 characters",
-        "errorSamePassword": "New password must differ from the current one",
-        "successMsg": "Password changed successfully.",
-        "successNote": "You are still logged in. Your vault entries are unchanged.",
-        "done": "Done",
-        "changing": "Changing…",
-        "changeBtn": "Change password"
-      },
       "setMasterPassword": {
         "label": "Set a master password",
         "sub": "Protect your vault locally without cloud sync"
@@ -182,48 +143,12 @@
       },
       "error": {
         "minLength": "At least 4 characters",
-        "mismatch": "Passwords don't match",
-        "updateFailed": "Update failed"
+        "mismatch": "Passwords don't match"
       },
       "success": {
         "passwordSet": "Master password set. Your vault is now password-protected."
       },
       "loading": "Working...",
-      "plan": {
-        "title": "Plan",
-        "badge": {
-          "business": "Business",
-          "teams": "Teams",
-          "proTrial": "Pro Trial — {{daysLeft}}d left",
-          "pro": "Pro",
-          "free": "Free"
-        },
-        "manageBilling": "Manage billing →",
-        "subscription": {
-          "cancelled": "Cancels on {{date}}. You keep access until then.",
-          "cancelledNoPeriod": "Cancels at the period end. You keep access until then.",
-          "renews": "Renews on {{date}}.",
-          "active": "Your subscription is active."
-        },
-        "seats": "Seats",
-        "seatsUsed": "{{used}} / {{total}} used",
-        "upgradeToPro": "Upgrade to unlock cloud sync and more",
-        "upgrade": "Upgrade",
-        "upgradeToTeams": "Upgrade to Teams for shared vaults and unlimited guests",
-        "teamsButton": "Teams →",
-        "viewAllPlans": "View all plans →",
-        "feature": {
-          "localVault": "Local vault",
-          "auditLogs": "Audit logs",
-          "gistSync": "GitHub Gist sync",
-          "realtimeSync": "Real-time cloud sync",
-          "unlimitedVaults": "Unlimited private vaults",
-          "terminalSharing": "Terminal sharing (1 session · 1 guest)",
-          "teamVaults": "Shared team vaults",
-          "teamSharing": "Team sharing (5 sessions · 10 guests)",
-          "customRoles": "Custom roles"
-        }
-      },
       "buySeats": {
         "title": "No seats available",
         "seatsUsed": "{{used}} / {{total}} seats used",
@@ -281,7 +206,6 @@
       "attribution": "Handsome Voltius is a personal-use fork of the open-source Voltius project. Original copyright and AGPLv3 attribution are preserved in the repository."
     },
     "sync": {
-      "voltiusCloud": "Legacy Voltius Cloud",
       "active": {
         "title": "Gist sync active",
         "syncing": "Syncing…",
@@ -290,16 +214,6 @@
         "offline": "Offline",
         "idle": "Not synced yet",
         "syncNow": "Sync now"
-      },
-      "requiresPro": {
-        "title": "Cloud sync",
-        "sub": "Requires a Pro subscription",
-        "upgrade": "Upgrade"
-      },
-      "notConnected": {
-        "title": "Cloud account not connected",
-        "sub": "Sign in or create a cloud account to sync across devices.",
-        "signIn": "Sign in"
       },
       "gistTitle": "GitHub Gist (E2EE)",
       "gist": {
@@ -384,8 +298,7 @@
         "requiresTeams": "Team Vaults require a Teams plan",
         "upgradeDesc": "Invite members, assign roles, and share credentials securely with your team.",
         "upgradeBtn": "Upgrade to Teams →",
-        "signInDesc": "Sign in to a cloud account to invite teammates to this vault.",
-        "signInBtn": "Sign in / Create account"
+        "signInDesc": "Inviting teammates needs a Legacy Voltius Cloud account, which this build does not create."
       },
       "general": {
         "vaultNameLabel": "Vault name",

@@ -58,7 +58,6 @@ export type KeychainPendingAction =
   | { action: "edit-key"; id: string }
   | { action: "edit-identity"; id: string }
   | null;
-export type CloudAuthMode = "signin" | "register";
 
 interface UIStore {
   sidebarOpen: boolean;
@@ -67,8 +66,6 @@ interface UIStore {
   newTabOpen: boolean;
   omniOpen: boolean;
   settingsOpen: boolean;
-  cloudAuthOpen: boolean;
-  cloudAuthMode: CloudAuthMode;
   settingsSection: SettingsSection;
   /** Mobile drill-down page: null = section list, otherwise the open section. */
   settingsSubPage: SettingsSection | null;
@@ -107,9 +104,6 @@ interface UIStore {
   closeNewTab: () => void;
   setOmniOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
-  openCloudAuth: (mode?: CloudAuthMode) => void;
-  closeCloudAuth: () => void;
-  setCloudAuthMode: (mode: CloudAuthMode) => void;
   setSettingsSection: (section: SettingsSection) => void;
   setSettingsSubPage: (section: SettingsSection | null) => void;
   setSettingsPluginPageId: (id: string | null) => void;
@@ -156,8 +150,6 @@ export const useUIStore = create<UIStore>()(
       newTabOpen: false,
       omniOpen: false,
       settingsOpen: false,
-      cloudAuthOpen: false,
-      cloudAuthMode: "signin" as CloudAuthMode,
       settingsSection: "appearance" as SettingsSection,
       settingsSubPage: null as SettingsSection | null,
       settingsPluginPageId: null as string | null,
@@ -204,9 +196,6 @@ export const useUIStore = create<UIStore>()(
       closeNewTab: () => set({ newTabOpen: false }),
       setOmniOpen: (open) => set({ omniOpen: open }),
       setSettingsOpen: (open) => set((s) => ({ settingsOpen: open, settingsSubPage: open ? s.settingsSubPage : null })),
-      openCloudAuth: (mode) => set({ cloudAuthOpen: true, cloudAuthMode: mode ?? "signin" }),
-      closeCloudAuth: () => set({ cloudAuthOpen: false }),
-      setCloudAuthMode: (mode) => set({ cloudAuthMode: mode }),
       setSettingsSection: (section) => set({ settingsSection: section }),
       setSettingsSubPage: (section) => set({ settingsSubPage: section }),
       setSettingsPluginPageId: (id) => set({ settingsPluginPageId: id }),

@@ -1,33 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Icon } from "@iconify/react";
 import { useTranslation } from "react-i18next";
-import { getAccountMode, getCurrentUserEmail, fetchAndCacheDisplayName, updateDisplayName, setMasterPassword, logout, lockVaultSession } from "@/services/account";
+import { getAccountMode, setMasterPassword, logout, lockVaultSession } from "@/services/account";
 import { resetVault } from "@/services/vault";
 import { useSecurityStore } from "@/stores/securityStore";
 import { ActionItem, FormButtons, SettingsInput } from "./shared";
-import { useSubscriptionStore } from "@/stores/subscriptionStore";
-import { openPortal } from "@/utils/billing";
-import { openBillingCheckout } from "@/services/billingCheckout";
-import EditEmailModal from "./EditEmailModal";
-import ChangeMasterPasswordModal from "./ChangeMasterPasswordModal";
 
 type AccountStep = "idle" | "set-password" | "loading" | "confirm-wipe";
-
-const PLAN_FEATURES = [
-  { id: "localVault",       free: true,  pro: true,  teams: true,  business: true  },
-  { id: "auditLogs",        free: true,  pro: true,  teams: true,  business: true  },
-  { id: "gistSync",         free: true,  pro: true,  teams: true,  business: true  },
-  { id: "realtimeSync",     free: false, pro: true,  teams: true,  business: true  },
-  { id: "unlimitedVaults",  free: false, pro: true,  teams: true,  business: true  },
-  { id: "terminalSharing",  free: false, pro: true,  teams: true,  business: true  },
-  { id: "teamVaults",       free: false, pro: false, teams: true,  business: true  },
-  { id: "teamSharing",      free: false, pro: false, teams: true,  business: true  },
-  { id: "customRoles",      free: false, pro: false, teams: false, business: true  },
-];
-
-async function openCheckout(plan: "pro" | "teams") {
-  await openBillingCheckout(plan);
-}
 
 export default function AccountSection() {
   const { t } = useTranslation();
@@ -35,16 +14,8 @@ export default function AccountSection() {
   const [step, setStep] = useState<AccountStep>("idle");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [currentEmail, setCurrentEmail] = useState<string | null>(null);
-  const [displayName, setDisplayName] = useState<string | null>(null);
-  const [editingDisplayName, setEditingDisplayName] = useState(false);
-  const [displayNameInput, setDisplayNameInput] = useState("");
-  const [displayNameError, setDisplayNameError] = useState("");
-  const [displayNameLoading, setDisplayNameLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [showEditEmail, setShowEditEmail] = useState(false);
-  const [showChangePassword, setShowChangePassword] = useState(false);
   const sessionTimeoutMinutes = useSecurityStore((s) => s.sessionTimeoutMinutes);
   const setSessionTimeoutMinutes = useSecurityStore((s) => s.setSessionTimeoutMinutes);
 
@@ -59,8 +30,6 @@ export default function AccountSection() {
 
   useEffect(() => {
     getAccountMode().then(setMode).catch(() => setMode(null));
-    getCurrentUserEmail().then(setCurrentEmail).catch(() => {});
-    fetchAndCacheDisplayName().then((n) => { if (n) setDisplayName(n); }).catch(() => {});
     setStep("idle");
     setError("");
     setSuccess("");
@@ -132,8 +101,6 @@ export default function AccountSection() {
         </div>
       </div>
 
-      {mode === "server" && <PlansSection />}
-
       <div>
         <h3 className="text-xs font-bold uppercase tracking-widest mb-3 text-(--t-text-dim)">
           {t("settings.account.sessionSecurity.title")}
@@ -175,84 +142,6 @@ export default function AccountSection() {
 
       {step === "idle" && (
         <div className="space-y-2">
-          {mode === "server" && currentEmail && (
-            <ActionItem
-              icon="lucide:mail"
-              label={t("settings.account.email")}
-              sub={currentEmail}
-              onClick={() => setShowEditEmail(true)}
-            />
-          )}
-          {mode === "server" && (
-            editingDisplayName ? (
-              <div
-                className="flex flex-col gap-2 rounded-lg px-4 py-3"
-                style={{ background: "var(--t-bg-elevated)", border: "1px solid var(--t-border)" }}
-              >
-                <p className="text-xs font-medium text-(--t-text-dim)">{t("settings.account.displayName.title")}</p>
-                <input
-                  autoFocus
-                  type="text"
-                  value={displayNameInput}
-                  maxLength={50}
-                  onChange={(e) => { setDisplayNameInput(e.target.value); setDisplayNameError(""); }}
-                  className="rounded-lg px-3 py-1.5 text-sm outline-hidden"
-                  style={{ background: "var(--t-bg-input)", border: "1px solid var(--t-border)", color: "var(--t-text-primary)" }}
-                />
-                {displayNameError && <p className="text-xs text-(--t-status-error)">{displayNameError}</p>}
-                <div className="flex gap-2">
-                  <button
-                    className="flex-1 text-xs px-3 py-1.5 rounded-lg"
-                    style={{ background: "var(--t-bg-input)", color: "var(--t-text-muted)", border: "1px solid var(--t-border)" }}
-                    onClick={() => { setEditingDisplayName(false); setDisplayNameError(""); }}
-                  >
-                    {t("settings.shared.cancel")}
-                  </button>
-                  <button
-                    disabled={displayNameLoading}
-                    className="flex-1 text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
-                    style={{ background: "var(--t-accent)", color: "#fff" }}
-                    onClick={async () => {
-                      const trimmed = displayNameInput.trim();
-                      if (!trimmed) { setDisplayNameError(t("settings.account.displayName.cannotBeEmpty")); return; }
-                      setDisplayNameLoading(true);
-                      setDisplayNameError("");
-                      try {
-                        await updateDisplayName(trimmed);
-                        setDisplayName(trimmed);
-                        setEditingDisplayName(false);
-                      } catch (e) {
-                        setDisplayNameError(e instanceof Error ? e.message : t("settings.account.error.updateFailed"));
-                      } finally {
-                        setDisplayNameLoading(false);
-                      }
-                    }}
-                  >
-                    {displayNameLoading ? t("settings.account.displayName.saving") : t("settings.account.displayName.save")}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <ActionItem
-                icon="lucide:user"
-                label={t("settings.account.displayName.title")}
-                sub={displayName ?? "—"}
-                onClick={() => {
-                  setDisplayNameInput(displayName ?? "");
-                  setDisplayNameError("");
-                  setEditingDisplayName(true);
-                }}
-              />
-            )
-          )}
-          {mode === "server" && (
-            <ActionItem
-              icon="lucide:key-round"
-              label={t("settings.account.changeMasterPassword.label")}
-              sub={t("settings.account.changeMasterPassword.sub")}
-              onClick={() => setShowChangePassword(true)}
-            />
-          )}
           {mode === "local-nopassword" && (
             <ActionItem
               icon="lucide:lock"
@@ -302,20 +191,6 @@ export default function AccountSection() {
             }}
           />
         </div>
-      )}
-
-      {showEditEmail && currentEmail && (
-        <EditEmailModal
-          currentEmail={currentEmail}
-          onClose={() => {
-            setShowEditEmail(false);
-            getCurrentUserEmail().then(setCurrentEmail).catch(() => {});
-          }}
-        />
-      )}
-
-      {showChangePassword && (
-        <ChangeMasterPasswordModal onClose={() => setShowChangePassword(false)} />
       )}
 
       {step === "confirm-wipe" && (
@@ -378,140 +253,6 @@ export default function AccountSection() {
           <span className="text-sm text-(--t-text-muted)">{t("settings.account.loading")}</span>
         </div>
       )}
-    </div>
-  );
-}
-
-// ─── Plans section ────────────────────────────────────────────────────────────
-
-function formatPlanDate(date: Date | null): string | null {
-  if (!date) return null;
-  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(date);
-}
-
-function PlansSection() {
-  const { t } = useTranslation();
-  const { tier, trialEndsAt, isTrialActive, isPro, isTeams, isBusiness, usedSeats, totalSeats, subscriptionStatus, subscriptionCancelled, renewsAt, endsAt } = useSubscriptionStore();
-
-  const daysLeft = trialEndsAt
-    ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86_400_000))
-    : 0;
-
-  const badgeLabel =
-    isBusiness ? t("settings.account.plan.badge.business") :
-    isTeams ? t("settings.account.plan.badge.teams") :
-    isTrialActive ? t("settings.account.plan.badge.proTrial", { daysLeft }) :
-    tier === "pro" ? t("settings.account.plan.badge.pro") : t("settings.account.plan.badge.free");
-
-  const isPaidPro = isPro && !isTrialActive;
-
-  const badgeColor = isPro ? "#f59e0b" : "var(--t-text-muted)";
-  const renewalDate = formatPlanDate(renewsAt);
-  const cancellationDate = formatPlanDate(endsAt ?? renewsAt);
-
-  return (
-    <div>
-      <h3 className="text-xs font-bold uppercase tracking-widest mb-3 text-(--t-text-dim)">
-        {t("settings.account.plan.title")}
-      </h3>
-
-      <div className="rounded-lg px-4 py-3 bg-(--t-bg-elevated) border border-(--t-border) space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Icon
-              icon={isPro ? "lucide:crown" : "lucide:circle-fading-arrow-up"}
-              width={14}
-              style={{ color: badgeColor }}
-            />
-            <span className="text-sm font-medium text-(--t-text-primary)">{badgeLabel}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            {isPaidPro && (
-              <button
-                onClick={() => openPortal()}
-                className="text-xs text-(--t-text-dim) hover:text-(--t-text-primary) transition-colors"
-              >
-                {t("settings.account.plan.manageBilling")}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {isPaidPro && (
-          <div className="rounded-md px-3 py-2 bg-(--t-bg-input) text-xs text-(--t-text-muted)">
-            {subscriptionCancelled ? (
-              <span>
-                {cancellationDate
-                  ? t("settings.account.plan.subscription.cancelled", { date: cancellationDate })
-                  : t("settings.account.plan.subscription.cancelledNoPeriod")}
-              </span>
-            ) : subscriptionStatus === "active" && renewalDate ? (
-              <span>{t("settings.account.plan.subscription.renews", { date: renewalDate })}</span>
-            ) : (
-              <span>{t("settings.account.plan.subscription.active")}</span>
-            )}
-          </div>
-        )}
-
-        {isTeams && totalSeats != null && (
-          <div className="flex items-center justify-between text-xs py-0.5">
-            <span style={{ color: "var(--t-text-secondary)" }}>{t("settings.account.plan.seats")}</span>
-            <span style={{ color: "var(--t-text-primary)", fontVariantNumeric: "tabular-nums" }}>
-              {t("settings.account.plan.seatsUsed", { used: usedSeats ?? "…", total: totalSeats })}
-            </span>
-          </div>
-        )}
-
-        {!isPro && (
-          <div className="flex items-center justify-between gap-3 rounded-md px-3 py-2 bg-(--t-bg-input)">
-            <p className="text-xs text-(--t-text-muted)">{t("settings.account.plan.upgradeToPro")}</p>
-            <button
-              onClick={() => openCheckout("pro")}
-              className="text-xs px-2.5 py-1 rounded-md font-medium shrink-0 bg-(--t-accent) text-white hover:opacity-85 transition-opacity"
-            >
-              {t("settings.account.plan.upgrade")}
-            </button>
-          </div>
-        )}
-
-        {isPro && !isTeams && (
-          <div className="flex items-center justify-between gap-3 rounded-md px-3 py-2 bg-(--t-bg-input)">
-            <p className="text-xs text-(--t-text-muted)">{t("settings.account.plan.upgradeToTeams")}</p>
-            <button
-              onClick={() => openCheckout("teams")}
-              className="text-xs px-2.5 py-1 rounded-md font-medium shrink-0 bg-(--t-bg-elevated) text-(--t-text-primary) hover:opacity-85 transition-opacity border border-(--t-border)"
-            >
-              {t("settings.account.plan.teamsButton")}
-            </button>
-          </div>
-        )}
-
-        {/* Feature comparison */}
-        <div className="border-t border-(--t-border) pt-3 space-y-1.5">
-          {PLAN_FEATURES.map(({ id, free, pro, teams: teamsFlag, business }) => {
-            const active = isBusiness ? business : isTeams ? teamsFlag : isPro ? pro : free;
-            return (
-              <div key={id} className="flex items-center justify-between">
-                <span className="text-xs" style={{ color: active ? "var(--t-text-primary)" : "var(--t-text-muted)" }}>
-                  {t(`settings.account.plan.feature.${id}`)}
-                </span>
-                <Icon
-                  icon={active ? "lucide:check" : "lucide:minus"}
-                  width={12}
-                  style={{ color: active ? "var(--t-status-connected)" : "var(--t-text-dim)" }}
-                />
-              </div>
-            );
-          })}
-        </div>
-
-        <button
-          onClick={() => openPortal()}
-          className="text-xs w-full text-center text-(--t-text-dim) hover:text-(--t-text-primary) transition-colors pt-1"
-        >
-          {t("settings.account.plan.viewAllPlans")}
-        </button>
-      </div>
     </div>
   );
 }

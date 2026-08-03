@@ -112,9 +112,8 @@
       "vaultNotFound": "Vault not found."
     },
     "cta": {
-      "signInTitle": "Sign in to use team features",
-      "signInDesc": "Members, invites, and shared vault access require a cloud account before you can upgrade or manage a team.",
-      "signInBtn": "Sign in or create cloud account →",
+      "signInTitle": "Team features need a Legacy Voltius Cloud account",
+      "signInDesc": "This build has no cloud sign-in, so members, invites, and shared vault access stay unavailable. Your own hosts and keys sync through encrypted GitHub Gist.",
       "upgradeTitle": "Team Vaults require Teams",
       "upgradeDesc": "Invite members, assign roles, and share credentials securely with your team.",
       "upgradeBtn": "Upgrade to Teams →"

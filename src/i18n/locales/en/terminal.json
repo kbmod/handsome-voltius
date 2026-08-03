@@ -101,9 +101,6 @@
       }
     },
     "share": {
-      "signInToShare": "Sign in to share",
-      "signInDescription": "Connect a server account to share your terminal with teammates.",
-      "signInButton": "Sign in / Sign up",
       "proRequired": "Pro required",
       "proRequiredDescription": "Terminal sharing is available on Pro and above.",
       "features": [

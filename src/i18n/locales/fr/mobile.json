@@ -62,34 +62,13 @@
     "account": {
       "title": "Compte",
       "email": "E-mail",
-      "notSignedIn": "Non connecté",
-      "plan": "Forfait",
       "cloudSync": "Synchronisation cloud",
       "off": "Désactivée",
-      "proTrial": "Essai Pro — {{days}} j restants",
-      "tier": {
-        "free": "Gratuit",
-        "pro": "Pro",
-        "teams": "Teams",
-        "business": "Business"
-      },
-      "cancelsOn": "Résiliation le {{date}}. Vous conservez l'accès jusqu'à cette date.",
-      "periodEnd": "la fin de la période",
-      "renewsOn": "Renouvellement le {{date}}.",
-      "subscriptionActive": "Votre abonnement est actif.",
-      "seats": "Sièges",
-      "seatsUsed": "{{used}} / {{total}} utilisés",
-      "upgradeToPro": "Passer à Pro",
-      "upgradeToTeams": "Passer à Teams",
-      "manageBilling": "Gérer la facturation",
-      "viewAllPlans": "Voir tous les forfaits",
-      "signInToSync": "Se connecter pour synchroniser",
       "signOutConfirm": "Se déconnecter ? Votre coffre chiffré est supprimé de cet appareil et resynchronisé lors de votre prochaine connexion.",
       "signOut": "Se déconnecter"
     },
     "more": {
-      "settings": "Paramètres",
-      "planLabel": "Forfait {{tier}}"
+      "settings": "Paramètres"
     },
     "host": {
       "newTitle": "Nouvel hôte",

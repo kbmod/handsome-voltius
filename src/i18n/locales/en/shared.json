@@ -3,12 +3,6 @@
     "errorBanner": {
       "dismiss": "dismiss"
     },
-    "trialExpiredModal": {
-      "title": "Your Pro trial has ended",
-      "body": "You've had 14 days to try Pro — hope it was useful. Upgrade to keep real-time sync and cloud features.",
-      "upgradeButton": "Upgrade to Pro",
-      "laterButton": "Maybe later"
-    },
     "createVaultModal": {
       "title": "New Vault",
       "subtitle": "Vaults keep your credentials organized",

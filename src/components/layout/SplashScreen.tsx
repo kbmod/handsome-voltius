@@ -8,9 +8,8 @@ import { useFolderStore } from "@/stores/folderStore";
 import { useSnippetStore } from "@/stores/snippetStore";
 import { useSnippetFolderStore } from "@/stores/snippetFolderStore";
 import { usePortForwardingStore } from "@/stores/portForwardingStore";
-import { autoLogin, consumeForceLockFlag, isServerMode } from "@/services/account";
+import { autoLogin, consumeForceLockFlag } from "@/services/account";
 import { saveCurrentAccount } from "@/services/savedAccounts";
-import { startRealtimeSync } from "@/services/sync";
 import { loadPlugin } from "@/plugins/runtime";
 import { useUIStore } from "@/stores/uiStore";
 import { consumeGistSetupRequest } from "@/services/gistSetupHandoff";
@@ -108,14 +107,9 @@ export default function SplashScreen({ onReady }: Props) {
       setStep("connections", "error", t("layout.splash.connectionsUnavailable"));
     }
     useSubscriptionStore.getState().load().catch(() => {});
-    isServerMode().then((server) => {
-      if (!server) return;
-      sessionStorage.removeItem("voltius.replace-sync-on-login");
-      // Personal data sync is encrypted Gist sync, which the plugin drives on
-      // its own once registered. Only the optional Legacy Voltius Cloud team
-      // stream is started here.
-      startRealtimeSync();
-    });
+    // Personal data sync is encrypted Gist sync, which the plugin drives on its
+    // own once registered. The Legacy Voltius Cloud team stream is not started:
+    // this fork has no sign-in, so no launch can be in server mode.
     useThemeStore.getState().loadFromDisk().catch(() => {});
     // Plugin loading must never freeze startup: a single rejected invoke here
     // (e.g. a storage command failing on a locked-down platform) would leave the

@@ -25,8 +25,6 @@ import { startLiveSessionPublisher } from "@/services/liveSessionPublisher";
 import { startCrossDeviceSessions } from "@/services/crossDeviceSessions";
 import { NotificationToastContainer } from "@/components/notifications/NotificationToastContainer";
 import ThemeCreator from "@/components/theme-creator/ThemeCreator";
-import { TrialExpiredModal } from "@/components/shared/TrialExpiredModal";
-import CloudAuthModal from "@/components/layout/CloudAuthModal";
 import WhatsNewModal from "@/components/changelog/WhatsNewModal";
 import { EmailVerificationRequiredModal } from "@/components/notifications/EmailVerificationRequiredModal";
 import { shouldShowVisualReview } from "@/dev/visualFixtures";
@@ -75,8 +73,6 @@ function ProductionApp() {
 
       <NotificationToastContainer />
       <ThemeCreator />
-      <TrialExpiredModal />
-      <CloudAuthModal />
       <WhatsNewModal />
       <EmailVerificationRequiredModal />
       {/* Global snippet variable modal — triggered from OmniSearch */}

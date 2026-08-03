@@ -11,7 +11,6 @@ import { DropdownMenuItem } from "@/components/shared/DropdownMenuItem";
 export function SidebarAccountButton() {
   const { t } = useTranslation();
   const { createRipple, rippleEls } = useRipple();
-  const openCloudAuth = useUIStore((s) => s.openCloudAuth);
   const uiScale = useUIStore((s) => s.uiScale);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -159,14 +158,6 @@ export function SidebarAccountButton() {
             label={t("layout.sidebarAccount.appearance")}
             onClick={() => { setOpen(false); useUIStore.getState().openSettings("appearance"); }}
           />
-          {accountMode !== "server" && (
-            <DropdownMenuItem
-              icon="lucide:log-in"
-              label={t("layout.sidebarAccount.signInSignUp")}
-              onClick={() => { openCloudAuth("signin"); setOpen(false); }}
-            />
-          )}
-
           {accountMode === "server" && (
             <DropdownMenuItem icon="lucide:log-out" label={t("common.action.disconnect")} onClick={() => void handleDisconnect()} />
           )}

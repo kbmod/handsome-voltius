@@ -112,9 +112,8 @@
       "vaultNotFound": "Coffre-fort introuvable."
     },
     "cta": {
-      "signInTitle": "Connectez-vous pour utiliser les fonctionnalités d'équipe",
-      "signInDesc": "Les membres, invitations et l'accès partagé aux coffres-forts nécessitent un compte cloud avant de pouvoir mettre à niveau ou gérer une équipe.",
-      "signInBtn": "Se connecter ou créer un compte cloud →",
+      "signInTitle": "Les fonctionnalités d'équipe nécessitent un compte Legacy Voltius Cloud",
+      "signInDesc": "Cette version ne propose aucune connexion cloud : les membres, les invitations et l'accès partagé aux coffres-forts restent indisponibles. Vos propres hôtes et clés se synchronisent via un Gist GitHub chiffré.",
       "upgradeTitle": "Les coffres-forts d'équipe nécessitent Teams",
       "upgradeDesc": "Invitez des membres, attribuez des rôles et partagez des identifiants en toute sécurité avec votre équipe.",
       "upgradeBtn": "Passer à Teams →"

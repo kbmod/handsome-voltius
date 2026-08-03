@@ -1163,7 +1163,7 @@ function PrivateVaultInvitePanel({
 
 // ─── Upgrade CTA ──────────────────────────────────────────────────────────────
 
-function SignInToCloudCTA({ onSignIn }: { onSignIn: () => void }) {
+function SignInToCloudCTA() {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-[320px] gap-5">
@@ -1176,13 +1176,6 @@ function SignInToCloudCTA({ onSignIn }: { onSignIn: () => void }) {
           {t("members.cta.signInDesc")}
         </p>
       </div>
-      <button
-        onClick={onSignIn}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white transition-opacity hover:opacity-90"
-        style={{ background: "var(--t-accent)" }}
-      >
-        {t("members.cta.signInBtn")}
-      </button>
     </div>
   );
 }
@@ -1239,7 +1232,6 @@ export default function MembersPage() {
   const membersInvitePending = useUIStore((s) => s.membersInvitePending);
   const clearMembersInvitePending = useUIStore((s) => s.clearMembersInvitePending);
   const openSettings = useUIStore((s) => s.openSettings);
-  const openCloudAuth = useUIStore((s) => s.openCloudAuth);
 
   const [myUserId, setMyUserId] = useState("");
   const [myEmail, setMyEmail] = useState<string | null>(null);
@@ -1682,7 +1674,7 @@ const vaultTabs = selectedVaultIds.length > 1
       return (
         <div className="flex-1 flex flex-col bg-(--t-bg-base)">
           {toolbar}
-          <SignInToCloudCTA onSignIn={() => openCloudAuth("signin")} />
+          <SignInToCloudCTA />
         </div>
       );
     }

@@ -847,7 +847,6 @@ export function PrivateVaultMembersPanel({
 }) {
   const { t } = useTranslation();
   const { isTeams, accountMode } = useSubscriptionStore();
-  const openCloudAuth = useUIStore((s) => s.openCloudAuth);
   const { createTeam, loadRoles, addMemberById, assignMemberRole } = useTeamStore();
   const { setVaultTeamId } = useVaultStore();
 
@@ -916,13 +915,6 @@ export function PrivateVaultMembersPanel({
         <p className="text-sm" style={{ color: "var(--t-text-dim)" }}>
           {t("settings.vaults.upgrade.signInDesc")}
         </p>
-        <button
-          onClick={() => openCloudAuth("signin")}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-90"
-          style={{ background: "var(--t-accent)" }}
-        >
-          {t("settings.vaults.upgrade.signInBtn")}
-        </button>
       </div>
     );
   }
@@ -1362,9 +1354,6 @@ export default function VaultsSection() {
 
   const { teams, loadTeams } = useTeamStore();
   const [myUserId, setMyUserId] = useState("");
-  const { isPro, accountMode } = useSubscriptionStore();
-  const openSettings = useUIStore((s) => s.openSettings);
-  const openCloudAuth = useUIStore((s) => s.openCloudAuth);
 
   const [detail, setDetail] = useState<VaultDetail | null>(null);
   const [activeTab, setActiveTab] = useState<DetailTab>("General");
@@ -1378,13 +1367,6 @@ export default function VaultsSection() {
   const handleCreateVault = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newVaultName.trim()) return;
-    if (!isPro && vaults.length >= 1) {
-      setShowCreate(false);
-      setNewVaultName("");
-      if (accountMode === "server") openSettings("account");
-      else openCloudAuth("signin");
-      return;
-    }
     const vault = addVault(newVaultName.trim());
     setNewVaultName(""); setShowCreate(false);
     setDetail({ kind: "local", vaultId: vault.id, teamId: null, name: vault.name });
@@ -1476,14 +1458,7 @@ export default function VaultsSection() {
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-xs font-bold uppercase tracking-widest text-(--t-text-dim)">{t("settings.vaults.title")}</h3>
           <button
-            onClick={() => {
-              if (!isPro && vaults.length >= 1) {
-                if (accountMode === "server") openSettings("account");
-                else openCloudAuth("signin");
-                return;
-              }
-              setShowCreate((v) => !v);
-            }}
+            onClick={() => setShowCreate((v) => !v)}
             className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors"
             style={{ color: "var(--t-text-dim)", background: showCreate ? "var(--t-bg-elevated)" : "transparent", border: "1px solid var(--t-border)" }}
           >

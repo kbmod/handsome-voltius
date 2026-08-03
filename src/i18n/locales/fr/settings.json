@@ -108,45 +108,6 @@
           "4h": "4 heures"
         }
       },
-      "email": "E-mail",
-      "editEmail": {
-        "title": "Modifier l'adresse e-mail",
-        "currentLabel": "Actuel :",
-        "newPlaceholder": "Nouvelle adresse e-mail",
-        "passwordPlaceholder": "Mot de passe maître actuel",
-        "errorInvalidEmail": "Adresse e-mail invalide",
-        "errorSameEmail": "Le nouvel e-mail doit être différent de l'actuel",
-        "errorPasswordRequired": "Le mot de passe est requis pour confirmer la modification",
-        "updatedPrefix": "E-mail mis à jour vers ",
-        "updatedSuffix": ". Vérifiez votre boîte de réception pour un lien de vérification.",
-        "pausedNote": "Jusqu'à la vérification, les fonctionnalités payantes seront suspendues.",
-        "done": "Terminé",
-        "saving": "Enregistrement…",
-        "save": "Enregistrer",
-        "toastVerification": "E-mail de vérification envoyé à {{email}}."
-      },
-      "displayName": {
-        "title": "Nom d'affichage",
-        "cannotBeEmpty": "Ne peut pas être vide",
-        "saving": "Enregistrement…",
-        "save": "Enregistrer"
-      },
-      "changeMasterPassword": {
-        "label": "Changer le mot de passe maître",
-        "sub": "Mettez à jour votre mot de passe sans rechiffrer votre coffre-fort",
-        "title": "Changer le mot de passe maître",
-        "currentPlaceholder": "Mot de passe actuel",
-        "newPlaceholder": "Nouveau mot de passe (min 8 caractères)",
-        "confirmPlaceholder": "Confirmer le nouveau mot de passe",
-        "errorCurrentRequired": "Le mot de passe actuel est requis",
-        "errorMinLength": "Le nouveau mot de passe doit comporter au moins 8 caractères",
-        "errorSamePassword": "Le nouveau mot de passe doit être différent de l'actuel",
-        "successMsg": "Mot de passe modifié avec succès.",
-        "successNote": "Vous êtes toujours connecté. Les entrées de votre coffre-fort sont inchangées.",
-        "done": "Terminé",
-        "changing": "Modification…",
-        "changeBtn": "Changer le mot de passe"
-      },
       "setMasterPassword": {
         "label": "Définir un mot de passe maître",
         "sub": "Protégez votre coffre-fort localement sans synchronisation cloud"
@@ -177,48 +138,12 @@
       },
       "error": {
         "minLength": "Au moins 4 caractères",
-        "mismatch": "Les mots de passe ne correspondent pas",
-        "updateFailed": "Échec de la mise à jour"
+        "mismatch": "Les mots de passe ne correspondent pas"
       },
       "success": {
         "passwordSet": "Mot de passe maître défini. Votre coffre-fort est maintenant protégé par mot de passe."
       },
       "loading": "Traitement…",
-      "plan": {
-        "title": "Abonnement",
-        "badge": {
-          "business": "Business",
-          "teams": "Teams",
-          "proTrial": "Essai Pro — {{daysLeft}}j restants",
-          "pro": "Pro",
-          "free": "Gratuit"
-        },
-        "manageBilling": "Gérer la facturation →",
-        "subscription": {
-          "cancelled": "Se termine le {{date}}. Vous conservez l'accès jusqu'à cette date.",
-          "cancelledNoPeriod": "Se termine en fin de période. Vous conservez l'accès jusqu'alors.",
-          "renews": "Renouvellement le {{date}}.",
-          "active": "Votre abonnement est actif."
-        },
-        "seats": "Postes",
-        "seatsUsed": "{{used}} / {{total}} utilisés",
-        "upgradeToPro": "Passez à Pro pour débloquer la synchronisation cloud et plus encore",
-        "upgrade": "Mettre à niveau",
-        "upgradeToTeams": "Passez à Teams pour les coffres partagés et les invités illimités",
-        "teamsButton": "Teams →",
-        "viewAllPlans": "Voir tous les abonnements →",
-        "feature": {
-          "localVault": "Coffre-fort local",
-          "auditLogs": "Journaux d'audit",
-          "gistSync": "Synchronisation GitHub Gist",
-          "realtimeSync": "Synchronisation cloud en temps réel",
-          "unlimitedVaults": "Coffres-forts privés illimités",
-          "terminalSharing": "Partage de terminal (1 session · 1 invité)",
-          "teamVaults": "Coffres-forts d'équipe partagés",
-          "teamSharing": "Partage d'équipe (5 sessions · 10 invités)",
-          "customRoles": "Rôles personnalisés"
-        }
-      },
       "buySeats": {
         "title": "Aucun poste disponible",
         "seatsUsed": "{{used}} / {{total}} postes utilisés",
@@ -276,7 +201,6 @@
       "attribution": "Handsome Voltius est un fork personnel du projet open source Voltius. Les droits d'auteur d'origine et l'attribution AGPLv3 sont conservés dans le dépôt."
     },
     "sync": {
-      "voltiusCloud": "Legacy Voltius Cloud",
       "active": {
         "title": "Synchronisation Gist active",
         "syncing": "Synchronisation en cours…",
@@ -285,16 +209,6 @@
         "offline": "Hors ligne",
         "idle": "Pas encore synchronisé",
         "syncNow": "Synchroniser"
-      },
-      "requiresPro": {
-        "title": "Synchronisation cloud",
-        "sub": "Requiert un abonnement Pro",
-        "upgrade": "Mettre à niveau"
-      },
-      "notConnected": {
-        "title": "Compte cloud non connecté",
-        "sub": "Connectez-vous ou créez un compte cloud pour synchroniser vos appareils.",
-        "signIn": "Se connecter"
       },
       "gistTitle": "GitHub Gist (E2EE)",
       "gist": {
@@ -379,8 +293,7 @@
         "requiresTeams": "Les coffres-forts d'équipe nécessitent un abonnement Teams",
         "upgradeDesc": "Invitez des membres, attribuez des rôles et partagez des identifiants en toute sécurité avec votre équipe.",
         "upgradeBtn": "Passer à Teams →",
-        "signInDesc": "Connectez-vous à un compte cloud pour inviter des coéquipiers dans ce coffre-fort.",
-        "signInBtn": "Se connecter / Créer un compte"
+        "signInDesc": "Inviter des coéquipiers nécessite un compte Legacy Voltius Cloud, que cette version ne crée pas."
       },
       "general": {
         "vaultNameLabel": "Nom du coffre-fort",

@@ -2,46 +2,20 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@iconify/react";
 import LogoBadge from "./LogoBadge";
-import {
-  createLocalAccountNoPassword,
-  createServerAccount,
-  login,
-} from "@/services/account";
-import { useNotificationStore } from "@/stores/notificationStore";
+import { createLocalAccountNoPassword, login } from "@/services/account";
 import { requestGistSetup } from "@/services/gistSetupHandoff";
-
-
-type View = "home" | "cloud";
-type CloudMode = "signup" | "signin";
 
 interface Props {
   isLocked: boolean;
   onReady: () => void;
 }
 
-const DEFAULT_SERVER = "https://api.voltius.app";
-
 export default function AuthPage({ isLocked, onReady }: Props) {
   const { t } = useTranslation();
-  const [view, setView] = useState<View>("home");
-  const [cloudMode, setCloudMode] = useState<CloudMode>("signup");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [email, setEmail] = useState("");
-  const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER);
-  const [showServerUrl, setShowServerUrl] = useState(false);
-  const addToast = useNotificationStore((s) => s.addToast);
-
-  const reset = (v: View, mode?: CloudMode) => {
-    setView(v);
-    if (mode) setCloudMode(mode);
-    setError("");
-    setPassword("");
-    setConfirm("");
-  };
 
   const wrap = async (fn: () => Promise<void>) => {
     setLoading(true);
@@ -91,180 +65,52 @@ export default function AuthPage({ isLocked, onReady }: Props) {
 
   // ── Home (first launch) ──────────────────────────────────────────────────
 
-  if (view === "home") {
-    return (
-      <Layout>
-        <p className="text-xs mb-6 text-center text-(--t-text-muted)">
-          {t("layout.auth.chooseHowToUse")}
-        </p>
+  return (
+    <Layout>
+      <p className="text-xs mb-6 text-center text-(--t-text-muted)">
+        {t("layout.auth.chooseHowToUse")}
+      </p>
 
-        <ActionButton
-          icon="lucide:zap"
-          label={t("layout.auth.getStarted")}
-          sub={t("layout.auth.getStartedSub")}
-          primary
-          loading={loading}
-          onClick={() => wrap(createLocalAccountNoPassword)}
-        />
+      <ActionButton
+        icon="lucide:zap"
+        label={t("layout.auth.getStarted")}
+        sub={t("layout.auth.getStartedSub")}
+        primary
+        loading={loading}
+        onClick={() => wrap(createLocalAccountNoPassword)}
+      />
 
-        <div className="flex items-center gap-2 my-4">
-          <div className="flex-1 h-px bg-(--t-border)" />
-          <span className="text-xs text-(--t-text-dim)">{t("layout.auth.or")}</span>
-          <div className="flex-1 h-px bg-(--t-border)" />
-        </div>
+      <div className="flex items-center gap-2 my-4">
+        <div className="flex-1 h-px bg-(--t-border)" />
+        <span className="text-xs text-(--t-text-dim)">{t("layout.auth.or")}</span>
+        <div className="flex-1 h-px bg-(--t-border)" />
+      </div>
 
-        <ActionButton
-          icon="mdi:github"
-          label={t("layout.auth.restoreFromGist")}
-          sub={t("layout.auth.restoreFromGistSub")}
-          loading={loading}
-          onClick={() =>
-            wrap(async () => {
-              // The Gist setup form writes the PAT into the vault, so a local
-              // account has to exist first. Creating it here means the user
-              // reaches the Gist form directly instead of having to discover
-              // it in Settings after choosing local-only.
-              await createLocalAccountNoPassword();
-              requestGistSetup();
-            })
-          }
-        />
-
-        <div className="mt-2" />
-
-        <ActionButton
-          icon="lucide:cloud"
-          label={t("layout.auth.cloudAccount")}
-          sub={t("layout.auth.cloudAccountSub")}
-          onClick={() => reset("cloud", "signup")}
-        />
-      </Layout>
-    );
-  }
-
-  // ── Cloud (merged sign-up / sign-in) ─────────────────────────────────────
-
-  if (view === "cloud") {
-    const isSignup = cloudMode === "signup";
-
-    const submit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!email.includes("@")) { setError(t("layout.auth.errorInvalidEmail")); return; }
-      const normalizedUrl = serverUrl.replace(/\/+$/, "");
-      if (isSignup) {
-        if (password.length < 8) { setError(t("layout.auth.errorMinLength8")); return; }
-        if (password !== confirm) { setError(t("layout.auth.errorPasswordMismatch")); return; }
-        await wrap(async () => {
-          await createServerAccount(email, password, normalizedUrl);
-          addToast({
-            pluginId: "system",
-            pluginName: "Handsome Voltius",
-            type: "toast",
-            message: t("layout.auth.accountCreatedToast"),
-            severity: "info",
-            duration: 5000,
-          });
-        });
-      } else {
-        await wrap(() => login(password, email, normalizedUrl));
-      }
-    };
-
-    return (
-      <Layout onBack={() => reset("home")}>
-        <p className="text-xs mb-4 text-center text-(--t-text-muted)">
-          {isSignup ? t("layout.auth.signupPrompt") : t("layout.auth.signinPrompt")}
-        </p>
-        <form onSubmit={submit} className="w-full space-y-2">
-          <Input type="email" placeholder={t("layout.auth.emailPlaceholder")} value={email} onChange={setEmail} autoFocus />
-          <Input type="password" placeholder={isSignup ? t("layout.auth.masterPasswordMinPlaceholder") : t("layout.auth.masterPasswordPlaceholder")}
-            value={password} onChange={setPassword} />
-          {isSignup && (
-            <Input type="password" placeholder={t("layout.auth.confirmPasswordPlaceholder")} value={confirm} onChange={setConfirm} />
-          )}
-          <button
-            type="button"
-            onClick={() => setShowServerUrl((v) => !v)}
-            className="text-xs w-full text-left transition-colors text-(--t-text-dim)"
-          >
-            {showServerUrl ? "▾" : "▸"} {t("layout.auth.customServerUrl")}
-          </button>
-          {showServerUrl && (
-            <Input type="url" placeholder="https://api.voltius.app"
-              value={serverUrl} onChange={setServerUrl} />
-          )}
-          <ErrorMsg msg={error} />
-          <SubmitBtn loading={loading} label={isSignup ? t("layout.auth.createAccount") : t("layout.auth.signIn")} />
-        </form>
-
-        <div className="mt-3 text-center">
-          {isSignup ? (
-            <>
-              <span className="text-xs text-(--t-text-dim)">{t("layout.auth.alreadyHaveAccount")}</span>
-              <button
-                type="button"
-                onClick={() => { setCloudMode("signin"); setError(""); setConfirm(""); }}
-                className="text-xs text-(--t-accent) hover:underline"
-              >
-                {t("layout.auth.signIn")}
-              </button>
-            </>
-          ) : (
-            <>
-              <span className="text-xs text-(--t-text-dim)">{t("layout.auth.newHere")}</span>
-              <button
-                type="button"
-                onClick={() => { setCloudMode("signup"); setError(""); }}
-                className="text-xs text-(--t-accent) hover:underline"
-              >
-                {t("layout.auth.createAccount")}
-              </button>
-            </>
-          )}
-        </div>
-
-        {isSignup && (
-          <p className="mt-2 text-xs text-center text-(--t-text-dim) leading-relaxed">
-            {t("layout.auth.e2eeNotice")}{" "}
-            <a href="https://github.com/kbmod/handsome-voltius" target="_blank" rel="noreferrer"
-              className="text-(--t-accent) hover:underline">
-              {t("layout.auth.openSource")}
-            </a>
-            <br />
-            {t("layout.auth.agreeToTerms")}{" "}
-            <a href="https://voltius.app/terms" target="_blank" rel="noreferrer"
-              className="text-(--t-accent) hover:underline">
-              {t("layout.auth.termsOfService")}
-            </a>{" "}
-            {t("layout.auth.and")}{" "}
-            <a href="https://voltius.app/privacy" target="_blank" rel="noreferrer"
-              className="text-(--t-accent) hover:underline">
-              {t("layout.auth.privacyPolicy")}
-            </a>
-            .
-          </p>
-        )}
-      </Layout>
-    );
-  }
-
-  return null;
+      <ActionButton
+        icon="mdi:github"
+        label={t("layout.auth.restoreFromGist")}
+        sub={t("layout.auth.restoreFromGistSub")}
+        loading={loading}
+        onClick={() =>
+          wrap(async () => {
+            // The Gist setup form writes the PAT into the vault, so a local
+            // account has to exist first. Creating it here means the user
+            // reaches the Gist form directly instead of having to discover
+            // it in Settings after choosing local-only.
+            await createLocalAccountNoPassword();
+            requestGistSetup();
+          })
+        }
+      />
+    </Layout>
+  );
 }
 
 // ── Shared sub-components ────────────────────────────────────────────────────
 
-function Layout({ children, onBack }: { children: React.ReactNode; onBack?: () => void }) {
-  const { t } = useTranslation();
+function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-(--t-bg-terminal)">
-      {onBack && (
-        <button onClick={onBack}
-          className="absolute top-6 left-6 flex items-center gap-1.5 text-xs transition-colors text-(--t-text-muted) hover:text-(--t-text-primary)"
-        >
-          <Icon icon="lucide:arrow-left" width={13} /> {t("layout.auth.back")}
-        </button>
-      )}
-
       <div className="mb-8 text-center">
         <LogoBadge size={12} className="mb-3" />
         <h1 className="text-lg font-bold text-(--t-text-bright)">Handsome Voltius</h1>

@@ -101,9 +101,6 @@
       }
     },
     "share": {
-      "signInToShare": "Connectez-vous pour partager",
-      "signInDescription": "Associez un compte serveur pour partager votre terminal avec des coéquipiers.",
-      "signInButton": "Se connecter / S'inscrire",
       "proRequired": "Pro requis",
       "proRequiredDescription": "Le partage de terminal est disponible à partir de l'offre Pro.",
       "features": [

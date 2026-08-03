@@ -91,7 +91,6 @@ export default function TitleBar() {
   const shareButtonRef = useRef<HTMLButtonElement>(null);
   const tier = useSubscriptionStore((s) => s.tier);
   const openSettings = useUIStore((s) => s.openSettings);
-  const openCloudAuth = useUIStore((s) => s.openCloudAuth);
   const tabContextMenu = useContextMenu();
   const [tabContextTarget, setTabContextTarget] = useState<
     { type: "session" | "split"; id: string } | null
@@ -622,7 +621,9 @@ export default function TitleBar() {
       )}
 
       {/* Share button — only in terminal view for non-multiplayer sessions */}
-      {showTerminal && !isActiveSessionMultiplayer && (
+      {/* Terminal sharing belongs to the dormant Legacy Voltius Cloud team code.
+          This fork never signs in, so the control would only ever open a wall. */}
+      {showTerminal && !isActiveSessionMultiplayer && accountMode === "server" && (
         <div className="flex items-center px-1 shrink-0" data-no-drag>
           <button
             ref={shareButtonRef}
@@ -639,7 +640,6 @@ export default function TitleBar() {
             }}
             title={
               isActiveSessionSharing        ? t("layout.titleBar.sharingCurrently") :
-              accountMode !== "server"      ? t("layout.titleBar.signInToShare") :
               tier === "free"               ? t("layout.titleBar.sharingRequiresPro") :
                                               t("layout.titleBar.shareTerminal")
             }
@@ -667,9 +667,7 @@ export default function TitleBar() {
               activeSessionId={activeSessionId}
               connectionName={activeSession?.connectionName ?? t("layout.titleBar.terminalFallback")}
               connectionVaultId={connections.find((c) => c.id === activeSession?.connectionId)?.vault_id}
-              isLoggedIn={accountMode === "server"}
               tier={tier}
-              onSignIn={() => { setShareDropdownOpen(false); openCloudAuth("signin"); }}
               onUpgrade={() => { setShareDropdownOpen(false); openSettings("account"); }}
             />
           )}

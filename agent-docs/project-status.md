@@ -355,8 +355,8 @@ the old two-engine world. Corrected:
 
 Latest automated result:
 
-- 176 test files passed;
-- 850 tests passed;
+- 185 test files passed;
+- 924 tests passed;
 - 8 targeted Rust port-forwarding tests passed, covering domain and IPv6
   SOCKS5 negotiation, the waiting-state wire contract, local listener
   lifecycle, bind behavior, and single-host rule ownership;
@@ -519,17 +519,48 @@ from the GitHub PAT when no passphrase is set. Two profiles that disagree about
 whether a passphrase exists will derive different keys and fail to decrypt each
 other's blobs, which is expected rather than a defect.
 
-### 3. Remove the Legacy Voltius Cloud sign-in, account, and billing UI
+### 3. Remove the Legacy Voltius Cloud sign-in, account, and billing UI — complete in source
 
-The sync surfaces have been collapsed to one method (see **Single sync surface**
-above). What remains of this item:
+Every reachable sign-in, cloud-account, and billing surface is gone. What
+remains is installed-app acceptance.
 
-- `CloudAuthModal` still offers cloud register/sign-in;
-- `AccountSection` still shows plan and billing state;
-- `SplashScreen` still starts the team stream in server mode;
-- the setup screen still offers **Legacy Voltius Cloud** as a third option.
+Removed:
 
-Team/multiplayer code stays in the tree but dormant.
+- `CloudAuthModal`, `TrialExpiredModal`, `EditEmailModal`, and
+  `ChangeMasterPasswordModal` are deleted, along with the `cloudAuth` state and
+  actions on `uiStore`;
+- the first-launch setup screen offers only **Get started** and **Restore from
+  GitHub Gist**; the third **Legacy Voltius Cloud** option and its sign-up/
+  sign-in form, custom server field, and terms/privacy links are gone;
+- `AccountSection` no longer renders the plan badge, trial state, seat counts,
+  feature comparison, upgrade buttons, or billing-portal links, nor the
+  server-only email and display-name rows. It keeps mode, auto-lock, set/lock
+  master password, sign out, and wipe;
+- every sign-in entry point is removed: the sidebar account menu, the vault
+  sidebar, Settings > Vaults, Members, the mobile More and Account screens, and
+  the title-bar share menu;
+- `SplashScreen` no longer starts the team realtime stream, because no launch
+  can be in server mode any more;
+- the title-bar **Share** control only renders for a server-mode session, so
+  `ShareMenu` lost its unauthenticated wall;
+- 204 dead translation entries across `en`, `fr`, and `ru`, including the
+  leftovers from the removed paid sync engine. Copy that told the user to sign
+  in now says team features need a Legacy Voltius Cloud account this build does
+  not create.
+
+Also changed, because removing billing made a gate permanent rather than an
+upsell: creating a vault is no longer limited to one on the free tier. Local
+vaults are local data, and with no plan to buy the cap could never be lifted.
+
+Deliberately kept dormant rather than deleted: the team/multiplayer code, the
+`subscriptionStore`, and the server-account service functions
+(`createServerAccount`, `signInToCloud`, `linkToCloud`, `changeMasterPassword`,
+`updateDisplayName`) with their existing tests. `src/cloudAuthRemoval.test.ts`
+asserts that nothing calls them and that no sign-in entry point returns.
+
+Known gap this exposes: `changeMasterPassword` is server-only, so a local
+account that has set a master password still has no way to change it. That was
+already true before this change and is not addressed here.
 
 ### 4. Final regression and cleanup
 
