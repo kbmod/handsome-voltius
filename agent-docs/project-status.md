@@ -566,9 +566,97 @@ asserts that nothing calls them and that no sign-in entry point returns.
 
 Known gap this exposes: `changeMasterPassword` is server-only, so a local
 account that has set a master password still has no way to change it. That was
-already true before this change and is not addressed here.
+already true before this change and is not addressed here — it is now pending
+item 4.
 
-### 4. Final regression and cleanup
+### 4. Local change-master-password flow
+
+A local account that has set a master password currently has no way to change
+it. `changeMasterPassword` in `services/account.ts` is server-only: it requires
+a `jwt` and `server_url` and calls `/v1/auth/me`, so it throws
+`notConnectedToServer` on every local install. Its UI was removed with the rest
+of the cloud account surfaces, and the function stays dormant for the team code.
+
+Requirements:
+
+- require the current master password and reject a wrong one before anything is
+  written;
+- re-encrypt the vault under the new key, not just swap the stored string;
+- work entirely offline with no server session.
+
+Implementation notes gathered while removing the cloud UI:
+
+- `setMasterPassword(password)` already performs the local half correctly: it
+  derives `enc_key` from `(password, account_id)`, calls the Rust
+  `secrets_reencrypt` command with the new key, writes `master_password` and
+  `mode` to the keychain, and calls `setVaultKey`. A local change flow is that
+  function plus a verification step, not new crypto.
+- Verify the current password by deriving `enc_key` from
+  `(currentPassword, account_id)` and comparing it to the active vault key,
+  rather than string-comparing against the stored `master_password`. Deriving is
+  the check that actually proves the vault would open.
+- `local-nopassword` accounts store a hex vault key in `master_password`
+  instead of a password, so the flow must be offered only for `mode === "local"`
+  and must not be confused with **Set a master password**.
+- Both paths need the vault unlocked first (`unlockVaultIfNeeded`); `autoLogin`
+  sets the key lazily.
+
+#### What the OS keychain actually does — verified, not assumed
+
+The suspicion was that a local-only account claims OS-keychain storage but
+never elevates, and therefore may not be writing to the keychain at all. That is
+not what is happening. Verified on this machine by querying the Secret Service
+directly: the collection `Login` holds five unlocked `service=voltius` entries —
+`account_id`, `mode`, `master_password`, `voltius.saved_accounts`, and
+`team_vault_roles`. Writes are real and they persist.
+
+No elevation prompt appears because the GNOME login keyring is unlocked by PAM
+at session login, so an already-unlocked collection accepts reads and writes
+without a prompt. `src-tauri/src/lib.rs` registers
+`dbus_secret_service_keyring_store` as the keyring-core default on Linux and
+falls back to the volatile kernel keyutils store only when no Secret Service
+daemon answers — the fallback logs a warning and would silently lose
+credentials across reboots, so it is worth checking `voltius.log` for that
+warning on any machine where auto-login stops working.
+
+The real finding is different and worth deciding on separately: in `local`
+mode the master password is stored **in cleartext** in that keyring, and
+`autoLogin` reads it back to unlock the vault on every launch without asking.
+So the master password is a session lock, not protection at rest against anyone
+who already has the logged-in desktop session. Whatever the change-password
+flow does, it should not describe the password as more than that.
+
+### 5. Remove code left unreachable by this fork's changes
+
+Run this **after all other feature work is finished**, since later work can
+strand more code. A sweep done early would be redone.
+
+Scope: exports and modules that nothing calls because of decisions already
+made here — removed paid sync, removed cloud sign-in/account/billing UI, and
+the dormant team surfaces. Already known to have no callers:
+
+- `startRealtimeSync` in `services/sync.ts`;
+- `openPortal` in `utils/billing.ts` (the whole module, if nothing else lands);
+- `createServerAccount`, `signInToCloud`, `linkToCloud`, `updateDisplayName`,
+  and `fetchAndCacheDisplayName` in `services/account.ts`, referenced only by
+  their own tests;
+- `openBillingCheckout`, reachable only from team CTAs that require server mode,
+  which no longer occurs.
+
+Method and cautions:
+
+- treat "no static reference" as a starting point, not proof: this codebase uses
+  dynamic `import()` in stores and services, and i18n keys are built at runtime
+  (`t(\`settings.…${id}\`)`), so a key or module can be live while looking dead;
+- decide explicitly for each item whether it is dead or dormant-on-purpose. The
+  team/multiplayer code is deliberately retained, so deleting a function only
+  because the *UI* is gone would contradict that decision;
+- delete a symbol's tests with the symbol; do not leave tests asserting the
+  behavior of code that no longer ships;
+- `src/cloudAuthRemoval.test.ts` already guards the sign-in and billing entry
+  points; extend it rather than duplicating the pattern.
+
+### 6. Final regression and cleanup
 
 - Repeat the main local shell, SSH, tabs, splits, rename, shortcuts, exit,
   reconnect, workspace restore, theme, and SFTP tests.
@@ -580,7 +668,7 @@ already true before this change and is not addressed here.
 - Update this status document and README if behavior changed.
 - Commit and push the final verified source checkpoint.
 
-### 5. Deferred work
+### 7. Deferred work
 
 These are intentionally outside the current personal Debian milestone:
 
