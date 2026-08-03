@@ -366,13 +366,19 @@ Latest automated result:
 - Rust `cargo check` passed;
 - `git diff --check` passed.
 
-Latest locally built test package:
+Latest locally built test package (not yet installed-app accepted):
 
 - Path:
   `target/release/bundle/deb/Handsome_Voltius_0.12.0_amd64.deb`
 - SHA-256:
-  `7348b4483ec4f26a4aa2f483c126de85654be522fba6c92838d69de84a9e276d`
+  `2aac3f45f423a8cd822e5c07019fa32ce358cc58537055370a2d6f19fab3279c`
+- Built from commit `2007697`, which removes the Legacy Voltius Cloud
+  sign-in, account, and billing UI and lifts the one-vault cap.
 - Debian package name: `handsome-voltius`
+
+The package accepted before this one was
+`7348b4483ec4f26a4aa2f483c126de85654be522fba6c92838d69de84a9e276d`, and the
+notes below describe what it contained.
 - This package includes the accepted terminal, workspace, SFTP, Known Hosts,
   Keychain, Settings, Snippets, port-forwarding, shared dialog/menu/
   notification, and Handsome Voltius identity work.
