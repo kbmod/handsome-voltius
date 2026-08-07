@@ -1,5 +1,6 @@
 import type { UserDataHandler } from "./handler";
 import type { UserDataBundle, UserDataSection } from "./formats";
+import { withRemoteUserDataApply } from "./remoteApply";
 import { themesHandler } from "./handlers/themes";
 import { uiPreferencesHandler } from "./handlers/uiPreferences";
 import { shortcutsHandler } from "./handlers/shortcuts";
@@ -39,18 +40,41 @@ export function buildUserDataBundle(keys?: string[]): UserDataBundle {
 
 // ─── Apply ────────────────────────────────────────────────────────────────────
 
+/**
+ * Write a bundle's sections into local stores.
+ *
+ * `adoptTimestamps` marks this as applying another device's settings rather
+ * than a local change: each section keeps the originating device's
+ * `updated_at`, and the sync scheduling that store setters trigger is
+ * suppressed. Without it the receiving device stamps its own clock on settings
+ * it merely received, wins the next last-write-wins merge against the device
+ * that actually authored them, and pushes them back — so restoring a fresh
+ * profile from a Gist would overwrite the settings of the profile it restored
+ * from. A manual file import leaves it off: choosing to import is a local act
+ * and should propagate.
+ */
 export async function applyUserDataBundle(
   bundle: UserDataBundle,
   keys?: string[],
+  options: { adoptTimestamps?: boolean } = {},
 ): Promise<{ applied: string[] }> {
   const applied: string[] = [];
-  for (const h of USER_DATA_HANDLERS) {
-    if (keys && !keys.includes(h.key)) continue;
-    const section = bundle.sections[h.key];
-    if (!section) continue;
-    await h.import(section.data);
-    applied.push(h.key);
-  }
+
+  const run = async () => {
+    for (const h of USER_DATA_HANDLERS) {
+      if (keys && !keys.includes(h.key)) continue;
+      const section = bundle.sections[h.key];
+      if (!section) continue;
+      await h.import(section.data);
+      // After import, because the setters `import` calls restamp it.
+      if (options.adoptTimestamps) h.setTimestamp(section.updated_at);
+      applied.push(h.key);
+    }
+  };
+
+  if (options.adoptTimestamps) await withRemoteUserDataApply(run);
+  else await run();
+
   return { applied };
 }
 

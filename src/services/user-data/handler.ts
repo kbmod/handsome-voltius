@@ -23,6 +23,11 @@ export interface UserDataHandler {
   // ISO timestamp of the most recent local change to this domain.
   getTimestamp(): string;
 
+  // Record `ts` as this domain's last-change time. Used when applying a pull to
+  // keep the originating device's timestamp instead of claiming authorship of
+  // settings this device merely received.
+  setTimestamp(ts: string): void;
+
   // Short human-readable summary of current state, e.g. "3 custom themes".
   describe(): string;
 }

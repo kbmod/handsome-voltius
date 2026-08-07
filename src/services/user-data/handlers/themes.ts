@@ -43,6 +43,12 @@ export const themesHandler: UserDataHandler = {
     return useThemeStore.getState().updatedAt;
   },
 
+  setTimestamp(ts: string): void {
+    // Goes through `persist` because themes also carry `updatedAt` in
+    // theme.json; a store-only write would be undone by the next disk load.
+    useThemeStore.getState().persist(ts);
+  },
+
   describe(): string {
     const { customThemes } = useThemeStore.getState();
     return i18n.t("importExport.userData.describe.themes", { count: customThemes.length });

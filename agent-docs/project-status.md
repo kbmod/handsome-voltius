@@ -515,9 +515,16 @@ The known-hosts, settings, and shortcuts halves of this list were previously
 impossible to satisfy — those files were pushed but dropped on pull. That is
 fixed in code and covered by tests.
 
-A Gist pull onto a separate Debian VM has been verified working. The remaining
-gate is the rest of the acceptance list: ciphertext-only contents, wrong-
-passphrase rejection, deletion propagation, and no data loss syncing between a
+A Gist pull onto a separate Debian VM has been verified working, as has the
+first-launch screen on a genuinely fresh profile.
+
+**Ciphertext-only contents: verified.** A device blob downloaded straight from
+GitHub decodes to a 4-byte little-endian length, a 13-byte plaintext header
+`{"version":2}`, then 75,511 bytes of ciphertext containing 13 printable runs of
+8+ characters, all random. No hostnames, usernames, or key material.
+
+Remaining acceptance gates: wrong-passphrase rejection, deletion propagation,
+terminal theme not recoloring desktop chrome, and no data loss syncing between a
 fresh and an existing profile.
 
 Note while testing: the encryption key is derived from the sync passphrase, or
@@ -525,10 +532,118 @@ from the GitHub PAT when no passphrase is set. Two profiles that disagree about
 whether a passphrase exists will derive different keys and fail to decrypt each
 other's blobs, which is expected rather than a defect.
 
+#### Crypto reviewed — the published salt is not a defect
+
+The manifest publishes a 16-byte random `salt`, which is correct: every device
+must derive the same key from the same secret, so the salt has to travel with
+the data. Derivation is Argon2id at m=128 MiB, t=3, p=4 (`voltius-crypto`
+`derive_master_key_raw_salt`), then HKDF-SHA256 to the enc key, with
+XChaCha20-Poly1305 for the payload — well above the OWASP floor, so a public
+salt plus public ciphertext still leaves offline guessing impractical.
+
+Two consequences worth remembering rather than re-deriving:
+
+- a GitHub PAT is high-entropy, so **a weak user passphrase is worse than no
+  passphrase at all**, because it replaces the PAT as the KDF input;
+- a "Secret" gist is unlisted, not private — anyone with the URL reads it
+  unauthenticated. That is the threat model the encryption exists for, but it
+  means the passphrase is the only barrier once a URL leaks.
+
+#### Settings authorship — fixed
+
+Applying a pulled bundle was recorded as a local edit: `import()` calls the
+normal store setters, which stamp `updated_at` with the local clock and call
+`scheduleSync()`. A device that restored from a Gist therefore became the most
+recent author of settings it had merely received, won the next last-write-wins
+merge against the device that actually wrote them, and pushed them back — a
+fresh profile's defaults overwriting the profile it restored from. Observed
+live: three sections stamped 4ms apart, the signature of one apply claiming
+authorship of everything at once.
+
+Fixed by `applyUserDataBundle(bundle, keys, { adoptTimestamps: true })` on the
+sync path: each section keeps the sender's `updated_at`, and
+`src/services/user-data/remoteApply.ts` holds a depth-counted flag that makes
+`scheduleSync()` a no-op while a pull is being applied. Manual file import is
+deliberately unchanged — choosing to import is a local act and should
+propagate. Themes route through `themeStore.persist(ts)` because `updatedAt`
+also lives in `theme.json`, where a bare `setState` would be undone by the next
+disk load. Covered by `src/services/user-data/applyOwnership.test.ts`.
+
+Verified on the installed host: sections retain their pre-reinstall Aug 2
+timestamps across a sync that would previously have restamped them.
+
+#### Known defects still open in this area
+
+1. **The settings-pull decline does not stick.** `_declinedBundles` in
+   `services/syncPayload.ts` is keyed on `remote.exported_at`, and
+   `buildUserDataBundle` restamps `exported_at` on every call, so an idle device
+   re-pushing byte-identical settings mints a new identity each cycle and the
+   prompt returns forever. Fix: key the guard on a content hash of the sections.
+2. **`resetVault` hides keychain failures.** `src/services/vault.ts:85` swallows
+   every `keychain_delete` rejection, so a wipe that fails to clear
+   `master_password` still reports success, deletes the vault and config, and
+   auto-logs straight back in. This cost a full test cycle. Note also that
+   `voltius.saved_accounts` and `team_vault_roles` are absent from that deletion
+   list entirely.
+3. **`deviceId` churn leaves ghost devices in the Gist.** It lives in
+   `plugin-data/plugin-gist-sync.json` under `~/.config/voltius`, so any wipe or
+   fresh profile regenerates it. The previous blob stays in the Gist under the
+   old id, is treated as a separate machine forever, and keeps participating in
+   merges. Every wipe-and-restore test cycle adds another. Options: persist
+   `deviceId` outside the wiped config, prune blobs whose device has not pushed
+   in N days, or add a manual "forget device" control.
+4. **Rotating the PAT with no passphrase set orphans every blob.** The key is
+   derived from the PAT, and there is no re-encrypt path for a PAT change (only
+   `push({ reencrypt: true })` for passphrase changes). The app cannot tell
+   "rotated" from "wrong credential", so the data becomes permanently
+   undecryptable.
+
+#### Where the app state stands, for next session
+
+Config lives in four places, and an in-app wipe clears only the first two:
+`~/.config/voltius/` (entity JSON), `~/.local/share/com.voltius.app/`
+(`secrets.enc`, logs, WebKit localstorage), the WebView localStorage sqlite
+inside it (20 `voltius-*` keys), and the OS keychain (`service=voltius`:
+`account_id`, `mode`, `master_password`, `voltius.saved_accounts`,
+`team_vault_roles`).
+
+The gate for a genuine first-launch screen is the keychain entry
+`master_password` alone — `autoLogin` returns false only when it is absent
+(`services/account.ts:281`), and `SecretsStore::unlock` treats a missing
+`secrets.enc` as an empty vault, so deleting the vault alone just restores an
+empty session. Note `getVaultStatus().exists` reads the legacy `vault.hold`,
+which modern installs never create.
+
+For a repeatable fresh launch without destroying a working profile:
+
+```bash
+FRESH=~/voltius-fresh-$(date +%s); mkdir -p $FRESH/config $FRESH/data
+XDG_CONFIG_HOME=$FRESH/config XDG_DATA_HOME=$FRESH/data \
+VOLTIUS_KEYCHAIN_NS=fresh1 handsome-voltius
+```
+
+Before re-testing the settings prompt, note the Gist still holds a blob pushed
+under the old code with a forged Aug 6 authorship date. The fix cannot demote
+it. Make one settings change on the authoritative host and quit (which flushes
+the push immediately) so its bundle becomes newest.
+
 ### 3. Remove the Legacy Voltius Cloud sign-in, account, and billing UI — complete in source
 
-Every reachable sign-in, cloud-account, and billing surface is gone. What
-remains is installed-app acceptance.
+Every reachable sign-in, cloud-account, and billing surface is gone.
+
+Accepted in the installed app: the first-launch setup screen offers only **Get
+started** and **Restore from GitHub Gist**, with no third Legacy Voltius Cloud
+option, confirmed on a genuinely fresh profile.
+
+Still to accept in the installed app:
+
+- Settings > Account shows mode, auto-lock, set/lock master password, sign out,
+  and wipe — and no plan badge, trial state, seat counts, feature comparison,
+  upgrade buttons, or billing-portal links;
+- no sign-in entry point in the sidebar account menu, the vault sidebar,
+  Settings > Vaults, Members, the mobile More and Account screens, or the
+  title-bar share menu;
+- creating a second vault is no longer blocked.
 
 Removed:
 

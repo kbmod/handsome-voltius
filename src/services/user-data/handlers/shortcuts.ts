@@ -38,6 +38,10 @@ export const shortcutsHandler: UserDataHandler = {
     return useShortcutStore.getState().shortcutsUpdatedAt;
   },
 
+  setTimestamp(ts: string): void {
+    useShortcutStore.setState({ shortcutsUpdatedAt: ts });
+  },
+
   describe(): string {
     const overrides = useShortcutStore.getState().shortcuts.filter(
       (sc) => sc.key !== sc.defaultKey,

@@ -7,6 +7,7 @@ import { appFetch } from "@/services/http";
 import { SseDataLineParser } from "@/services/realtimeSseEvents";
 import { connectNativeSse } from "@/services/nativeSseStream";
 import { parseUsingEvent } from "@/services/presenceEvent";
+import { isApplyingRemoteUserData } from "@/services/user-data/remoteApply";
 import {
   getGistSyncState,
   onGistSyncStateChange,
@@ -252,6 +253,9 @@ export const SYNC_DEBOUNCE_MS = 30_000;
  * does any work.
  */
 export function scheduleSync() {
+  // Applying a pull runs the same store setters a user edit does, so it would
+  // otherwise schedule a push of the settings just received.
+  if (isApplyingRemoteUserData()) return;
   if (_syncTimer) clearTimeout(_syncTimer);
   _syncTimer = setTimeout(() => {
     _syncTimer = null;

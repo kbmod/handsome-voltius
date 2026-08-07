@@ -40,7 +40,7 @@ interface ThemeStore {
   scheduleDarkStart: string;
   location: GeoLocation | null;
   resolvedPhase: ThemePhase;
-  persist: () => void;
+  persist: (ts?: string) => void;
   setTheme: (id: string) => void;
   setTerminalTheme: (id: string | null) => void;
   saveCustomTheme: (theme: AppTheme) => void;
@@ -73,8 +73,10 @@ export const useThemeStore = create<ThemeStore>()(
       scheduleDarkStart: "19:00",
       location: null,
       resolvedPhase: "dark",
-      persist: () => {
-        const now = new Date().toISOString();
+      persist: (ts?: string) => {
+        // `ts` is supplied when applying a pull, so the originating device's
+        // change time is written to disk rather than this device's clock.
+        const now = ts ?? new Date().toISOString();
         set({ updatedAt: now });
         const s = get();
         saveToDisk({

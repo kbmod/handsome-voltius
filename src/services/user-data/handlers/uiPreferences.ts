@@ -54,6 +54,10 @@ export const uiPreferencesHandler: UserDataHandler = {
     return useUIStore.getState().prefsUpdatedAt;
   },
 
+  setTimestamp(ts: string): void {
+    useUIStore.setState({ prefsUpdatedAt: ts });
+  },
+
   describe(): string {
     const s = useUIStore.getState();
     return i18n.t("importExport.userData.describe.uiPreferences", { scale: s.uiScale, layout: s.homeLayoutMode });

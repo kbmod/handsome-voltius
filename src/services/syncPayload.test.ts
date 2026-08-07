@@ -45,7 +45,11 @@ describe("applyRemoteSettings", () => {
     ).resolves.toBe(true);
 
     expect(invoke).toHaveBeenCalledWith("settings_save", { state: JSON.stringify(merged) });
-    expect(applyUserDataBundle).toHaveBeenCalledWith(merged, ["shortcuts"]);
+    // adoptTimestamps keeps the sending device as the author of what it sent,
+    // so this device cannot win the next merge against it and push it back.
+    expect(applyUserDataBundle).toHaveBeenCalledWith(merged, ["shortcuts"], {
+      adoptTimestamps: true,
+    });
   });
 
   test("writes nothing when the merge changed no keys", async () => {

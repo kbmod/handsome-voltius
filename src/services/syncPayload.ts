@@ -81,7 +81,7 @@ export async function applyRemoteSettings(
     }
 
     await invoke("settings_save", { state: JSON.stringify(merged) });
-    await applyUserDataBundle(merged, updatedKeys);
+    await applyUserDataBundle(merged, updatedKeys, { adoptTimestamps: true });
     return true;
   } catch {
     return false;

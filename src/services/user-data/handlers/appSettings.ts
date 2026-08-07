@@ -78,6 +78,10 @@ export const appSettingsHandler: UserDataHandler = {
     return useAppSettingsTimestampStore.getState().updatedAt;
   },
 
+  setTimestamp(ts: string): void {
+    useAppSettingsTimestampStore.setState({ updatedAt: ts });
+  },
+
   describe(): string {
     const { preferredShell } = useTerminalSettingsStore.getState();
     return preferredShell
